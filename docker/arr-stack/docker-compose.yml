@@ -1,0 +1,177 @@
+version: '3.9'
+
+services:
+  gluetun:
+    image: qmcgaw/gluetun:latest
+    container_name: gluetun
+    hostname: gluetun
+    cap_add:
+      - NET_ADMIN
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    ports:
+      - "${GLUETUN_BITTORRENT_PORT:-6881}:6881"
+      - "${GLUETUN_BITTORRENT_PORT:-6881}:6881/udp"
+      - "${QBITTORRENT_WEBUI_PORT:-8085}:8085"
+      - "${PROWLARR_PORT:-9696}:9696"
+      - "${SONARR_PORT:-8989}:8989"
+      - "${RADARR_PORT:-7878}:7878"
+      - "${LIDARR_PORT:-8686}:8686"
+      - "${BAZARR_PORT:-6767}:6767"
+      - "${JACKETT_PORT:-9117}:9117"
+      - "${FLARESOLVERR_PORT:-8191}:8191"
+      - "${JELLYSEERR_PORT:-5055}:5055"
+    volumes:
+      - ${DOCKER_VOLUMES_PATH}/gluetun:/gluetun
+    environment:
+      - VPN_SERVICE_PROVIDER=${VPN_SERVICE_PROVIDER}
+      - VPN_TYPE=${VPN_TYPE}
+      - WIREGUARD_PRIVATE_KEY=${WIREGUARD_PRIVATE_KEY}
+      - WIREGUARD_ADDRESSES=${WIREGUARD_ADDRESSES}
+      - TZ=${TZ:-UTC}
+      - SERVER_COUNTRIES=${SERVER_COUNTRIES}
+      - SERVER_CATEGORIES=${SERVER_CATEGORIES}
+      - UPDATER_PERIOD=${UPDATER_PERIOD:-24h}
+      - DOT=${DOT:-on}
+      - DOT_PROVIDERS=${DOT_PROVIDERS:-cloudflare}
+      - DNS_ADDRESS=${DNS_ADDRESS:-127.0.0.1}
+      - FIREWALL_VPN_INPUT_PORTS=${GLUETUN_BITTORRENT_PORT:-6881}
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+
+  qbittorrent:
+    image: lscr.io/linuxserver/qbittorrent:latest
+    container_name: qbittorrent
+    network_mode: "service:gluetun"
+    environment:
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+      - TZ=${TZ:-UTC}
+      - WEBUI_PORT=${QBITTORRENT_WEBUI_PORT:-8085}
+    volumes:
+      - ${DOCKER_VOLUMES_PATH}/qbittorrent:/config
+      - ${DOCKER_VOLUMES_PATH}/qbittorrent/downloads:/downloads
+    depends_on:
+      - gluetun
+    restart: unless-stopped
+
+  prowlarr:
+    image: lscr.io/linuxserver/prowlarr:latest
+    container_name: prowlarr
+    network_mode: "service:gluetun"
+    environment:
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+      - TZ=${TZ:-UTC}
+    volumes:
+      - ${DOCKER_VOLUMES_PATH}/prowlarr:/config
+    depends_on:
+      - gluetun
+    restart: unless-stopped
+
+  sonarr:
+    image: lscr.io/linuxserver/sonarr:latest
+    container_name: sonarr
+    network_mode: "service:gluetun"
+    environment:
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+      - TZ=${TZ:-UTC}
+    volumes:
+      - ${DOCKER_VOLUMES_PATH}/sonarr:/config
+      - ${DOCKER_VOLUMES_PATH}/qbittorrent/downloads:/downloads
+      - ${DOCKER_VOLUMES_PATH}/media/tv:/tv
+    depends_on:
+      - gluetun
+    restart: unless-stopped
+
+  radarr:
+    image: lscr.io/linuxserver/radarr:latest
+    container_name: radarr
+    network_mode: "service:gluetun"
+    environment:
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+      - TZ=${TZ:-UTC}
+    volumes:
+      - ${DOCKER_VOLUMES_PATH}/radarr:/config
+      - ${DOCKER_VOLUMES_PATH}/qbittorrent/downloads:/downloads
+      - ${DOCKER_VOLUMES_PATH}/media/movies:/movies
+    depends_on:
+      - gluetun
+    restart: unless-stopped
+
+  lidarr:
+    image: lscr.io/linuxserver/lidarr:latest
+    container_name: lidarr
+    network_mode: "service:gluetun"
+    environment:
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+      - TZ=${TZ:-UTC}
+    volumes:
+      - ${DOCKER_VOLUMES_PATH}/lidarr:/config
+      - ${DOCKER_VOLUMES_PATH}/qbittorrent/downloads:/downloads
+      - ${DOCKER_VOLUMES_PATH}/media/music:/music
+    depends_on:
+      - gluetun
+    restart: unless-stopped
+
+  bazarr:
+    image: lscr.io/linuxserver/bazarr:latest
+    container_name: bazarr
+    network_mode: "service:gluetun"
+    environment:
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+      - TZ=${TZ:-UTC}
+    volumes:
+      - ${DOCKER_VOLUMES_PATH}/bazarr:/config
+      - ${DOCKER_VOLUMES_PATH}/media/tv:/tv
+      - ${DOCKER_VOLUMES_PATH}/media/movies:/movies
+    depends_on:
+      - gluetun
+    restart: unless-stopped
+
+  jackett:
+    image: lscr.io/linuxserver/jackett:latest
+    container_name: jackett
+    network_mode: "service:gluetun"
+    environment:
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+      - TZ=${TZ:-UTC}
+      - AUTO_UPDATE=${JACKETT_AUTO_UPDATE:-true}
+    volumes:
+      - ${DOCKER_VOLUMES_PATH}/jackett:/config
+      - ${DOCKER_VOLUMES_PATH}/qbittorrent/downloads:/downloads
+    depends_on:
+      - gluetun
+    restart: unless-stopped
+
+  flaresolverr:
+    image: flaresolverr/flaresolverr:latest
+    container_name: flaresolverr
+    network_mode: "service:gluetun"
+    environment:
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+      - LOG_HTML=${LOG_HTML:-false}
+      - CAPTCHA_SOLVER=${CAPTCHA_SOLVER:-none}
+      - TZ=${TZ:-UTC}
+    depends_on:
+      - gluetun
+    restart: unless-stopped
+
+  jellyseerr:
+    image: fallenbagel/jellyseerr:latest
+    container_name: jellyseerr
+    network_mode: "service:gluetun"
+    environment:
+      - LOG_LEVEL=${JELLYSEERR_LOG_LEVEL:-info}
+      - TZ=${TZ:-UTC}
+    volumes:
+      - ${DOCKER_VOLUMES_PATH}/jellyseerr:/app/config
+    depends_on:
+      - gluetun
+    restart: unless-stopped
