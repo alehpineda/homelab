@@ -2,7 +2,7 @@ version: '3.9'
 
 services:
   gluetun:
-    image: qmcgaw/gluetun:v3.40.0
+    image: qmcgaw/gluetun:latest
     container_name: gluetun
     hostname: gluetun
     cap_add:
@@ -41,7 +41,7 @@ services:
       - no-new-privileges:true
 
   qbittorrent:
-    image: lscr.io/linuxserver/qbittorrent:5.1.2
+    image: lscr.io/linuxserver/qbittorrent:latest
     container_name: qbittorrent
     network_mode: "service:gluetun"
     environment:
