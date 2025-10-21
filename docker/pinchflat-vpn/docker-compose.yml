@@ -1,0 +1,45 @@
+version: '3.9'
+
+services:
+  gluetun:
+    image: qmcgaw/gluetun:latest
+    container_name: gluetun-pinchflat
+    hostname: gluetun-pinchflat
+    cap_add:
+      - NET_ADMIN
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    ports:
+      - "${PINCHFLAT_PORT:-8945}:8945"
+    volumes:
+      - ${DOCKER_VOLUMES_PATH}/gluetun-pinchflat:/gluetun
+    environment:
+      - VPN_SERVICE_PROVIDER=${VPN_SERVICE_PROVIDER}
+      - VPN_TYPE=${VPN_TYPE}
+      - WIREGUARD_PRIVATE_KEY=${WIREGUARD_PRIVATE_KEY}
+      - WIREGUARD_ADDRESSES=${WIREGUARD_ADDRESSES}
+      - TZ=${TZ:-UTC}
+      - SERVER_COUNTRIES=${SERVER_COUNTRIES}
+      - SERVER_CATEGORIES=${SERVER_CATEGORIES}
+      - UPDATER_PERIOD=${UPDATER_PERIOD:-24h}
+      - DOT=${DOT:-on}
+      - DOT_PROVIDERS=${DOT_PROVIDERS:-cloudflare}
+      - DNS_ADDRESS=${DNS_ADDRESS:-127.0.0.1}
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+
+  pinchflat:
+    image: ghcr.io/kieraneglin/pinchflat:latest
+    container_name: pinchflat
+    network_mode: "service:gluetun"
+    environment:
+      - TZ=${TZ:-UTC}
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+    volumes:
+      - ${DOCKER_VOLUMES_PATH}/pinchflat:/config
+      - ${DOCKER_VOLUMES_PATH}/media/youtube:/downloads
+    depends_on:
+      - gluetun
+    restart: unless-stopped
