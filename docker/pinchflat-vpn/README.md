@@ -45,7 +45,7 @@ This stack provides:
 ```
 pinchflat-vpn/
 ├── docker-compose.yml    # Main compose file
-├── auth-config.toml      # Gluetun control server auth whitelist (bind-mounted)
+├── auth-config.toml      # Gluetun control server auth whitelist (required - bind-mounted)
 ├── .env                  # Your environment variables (not committed)
 ├── .env.example          # Example environment file
 ├── README.md             # This file
