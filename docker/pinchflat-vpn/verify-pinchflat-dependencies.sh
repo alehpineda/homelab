@@ -4,35 +4,84 @@
 
 set -euo pipefail
 
+# Configuration
+COMPOSE_DIR="${COMPOSE_DIR:-$(pwd)}"
+COMPOSE_FILE="${COMPOSE_FILE:-docker-compose.yml}"
+
+# Container and service names (from docker-compose.yml)
+GLUETUN_CONTAINER="gluetun-pinchflat"
+PINCHFLAT_CONTAINER="pinchflat"
+GLUETUN_SERVICE="gluetun"
+PINCHFLAT_SERVICE="pinchflat"
+
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo "🔍 Pinchflat-VPN Dependency Verification"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo
 
+# Validate compose configuration
+echo "0. Validating compose configuration..."
+if [ -f "$COMPOSE_DIR/$COMPOSE_FILE" ]; then
+    echo "   ✅ Compose file found: $COMPOSE_DIR/$COMPOSE_FILE"
+    
+    # Verify service names match expectations
+    if grep -q "^\s*${GLUETUN_SERVICE}:" "$COMPOSE_DIR/$COMPOSE_FILE"; then
+        echo "   ✅ Gluetun service defined ($GLUETUN_SERVICE)"
+    else
+        echo "   ❌ Gluetun service not found in compose file"
+    fi
+    
+    if grep -q "^\s*${PINCHFLAT_SERVICE}:" "$COMPOSE_DIR/$COMPOSE_FILE"; then
+        echo "   ✅ Pinchflat service defined ($PINCHFLAT_SERVICE)"
+    else
+        echo "   ❌ Pinchflat service not found in compose file"
+    fi
+    
+    # Verify container names match
+    COMPOSE_GLUETUN_CONTAINER=$(grep -A 5 "^\s*${GLUETUN_SERVICE}:" "$COMPOSE_DIR/$COMPOSE_FILE" | grep "container_name:" | awk '{print $2}')
+    if [ "$COMPOSE_GLUETUN_CONTAINER" = "$GLUETUN_CONTAINER" ]; then
+        echo "   ✅ Gluetun container name matches: $GLUETUN_CONTAINER"
+    else
+        echo "   ⚠️  Container name mismatch. Expected: $GLUETUN_CONTAINER, Found: $COMPOSE_GLUETUN_CONTAINER"
+    fi
+    
+    COMPOSE_PINCHFLAT_CONTAINER=$(grep -A 5 "^\s*${PINCHFLAT_SERVICE}:" "$COMPOSE_DIR/$COMPOSE_FILE" | grep "container_name:" | awk '{print $2}')
+    if [ "$COMPOSE_PINCHFLAT_CONTAINER" = "$PINCHFLAT_CONTAINER" ]; then
+        echo "   ✅ Pinchflat container name matches: $PINCHFLAT_CONTAINER"
+    else
+        echo "   ⚠️  Container name mismatch. Expected: $PINCHFLAT_CONTAINER, Found: $COMPOSE_PINCHFLAT_CONTAINER"
+    fi
+else
+    echo "   ❌ Compose file not found: $COMPOSE_DIR/$COMPOSE_FILE"
+    echo "   💡 Run from compose directory or set COMPOSE_DIR environment variable"
+    exit 1
+fi
+echo
+
 # Check if containers exist
 echo "1. Checking containers exist..."
-if docker ps -a --format '{{.Names}}' | grep -q "gluetun-pinchflat"; then
-    echo "   ✅ gluetun-pinchflat container found"
+if docker ps -a --format '{{.Names}}' | grep -q "$GLUETUN_CONTAINER"; then
+    echo "   ✅ $GLUETUN_CONTAINER container found"
 else
-    echo "   ❌ gluetun-pinchflat container not found"
+    echo "   ❌ $GLUETUN_CONTAINER container not found"
     exit 1
 fi
 
-if docker ps -a --format '{{.Names}}' | grep -q "^pinchflat$"; then
-    echo "   ✅ pinchflat container found"
+if docker ps -a --format '{{.Names}}' | grep -q "^${PINCHFLAT_CONTAINER}$"; then
+    echo "   ✅ $PINCHFLAT_CONTAINER container found"
 else
-    echo "   ❌ pinchflat container not found"
+    echo "   ❌ $PINCHFLAT_CONTAINER container not found"
     exit 1
 fi
 echo
 
 # Check container status
 echo "2. Checking container status..."
-GLUETUN_STATUS=$(docker inspect -f '{{.State.Status}}' gluetun-pinchflat)
-PINCHFLAT_STATUS=$(docker inspect -f '{{.State.Status}}' pinchflat)
+GLUETUN_STATUS=$(docker inspect -f '{{.State.Status}}' "$GLUETUN_CONTAINER")
+PINCHFLAT_STATUS=$(docker inspect -f '{{.State.Status}}' "$PINCHFLAT_CONTAINER")
 
-echo "   Gluetun: $GLUETUN_STATUS"
-echo "   Pinchflat: $PINCHFLAT_STATUS"
+echo "   Gluetun ($GLUETUN_CONTAINER): $GLUETUN_STATUS"
+echo "   Pinchflat ($PINCHFLAT_CONTAINER): $PINCHFLAT_STATUS"
 
 if [ "$GLUETUN_STATUS" != "running" ]; then
     echo "   ⚠️  Gluetun is not running!"
@@ -45,7 +94,7 @@ echo
 
 # Check health status
 echo "3. Checking Gluetun health..."
-HEALTH_STATUS=$(docker inspect -f '{{.State.Health.Status}}' gluetun-pinchflat 2>/dev/null || echo "no-healthcheck")
+HEALTH_STATUS=$(docker inspect -f '{{.State.Health.Status}}' "$GLUETUN_CONTAINER" 2>/dev/null || echo "no-healthcheck")
 
 if [ "$HEALTH_STATUS" = "healthy" ]; then
     echo "   ✅ Gluetun is healthy"
@@ -58,7 +107,7 @@ echo
 
 # Check VPN connection
 echo "4. Checking VPN connection..."
-VPN_IP=$(docker exec gluetun-pinchflat wget -qO- https://api.ipify.org 2>/dev/null || echo "failed")
+VPN_IP=$(docker exec "$GLUETUN_CONTAINER" wget -qO- https://api.ipify.org 2>/dev/null || echo "failed")
 
 if [ "$VPN_IP" != "failed" ]; then
     echo "   ✅ VPN connected: $VPN_IP"
@@ -69,8 +118,8 @@ echo
 
 # Check container uptime
 echo "5. Checking container uptime..."
-GLUETUN_STARTED=$(docker inspect -f '{{.State.StartedAt}}' gluetun-pinchflat)
-PINCHFLAT_STARTED=$(docker inspect -f '{{.State.StartedAt}}' pinchflat)
+GLUETUN_STARTED=$(docker inspect -f '{{.State.StartedAt}}' "$GLUETUN_CONTAINER")
+PINCHFLAT_STARTED=$(docker inspect -f '{{.State.StartedAt}}' "$PINCHFLAT_CONTAINER")
 
 echo "   Gluetun started: $GLUETUN_STARTED"
 echo "   Pinchflat started: $PINCHFLAT_STARTED"
@@ -91,8 +140,8 @@ echo
 
 # Check depends_on configuration
 echo "6. Checking depends_on configuration..."
-if docker inspect pinchflat | grep -q "gluetun"; then
-    echo "   ✅ Pinchflat depends on Gluetun"
+if docker inspect "$PINCHFLAT_CONTAINER" | grep -q "$GLUETUN_SERVICE"; then
+    echo "   ✅ Pinchflat depends on Gluetun ($GLUETUN_SERVICE)"
 else
     echo "   ⚠️  No dependency found (check compose file)"
 fi
@@ -100,7 +149,7 @@ echo
 
 # Check control server port
 echo "7. Checking Gluetun control server..."
-if docker port gluetun-pinchflat | grep -q "8000"; then
+if docker port "$GLUETUN_CONTAINER" | grep -q "8000"; then
     echo "   ✅ Control server port exposed (8000)"
     
     # Test control server

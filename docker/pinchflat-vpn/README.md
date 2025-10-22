@@ -103,8 +103,17 @@ All traffic from Pinchflat is routed through Gluetun. If the VPN connection drop
 
 ### Startup Dependencies
 - Pinchflat waits for Gluetun to be healthy before starting
-- Health check ensures VPN connection is established
+- Health check ensures VPN connection is established via HTTP control server
 - Automatic 30-second grace period for VPN tunnel establishment
+- **IMPORTANT**: `HTTP_CONTROL_SERVER_ADDRESS` must be enabled for healthcheck to work
+
+### HTTP Control Server
+The Gluetun HTTP control server runs on port 8000 and provides:
+- **Health monitoring**: Healthcheck endpoint for Docker to verify VPN is connected
+- **API access**: Programmatic control for rotation and management
+- **Status queries**: Check VPN status, IP, and connection details
+
+**Note**: This is separate from `HTTPPROXY` (which is an HTTP proxy feature). The control server is required for the healthcheck to function properly.
 
 ## 🔄 VPN IP Rotation (Anti-Rate Limiting)
 

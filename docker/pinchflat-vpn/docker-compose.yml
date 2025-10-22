@@ -27,9 +27,12 @@ services:
       - UPDATER_PERIOD=${UPDATER_PERIOD:-24h}
       # Enable VPN server rotation (change servers periodically)
       - VPN_PORT_FORWARDING=${VPN_PORT_FORWARDING:-off}
-      # Enable HTTP control server for API control
+      # HTTP Control Server for health checks and API control
+      - HTTP_CONTROL_SERVER_ADDRESS=:8000
+      # Proxy services (not needed for control server)
       - HTTPPROXY=${HTTPPROXY:-off}
       - SHADOWSOCKS=${SHADOWSOCKS:-off}
+      # DNS Configuration
       - DOT=${DOT:-on}
       - DOT_PROVIDERS=${DOT_PROVIDERS:-cloudflare}
       - DNS_ADDRESS=${DNS_ADDRESS:-127.0.0.1}
