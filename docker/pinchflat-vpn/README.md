@@ -113,6 +113,8 @@ The Gluetun HTTP control server runs on port 8000 and provides:
 - **API access**: Programmatic control for rotation and management
 - **Status queries**: Check VPN status, IP, and connection details
 
+**Authentication**: By default, authentication is disabled (empty config file path) for internal Docker network use only. Port 8000 is not exposed externally for security.
+
 **Note**: This is separate from `HTTPPROXY` (which is an HTTP proxy feature). The control server is required for the healthcheck to function properly.
 
 ## 🔄 VPN IP Rotation (Anti-Rate Limiting)

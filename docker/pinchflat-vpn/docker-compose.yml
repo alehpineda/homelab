@@ -30,8 +30,8 @@ services:
       # HTTP Control Server for health checks and API control
       - HTTP_CONTROL_SERVER_ADDRESS=:8000
       - HTTP_CONTROL_SERVER_LOG=on
-      # Disable auth for internal control server (not exposed to internet)
-      - HTTP_CONTROL_SERVER_AUTH=off
+      # Disable authentication by setting empty config file path (safe for internal use)
+      - HTTP_CONTROL_SERVER_AUTH_CONFIG_FILEPATH=
       # Proxy services (not needed for control server)
       - HTTPPROXY=${HTTPPROXY:-off}
       - SHADOWSOCKS=${SHADOWSOCKS:-off}
