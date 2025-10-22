@@ -20,6 +20,40 @@ This stack provides:
 
 ### Installation
 
+#### Option A: Automated Setup (Recommended)
+
+1. **Copy and edit the environment file:**
+   ```bash
+   cp .env.example .env
+   nano .env  # Edit with your values
+   ```
+   
+   Required changes:
+   - `DOCKER_VOLUMES_PATH`: Path where Docker volumes will be stored
+   - `WIREGUARD_PRIVATE_KEY`: Your WireGuard private key
+   - `TZ`: Your timezone (e.g., `America/New_York`, `Europe/London`)
+   - `SERVER_COUNTRIES`: VPN server country (optional)
+
+2. **Run the setup script:**
+   ```bash
+   ./setup.sh
+   ```
+   
+   This script will:
+   - Create all required volume directories
+   - Copy the auth-config.toml to the correct location
+   - Set proper permissions
+
+3. **Start the stack:**
+   ```bash
+   docker-compose up -d
+   ```
+
+4. **Access Pinchflat:**
+   - Open your browser to: `http://localhost:8945`
+
+#### Option B: Manual Setup
+
 1. **Copy the environment file:**
    ```bash
    cp .env.example .env
@@ -36,12 +70,23 @@ This stack provides:
    - `TZ`: Your timezone (e.g., `America/New_York`, `Europe/London`)
    - `SERVER_COUNTRIES`: VPN server country (optional)
 
-3. **Start the stack:**
+3. **Copy authentication config to volume directory:**
+   ```bash
+   # Create the auth directory
+   mkdir -p ${DOCKER_VOLUMES_PATH}/gluetun-pinchflat/auth
+   
+   # Copy the auth config
+   cp auth-config.toml ${DOCKER_VOLUMES_PATH}/gluetun-pinchflat/auth/config.toml
+   ```
+   
+   > **Note:** This step is required for Gluetun >= v3.40.0 to allow healthcheck access without authentication.
+
+4. **Start the stack:**
    ```bash
    docker-compose up -d
    ```
 
-4. **Access Pinchflat:**
+5. **Access Pinchflat:**
    - Open your browser to: `http://localhost:8945`
 
 ## 📁 Directory Structure
@@ -49,9 +94,21 @@ This stack provides:
 ```
 pinchflat-vpn/
 ├── docker-compose.yml    # Main compose file
+├── auth-config.toml      # Gluetun control server auth whitelist (to be copied to volume)
+├── setup.sh              # Automated setup script
 ├── .env                  # Your environment variables (not committed)
 ├── .env.example          # Example environment file
-└── README.md            # This file
+├── README.md             # This file
+└── [rotation scripts]    # VPN rotation scripts
+
+Volume structure (created by setup):
+${DOCKER_VOLUMES_PATH}/
+├── gluetun-pinchflat/
+│   └── auth/
+│       └── config.toml   # Copied from auth-config.toml
+├── pinchflat/            # Pinchflat config
+└── media/
+    └── youtube/          # Downloaded media
 ```
 
 ## ⚙️ Configuration
@@ -113,7 +170,7 @@ The Gluetun HTTP control server runs on port 8000 and provides:
 - **API access**: Programmatic control for rotation and management
 - **Status queries**: Check VPN status, IP, and connection details
 
-**Authentication**: By default, authentication is disabled (empty config file path) for internal Docker network use only. Port 8000 is not exposed externally for security.
+**Authentication**: Starting with Gluetun v3.40.0, the control server requires authentication by default. This stack uses an `auth-config.toml` file to whitelist the `/v1/publicip/ip` endpoint for Docker healthchecks while maintaining security on other endpoints. Port 8000 is not exposed externally for security.
 
 **Note**: This is separate from `HTTPPROXY` (which is an HTTP proxy feature). The control server is required for the healthcheck to function properly.
 
