@@ -44,20 +44,19 @@ This stack provides:
 
 ```
 pinchflat-vpn/
-├── docker-compose.yml    # Main compose file
-├── config/
-│   └── auth-config.toml  # Gluetun control server auth whitelist (required - bind-mounted)
-├── .env                  # Your environment variables (not committed)
-├── .env.example          # Example environment file
-├── README.md             # This file
-└── [rotation scripts]    # VPN rotation scripts
+├── docker-compose.yml       # Main compose file
+├── entrypoint-wrapper.sh    # Runtime config generator (bind-mounted)
+├── .env                     # Your environment variables (not committed)
+├── .env.example             # Example environment file
+├── README.md                # This file
+└── [rotation scripts]       # VPN rotation scripts
 
 Volume structure (auto-created):
 ${DOCKER_VOLUMES_PATH}/
-├── gluetun-pinchflat/    # Gluetun config and data
-├── pinchflat/            # Pinchflat config
+├── gluetun-pinchflat/       # Gluetun config and data
+├── pinchflat/               # Pinchflat config
 └── media/
-    └── youtube/          # Downloaded media
+    └── youtube/             # Downloaded media
 ```
 
 ## ⚙️ Configuration
@@ -89,11 +88,11 @@ ${DOCKER_VOLUMES_PATH}/
 The stack creates the following volumes:
 
 - `${DOCKER_VOLUMES_PATH}/gluetun-pinchflat:/gluetun` - Gluetun configuration and data
-- `./config/auth-config.toml:/gluetun/auth/config.toml:ro` - Auth config (read-only bind mount)
+- `./entrypoint-wrapper.sh:/entrypoint-wrapper.sh:ro` - Entrypoint script (read-only bind mount)
 - `${DOCKER_VOLUMES_PATH}/pinchflat:/config` - Pinchflat configuration
 - `${DOCKER_VOLUMES_PATH}/media/youtube:/downloads` - Downloaded media
 
-**Note**: The auth config is stored in a `config/` subdirectory for compatibility with Portainer GitOps deployments.
+**Note**: Auth configuration is generated at runtime by `entrypoint-wrapper.sh` for Portainer GitOps compatibility.
 
 ## 🔒 Security Features
 
@@ -122,9 +121,9 @@ The Gluetun HTTP control server runs on port 8000 and provides:
 - **API access**: Programmatic control for rotation and management
 - **Status queries**: Check VPN status, IP, and connection details
 
-**Authentication**: Starting with Gluetun v3.40.0, the control server requires authentication by default. This stack uses an `auth-config.toml` file (bind-mounted from `./config/auth-config.toml` in the repo) to whitelist the `/v1/publicip/ip` endpoint for Docker healthchecks while maintaining security on other endpoints. Port 8000 is not exposed externally for security.
+**Authentication**: Starting with Gluetun v3.40.0, the control server requires authentication by default. This stack uses an `auth-config.toml` file that is **generated at runtime** by `entrypoint-wrapper.sh` to whitelist the `/v1/publicip/ip` endpoint for Docker healthchecks while maintaining security on other endpoints. Port 8000 is not exposed externally for security.
 
-**Portainer GitOps Compatibility**: The auth config file is stored in a `config/` subdirectory to ensure proper file handling when deployed via Portainer's GitOps feature. Config files in the root directory may be incorrectly created as directories during git sync operations.
+**Portainer GitOps Compatibility**: The auth config is generated at container startup instead of being bind-mounted from the repository. This avoids a known Portainer GitOps limitation where bind-mounted config files are incorrectly created as directories during git sync operations. The entrypoint script (`entrypoint-wrapper.sh`) creates the config file inside the container before Gluetun starts.
 
 **Note**: This is separate from `HTTPPROXY` (which is an HTTP proxy feature). The control server is required for the healthcheck to function properly.
 
