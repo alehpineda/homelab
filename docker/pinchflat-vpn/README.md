@@ -71,10 +71,12 @@ pinchflat-vpn/
 | `SERVER_COUNTRIES` | VPN server country | `United States` | ❌ |
 | `SERVER_CATEGORIES` | VPN server category | `Standard VPN servers` | ❌ |
 | `UPDATER_PERIOD` | How often to check for VPN updates | `24h` | ❌ |
+| `VPN_PORT_FORWARDING` | Enable port forwarding | `off` | ❌ |
 | `DOT` | Enable DNS over TLS | `on` | ❌ |
 | `DOT_PROVIDERS` | DoT provider | `cloudflare` | ❌ |
 | `DNS_ADDRESS` | Internal DNS address | `127.0.0.1` | ❌ |
 | `PINCHFLAT_PORT` | Pinchflat web UI port | `8945` | ❌ |
+| `GLUETUN_CONTROL_PORT` | Gluetun HTTP control server port | `8000` | ❌ |
 
 ### Volume Mappings
 
@@ -98,6 +100,85 @@ All traffic from Pinchflat is routed through Gluetun. If the VPN connection drop
 - `no-new-privileges:true` security option
 - Non-root user execution (PUID/PGID)
 - Network isolation via service networking
+
+### Startup Dependencies
+- Pinchflat waits for Gluetun to be healthy before starting
+- Health check ensures VPN connection is established via HTTP control server
+- Automatic 30-second grace period for VPN tunnel establishment
+- **IMPORTANT**: `HTTP_CONTROL_SERVER_ADDRESS` must be enabled for healthcheck to work
+
+### HTTP Control Server
+The Gluetun HTTP control server runs on port 8000 and provides:
+- **Health monitoring**: Healthcheck endpoint for Docker to verify VPN is connected
+- **API access**: Programmatic control for rotation and management
+- **Status queries**: Check VPN status, IP, and connection details
+
+**Note**: This is separate from `HTTPPROXY` (which is an HTTP proxy feature). The control server is required for the healthcheck to function properly.
+
+## 🔄 VPN IP Rotation (Anti-Rate Limiting)
+
+To avoid IP-based rate limiting from YouTube, you can set up automatic VPN IP rotation.
+
+### Option 1: Manual Rotation Script
+
+Use the provided script to manually rotate your VPN IP:
+
+```bash
+# Run the rotation script
+./rotate-vpn-ip.sh
+```
+
+This script:
+1. Checks current VPN IP
+2. Restarts Gluetun container
+3. Waits 30 seconds for reconnection
+4. Verifies new IP address
+5. Ensures Pinchflat restarts properly
+
+### Option 2: Automated Hourly Rotation (Recommended)
+
+Deploy automated VPN rotation using Ansible:
+
+```bash
+# From homelab/ansible directory
+ansible-playbook playbooks/configure-pinchflat-vpn-rotation.yml
+```
+
+This configures:
+- ✅ Hourly cron job for VPN rotation
+- ✅ Automatic IP rotation every 60 minutes
+- ✅ Logging to `/var/log/pinchflat-vpn-rotation.log`
+- ✅ Log rotation (7 days retention)
+
+**View rotation logs:**
+```bash
+# Real-time monitoring
+tail -f /var/log/pinchflat-vpn-rotation.log
+
+# Recent rotations
+tail -30 /var/log/pinchflat-vpn-rotation.log
+```
+
+**Disable rotation:**
+```bash
+# Remove cron job
+crontab -e
+# Delete the line: 0 * * * * cd /opt/docker/pinchflat-vpn && ./rotate-vpn-ip.sh
+```
+
+### Option 3: Gluetun Control Server (Advanced)
+
+Gluetun exposes a control server on port 8000 for programmatic control:
+
+```bash
+# Get current VPN IP
+curl http://localhost:8000/v1/publicip/ip
+
+# Get VPN status
+curl http://localhost:8000/v1/openvpn/status
+```
+
+You can build custom rotation logic using this API.
 
 ## 🛠️ Management Commands
 

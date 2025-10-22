@@ -11,6 +11,8 @@ services:
       - /dev/net/tun:/dev/net/tun
     ports:
       - "${PINCHFLAT_PORT:-8945}:8945"
+      # HTTP control server for VPN server rotation
+      - "${GLUETUN_CONTROL_PORT:-8000}:8000"
     volumes:
       - ${DOCKER_VOLUMES_PATH}/gluetun-pinchflat:/gluetun
     environment:
@@ -21,11 +23,28 @@ services:
       - TZ=${TZ:-UTC}
       - SERVER_COUNTRIES=${SERVER_COUNTRIES}
       - SERVER_CATEGORIES=${SERVER_CATEGORIES}
+      # Update VPN server list every 24 hours
       - UPDATER_PERIOD=${UPDATER_PERIOD:-24h}
+      # Enable VPN server rotation (change servers periodically)
+      - VPN_PORT_FORWARDING=${VPN_PORT_FORWARDING:-off}
+      # HTTP Control Server for health checks and API control
+      - HTTP_CONTROL_SERVER_ADDRESS=:8000
+      # Proxy services (not needed for control server)
+      - HTTPPROXY=${HTTPPROXY:-off}
+      - SHADOWSOCKS=${SHADOWSOCKS:-off}
+      # DNS Configuration
       - DOT=${DOT:-on}
       - DOT_PROVIDERS=${DOT_PROVIDERS:-cloudflare}
       - DNS_ADDRESS=${DNS_ADDRESS:-127.0.0.1}
+      # Health check settings
+      - HEALTH_VPN_DURATION_INITIAL=${HEALTH_VPN_DURATION_INITIAL:-20s}
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8000/v1/publicip/ip"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
     security_opt:
       - no-new-privileges:true
 
@@ -41,5 +60,6 @@ services:
       - ${DOCKER_VOLUMES_PATH}/pinchflat:/config
       - ${DOCKER_VOLUMES_PATH}/media/youtube:/downloads
     depends_on:
-      - gluetun
+      gluetun:
+        condition: service_healthy
     restart: unless-stopped
