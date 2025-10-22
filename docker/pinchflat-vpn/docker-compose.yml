@@ -29,6 +29,9 @@ services:
       - VPN_PORT_FORWARDING=${VPN_PORT_FORWARDING:-off}
       # HTTP Control Server for health checks and API control
       - HTTP_CONTROL_SERVER_ADDRESS=:8000
+      - HTTP_CONTROL_SERVER_LOG=on
+      # Disable auth for internal control server (not exposed to internet)
+      - HTTP_CONTROL_SERVER_AUTH=off
       # Proxy services (not needed for control server)
       - HTTPPROXY=${HTTPPROXY:-off}
       - SHADOWSOCKS=${SHADOWSOCKS:-off}
