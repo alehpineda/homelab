@@ -9,6 +9,7 @@ This stack provides:
 - **Gluetun**: VPN client supporting multiple VPN providers with kill-switch functionality
 - **DNS Leak Protection**: DNS-over-TLS (DoT) with Cloudflare
 - **Isolated Network**: All Pinchflat traffic routed through the VPN
+- **Portainer GitOps Compatible**: Directory-based bind mounts work reliably
 
 ## 🚀 Quick Start
 
@@ -45,7 +46,7 @@ This stack provides:
 ```
 pinchflat-vpn/
 ├── docker-compose.yml       # Main compose file
-├── config/
+├── auth/
 │   └── auth-config.toml     # Gluetun auth config (in version control)
 ├── .env                     # Your environment variables (not committed)
 ├── .env.example             # Example environment file
@@ -89,11 +90,11 @@ ${DOCKER_VOLUMES_PATH}/
 The stack creates the following volumes:
 
 - `${DOCKER_VOLUMES_PATH}/gluetun-pinchflat:/gluetun` - Gluetun configuration and data
-- `./config:/gluetun/auth:ro` - Auth configuration directory (read-only bind mount)
+- `./auth:/gluetun/auth:ro` - Auth configuration directory (read-only bind mount)
 - `${DOCKER_VOLUMES_PATH}/pinchflat:/config` - Pinchflat configuration
 - `${DOCKER_VOLUMES_PATH}/media/youtube:/downloads` - Downloaded media
 
-**Note**: The entire `config/` directory is bind-mounted instead of individual files for Portainer GitOps compatibility. Portainer handles directory mounts correctly but creates bind-mounted files as empty directories during git sync operations.
+**Portainer GitOps Note**: The entire `auth/` directory is bind-mounted instead of individual files. Portainer handles directory mounts correctly but creates bind-mounted files as empty directories during git sync operations.
 
 ## 🔒 Security Features
 
@@ -122,11 +123,9 @@ The Gluetun HTTP control server runs on port 8000 and provides:
 - **API access**: Programmatic control for rotation and management
 - **Status queries**: Check VPN status, IP, and connection details
 
-**Authentication**: Starting with Gluetun v3.40.0, the control server requires authentication by default. This stack uses an `auth-config.toml` file (stored in `config/auth-config.toml`) to whitelist the `/v1/publicip/ip` endpoint for Docker healthchecks while maintaining security on other endpoints. Port 8000 is not exposed externally for security.
+**Authentication**: Starting with Gluetun v3.40.0, the control server requires authentication by default. This stack uses an `auth-config.toml` file (stored in `auth/auth-config.toml`) to whitelist the `/v1/publicip/ip` endpoint for Docker healthchecks while maintaining security on other endpoints. Port 8000 is not exposed externally for security.
 
-**Portainer GitOps Compatibility**: The auth config directory (`./config`) is bind-mounted instead of the file directly. This avoids a known Portainer GitOps limitation where bind-mounted config **files** are incorrectly created as empty directories during git sync operations. Directory mounts work correctly in Portainer GitOps.
-
-**Note**: This is separate from `HTTPPROXY` (which is an HTTP proxy feature). The control server is required for the healthcheck to function properly.
+**Note**: This control server is separate from `HTTPPROXY` (which is an HTTP proxy feature). The control server is required for the healthcheck to function properly.
 
 ## 🔄 VPN IP Rotation (Anti-Rate Limiting)
 
@@ -242,12 +241,27 @@ docker-compose logs gluetun | grep "Connected"
 
 # Verify VPN IP (should show VPN server IP, not your real IP)
 docker exec gluetun-pinchflat wget -qO- https://ipinfo.io/ip
+
+# Test healthcheck endpoint
+curl -s http://localhost:8000/v1/publicip/ip
 ```
 
 ### Test DNS Leak Protection
 ```bash
 # Check DNS settings
 docker exec gluetun-pinchflat cat /etc/resolv.conf
+```
+
+### Verify Auth Configuration
+```bash
+# Check auth config is accessible inside container
+docker exec gluetun-pinchflat cat /gluetun/auth/auth-config.toml
+
+# Should output:
+# [[roles]]
+# name = "healthcheck"
+# routes = ["GET /v1/publicip/ip"]
+# auth = "none"
 ```
 
 ### Access Pinchflat UI
@@ -278,11 +292,94 @@ If port 8945 is already taken:
 1. Change `PINCHFLAT_PORT` in `.env`
 2. Restart: `docker-compose down && docker-compose up -d`
 
+### Healthcheck failing (401 Unauthorized)
+```bash
+# Verify auth config is properly mounted
+docker exec gluetun-pinchflat ls -la /gluetun/auth/
+
+# Check environment variable
+docker exec gluetun-pinchflat env | grep AUTH_CONFIG
+# Should show: HTTP_CONTROL_SERVER_AUTH_CONFIG_FILEPATH=/gluetun/auth/auth-config.toml
+
+# Verify auth config content
+docker exec gluetun-pinchflat cat /gluetun/auth/auth-config.toml
+```
+
+### Container won't start (Portainer deployments)
+```bash
+# Verify auth directory structure on host
+ls -la /data/compose/XX/docker/pinchflat-vpn/auth/
+# Should show auth-config.toml as a FILE (not directory)
+
+# If auth-config.toml is a directory, clean up and redeploy:
+sudo rm -rf /data/compose/XX/docker/pinchflat-vpn/auth
+# Then redeploy via Portainer UI: "Pull and redeploy"
+```
+
+## 🚀 Portainer GitOps Deployment
+
+### Why Directory Binding Works
+
+**Problem**: Portainer GitOps creates bind-mounted **files** as empty directories instead of pulling them from the repository.
+
+**Solution**: Bind-mount the **directory** containing the config file instead of binding the file directly.
+
+```yaml
+# ❌ DOESN'T WORK: Binding individual file
+volumes:
+  - ./auth/auth-config.toml:/gluetun/auth/config.toml:ro
+
+# ✅ WORKS: Binding directory containing file
+volumes:
+  - ./auth:/gluetun/auth:ro
+```
+
+**Why this works:**
+- Portainer CAN handle directory bind mounts ✅
+- Portainer CANNOT handle individual file bind mounts ❌
+- Directory binding is a standard Docker pattern and works reliably
+
+### Deployment Steps (Portainer)
+
+1. **Clean up previous failed deployments** (if needed):
+   ```bash
+   ssh bael.lan
+   sudo rm -rf /data/compose/XX/docker/pinchflat-vpn/auth
+   ```
+
+2. **Deploy via Portainer UI**:
+   - Navigate: **Stacks** → **pinchflat-vpn**
+   - Click **"Pull and redeploy"**
+   - Wait 60 seconds for containers to stabilize
+
+3. **Verify deployment**:
+   ```bash
+   # Check containers are healthy
+   docker ps --filter "name=pinchflat"
+   
+   # Verify directory structure
+   ls -la /data/compose/XX/docker/pinchflat-vpn/auth/
+   # Should show: auth-config.toml as a FILE
+   
+   # Test VPN connection
+   curl -s http://localhost:8000/v1/publicip/ip
+   ```
+
+### Success Criteria
+- [ ] Both containers show `(healthy)` status within 90 seconds
+- [ ] `auth/` created as directory (not file)
+- [ ] `auth-config.toml` is a file inside `auth/` (not a directory)
+- [ ] VPN public IP is different from home IP
+- [ ] Healthcheck endpoint returns 200 OK
+- [ ] No "Is a directory" errors in logs
+- [ ] Stack remains stable (no automatic restarts)
+
 ## 📚 Additional Resources
 
 - [Pinchflat Documentation](https://github.com/kieraneglin/pinchflat)
 - [Gluetun Documentation](https://github.com/qdm12/gluetun)
 - [Gluetun VPN Provider Setup](https://github.com/qdm12/gluetun-wiki/tree/main/setup/providers)
+- [Gluetun Control Server Auth](https://github.com/qdm12/gluetun/wiki/Control-server#authentication)
 - [WireGuard Setup Guide](https://www.wireguard.com/quickstart/)
 
 ## 🤝 Support
