@@ -68,7 +68,7 @@ Check Portainer stack environment variables are configured:
    - If it's a directory, Portainer GitOps is still having issues
 
 2. **Does the bind mount path match in docker-compose.yml?**
-   - Should be: `./config/auth-config.toml:/gluetun/auth/config.toml:ro`
+   - Should be: `./config:/gluetun/auth:ro`
 
 3. **Are there any permission issues?**
    - File should be readable (644 or similar)
