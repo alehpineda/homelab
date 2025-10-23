@@ -310,11 +310,14 @@ docker exec gluetun-pinchflat cat /gluetun/auth/auth-config.toml
 # Verify auth directory structure on host
 # NOTE: Replace 'XX' with your actual Portainer stack ID number.
 # You can find this by checking the stack details in the Portainer UI,
-# or by listing the folders in /data/compose/ on your host.
+# Verify auth directory structure on host
+# NOTE: Replace 'XX' in the path below with your actual Portainer stack ID number.
+# You can find the stack ID by navigating to your stack in the Portainer UI and checking the URL (e.g., `/compose/5/docker/...` means XX=5).
 ls -la /data/compose/XX/docker/pinchflat-vpn/auth/
 # Should show auth-config.toml as a FILE (not directory)
 
 # If auth-config.toml is a directory, clean up and redeploy:
+# NOTE: Again, replace 'XX' with your Portainer stack ID number.
 # Again, replace 'XX' with your Portainer stack ID.
 sudo rm -rf /data/compose/XX/docker/pinchflat-vpn/auth
 # Then redeploy via Portainer UI: "Pull and redeploy"
