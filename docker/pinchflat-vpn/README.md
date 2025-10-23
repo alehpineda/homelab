@@ -24,7 +24,7 @@ This stack provides:
 1. **Copy and edit the environment file:**
    ```bash
    cp .env.example .env
-   nano .env  # Edit with your values
+   # Edit .env with your preferred editor (e.g., nano .env, vim .env, code .env)
    ```
    
    Required changes:
