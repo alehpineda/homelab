@@ -1,0 +1,14 @@
+# Gluetun Control Server Authentication Configuration
+# 
+# This file whitelists specific routes to allow unauthenticated access
+# for healthcheck purposes while maintaining security on other endpoints.
+#
+# The /v1/publicip/ip endpoint is used by Docker healthcheck to verify
+# the VPN connection is active and the control server is responding.
+#
+# Reference: https://github.com/qdm12/gluetun-wiki/blob/main/setup/advanced/control-server.md
+
+[[roles]]
+name = "healthcheck"
+routes = ["GET /v1/publicip/ip"]
+auth = "none"
