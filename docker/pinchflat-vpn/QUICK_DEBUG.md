@@ -34,10 +34,10 @@ sleep 10 && docker ps -a | grep -E "(gluetun-pinchflat|pinchflat)"
 docker logs --tail 50 gluetun-pinchflat 2>&1
 
 # 11. Check if file is mounted in container
-docker exec gluetun-pinchflat ls -la /gluetun/auth/config.toml 2>&1
+docker exec gluetun-pinchflat ls -la /gluetun/auth/auth-config.toml 2>&1
 
 # 12. Try to read the file from inside container
-docker exec gluetun-pinchflat cat /gluetun/auth/config.toml 2>&1
+docker exec gluetun-pinchflat cat /gluetun/auth/auth-config.toml 2>&1
 ```
 
 ## If config/auth-config.toml is still a directory:
