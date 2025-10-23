@@ -90,7 +90,7 @@ echo ""
 echo "=== 10. Container Mount Inspection ==="
 if docker ps -a --format '{{.Names}}' | grep -q "gluetun-pinchflat"; then
     echo "Checking if auth-config.toml is properly mounted:"
-    docker inspect gluetun-pinchflat --format '{{json .Mounts}}' | jq '.[] | select(.Destination == "/gluetun/auth/config.toml")'
+    docker inspect gluetun-pinchflat --format '{{json .Mounts}}' | jq '.[] | select(.Destination == "/gluetun/auth")'
     
     echo ""
     echo "Verifying file exists inside container:"
