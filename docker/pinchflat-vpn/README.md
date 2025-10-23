@@ -45,7 +45,8 @@ This stack provides:
 ```
 pinchflat-vpn/
 ├── docker-compose.yml       # Main compose file
-├── entrypoint-wrapper.sh    # Runtime config generator (bind-mounted)
+├── config/
+│   └── auth-config.toml     # Gluetun auth config (in version control)
 ├── .env                     # Your environment variables (not committed)
 ├── .env.example             # Example environment file
 ├── README.md                # This file
@@ -88,11 +89,11 @@ ${DOCKER_VOLUMES_PATH}/
 The stack creates the following volumes:
 
 - `${DOCKER_VOLUMES_PATH}/gluetun-pinchflat:/gluetun` - Gluetun configuration and data
-- `./entrypoint-wrapper.sh:/entrypoint-wrapper.sh:ro` - Entrypoint script (read-only bind mount)
+- `./config:/gluetun/auth:ro` - Auth configuration directory (read-only bind mount)
 - `${DOCKER_VOLUMES_PATH}/pinchflat:/config` - Pinchflat configuration
 - `${DOCKER_VOLUMES_PATH}/media/youtube:/downloads` - Downloaded media
 
-**Note**: Auth configuration is generated at runtime by `entrypoint-wrapper.sh` for Portainer GitOps compatibility.
+**Note**: The entire `config/` directory is bind-mounted instead of individual files for Portainer GitOps compatibility. Portainer handles directory mounts correctly but creates bind-mounted files as empty directories during git sync operations.
 
 ## 🔒 Security Features
 
@@ -121,9 +122,9 @@ The Gluetun HTTP control server runs on port 8000 and provides:
 - **API access**: Programmatic control for rotation and management
 - **Status queries**: Check VPN status, IP, and connection details
 
-**Authentication**: Starting with Gluetun v3.40.0, the control server requires authentication by default. This stack uses an `auth-config.toml` file that is **generated at runtime** by `entrypoint-wrapper.sh` to whitelist the `/v1/publicip/ip` endpoint for Docker healthchecks while maintaining security on other endpoints. Port 8000 is not exposed externally for security.
+**Authentication**: Starting with Gluetun v3.40.0, the control server requires authentication by default. This stack uses an `auth-config.toml` file (stored in `config/auth-config.toml`) to whitelist the `/v1/publicip/ip` endpoint for Docker healthchecks while maintaining security on other endpoints. Port 8000 is not exposed externally for security.
 
-**Portainer GitOps Compatibility**: The auth config is generated at container startup instead of being bind-mounted from the repository. This avoids a known Portainer GitOps limitation where bind-mounted config files are incorrectly created as directories during git sync operations. The entrypoint script (`entrypoint-wrapper.sh`) creates the config file inside the container before Gluetun starts.
+**Portainer GitOps Compatibility**: The auth config directory (`./config`) is bind-mounted instead of the file directly. This avoids a known Portainer GitOps limitation where bind-mounted config **files** are incorrectly created as empty directories during git sync operations. Directory mounts work correctly in Portainer GitOps.
 
 **Note**: This is separate from `HTTPPROXY` (which is an HTTP proxy feature). The control server is required for the healthcheck to function properly.
 
