@@ -187,14 +187,36 @@ cd docker/arr-stack
 docker-compose up -d
 ```
 
-#### 7. Verify all services are running
+#### 7. Configure UFW firewall (Required for optimal downloads)
+
+**Open BitTorrent port for incoming peer connections:**
+```bash
+# Allow qBittorrent P2P traffic (required for optimal performance)
+sudo ufw allow 6881/tcp comment 'qBittorrent P2P'
+sudo ufw allow 6881/udp comment 'qBittorrent P2P'
+sudo ufw reload
+
+# Verify the rules
+sudo ufw status | grep 6881
+```
+
+**Why this is needed:**
+- ✅ Allows incoming peer connections (faster downloads)
+- ✅ Improves upload ratios and seeding capability
+- ✅ Increases available peer pool
+- ⚠️ Without this, you can only make outgoing connections (slower downloads)
+
+**Note:** You may also need to configure port forwarding on your router:
+- Forward external port `6881` (TCP + UDP) → Your server's internal IP
+
+#### 8. Verify all services are running
 ```bash
 docker-compose ps
 ```
 
 Expected: All 10 services showing "running" status.
 
-#### 8. Access services
+#### 9. Access services
 
 | Service | URL | Default Credentials |
 |---------|-----|-------------------|
@@ -220,6 +242,23 @@ docker logs qbittorrent | grep "temporary password"
 ### Breaking Changes in v2.0
 
 **Volume Structure Change:** This version consolidates multiple volume mounts into a unified `/data` path structure to enable hardlinks and eliminate file duplication.
+
+**Required Directory Structure:**
+```
+${DOCKER_VOLUMES_PATH}/media/
+├── downloads/          # qBittorrent download location
+│   ├── tv/            # Category: tv-sonarr
+│   ├── movies/        # Category: movies-radarr
+│   └── music/         # Category: music-lidarr
+├── tv/                # Sonarr managed library (hardlinked)
+├── movies/            # Radarr managed library (hardlinked)
+└── music/             # Lidarr managed library (hardlinked)
+```
+
+**What Changed:**
+- ❌ **Old:** Separate mounts: `/downloads`, `/tv`, `/movies`, `/music`
+- ✅ **New:** Single mount: `/data` (contains all subdirectories)
+- ✅ **Why:** Enables hardlinks (same filesystem requirement)
 
 ### Migration Steps
 
@@ -283,7 +322,7 @@ rm -rf ${DOCKER_VOLUMES_PATH}/qbittorrent/downloads
 
 ```bash
 # Pull the latest version
-git pull origin feature/arr-stack
+git pull origin master
 
 # Or manually update your docker-compose.yml with the new volume mounts
 ```
@@ -491,15 +530,13 @@ docker-compose up -d
    - Address: `sonarr`
    - Port: `8989`
    - API Key: (from Sonarr)
-   - Base URL: `/data`
-   - Path Mapping: `/data/tv`
+   - Base URL: (leave blank unless using a reverse proxy with path prefix)
 4. **Settings → Radarr:**
    - ✅ Enabled
    - Address: `radarr`
    - Port: `7878`
    - API Key: (from Radarr)
-   - Base URL: `/data`
-   - Path Mapping: `/data/movies`
+   - Base URL: (leave blank unless using a reverse proxy with path prefix)
 5. **Settings → Subtitles:**
    - Add subtitle providers (OpenSubtitles, etc.)
    - Configure languages (English, Spanish, etc.)
@@ -1594,8 +1631,9 @@ When deploying via Portainer:
 
 1. **VPN Account Required:** Active NordVPN subscription needed
 2. **Kill Switch:** qBittorrent cannot access internet without VPN (by design)
-3. **Port Forwarding:** NordVPN doesn't support it; consider different provider if needed
-4. **Legal Use:** Only download content you have legal right to download
+3. **Firewall Configuration:** You must open port 6881 (TCP+UDP) in UFW for optimal download speeds (see step 7 in Quick Start)
+4. **Port Forwarding:** NordVPN doesn't support it; consider different provider if needed
+5. **Legal Use:** Only download content you have legal right to download
 5. **Active Downloads:** Brief interruption during VPN reconnections (auto-resume)
 6. **Shared Connection:** Adjust bandwidth if others use your internet
 7. **FlareSolverr:** Only for Cloudflare-protected indexers (adds latency)
