@@ -7,6 +7,7 @@ A comprehensive Docker-based media automation stack with **10 services**, all pr
 - [Overview](#-overview)
 - [Services & Architecture](#-services--architecture)
 - [Quick Start](#-quick-start)
+- [Migration Guide](#-migration-guide-upgrading-from-previous-version) ⚠️ **Read if upgrading!**
 - [Initial Configuration](#️-initial-configuration)
 - [Advanced Features](#-advanced-features)
 - [Security & VPN Protection](#-security--vpn-protection)
@@ -27,6 +28,7 @@ A complete, VPN-protected media automation system that:
 - **Bypasses** Cloudflare protection on indexers
 - **Provides** user-friendly request interface for family/friends
 - **Ensures** complete privacy with DNS leak protection and kill switch
+- **Optimizes storage** using hardlinks to eliminate file duplication
 
 ### Services Included
 
@@ -141,10 +143,13 @@ TZ=America/Mexico_City   # Or your timezone
 ```
 
 #### 5. Create volume directories
+
+**Note:** This stack uses a unified `/data` mount structure to enable hardlinks and eliminate file duplication.
+
 ```bash
+# Create service configuration directories
 mkdir -p ${DOCKER_VOLUMES_PATH}/gluetun
 mkdir -p ${DOCKER_VOLUMES_PATH}/qbittorrent
-mkdir -p ${DOCKER_VOLUMES_PATH}/qbittorrent/downloads
 mkdir -p ${DOCKER_VOLUMES_PATH}/prowlarr
 mkdir -p ${DOCKER_VOLUMES_PATH}/sonarr
 mkdir -p ${DOCKER_VOLUMES_PATH}/radarr
@@ -152,8 +157,29 @@ mkdir -p ${DOCKER_VOLUMES_PATH}/lidarr
 mkdir -p ${DOCKER_VOLUMES_PATH}/bazarr
 mkdir -p ${DOCKER_VOLUMES_PATH}/jackett
 mkdir -p ${DOCKER_VOLUMES_PATH}/jellyseerr
+
+# Create unified media directory structure (required for hardlinks)
+mkdir -p ${DOCKER_VOLUMES_PATH}/media/downloads/{tv,movies,music}
 mkdir -p ${DOCKER_VOLUMES_PATH}/media/{tv,movies,music}
 ```
+
+**Directory Structure Explained:**
+```
+${DOCKER_VOLUMES_PATH}/media/
+├── downloads/          # qBittorrent saves files here
+│   ├── tv/            # TV show downloads (category: tv-sonarr)
+│   ├── movies/        # Movie downloads (category: movies-radarr)
+│   └── music/         # Music downloads (category: music-lidarr)
+├── tv/                # Sonarr hardlinks final TV shows here
+├── movies/            # Radarr hardlinks final movies here
+└── music/             # Lidarr hardlinks final music here
+```
+
+**Why This Structure?**
+- ✅ **No Duplication**: Files use hardlinks (same file, multiple locations)
+- ✅ **Continue Seeding**: qBittorrent keeps seeding from `/data/downloads`
+- ✅ **Organized Library**: *arr apps manage organized media in `/data/tv`, `/data/movies`, `/data/music`
+- ✅ **Space Efficient**: One copy on disk, appears in multiple places
 
 #### 6. Deploy the stack
 ```bash
@@ -161,14 +187,36 @@ cd docker/arr-stack
 docker-compose up -d
 ```
 
-#### 7. Verify all services are running
+#### 7. Configure UFW firewall (Required for optimal downloads)
+
+**Open BitTorrent port for incoming peer connections:**
+```bash
+# Allow qBittorrent P2P traffic (required for optimal performance)
+sudo ufw allow 6881/tcp comment 'qBittorrent P2P'
+sudo ufw allow 6881/udp comment 'qBittorrent P2P'
+sudo ufw reload
+
+# Verify the rules
+sudo ufw status | grep 6881
+```
+
+**Why this is needed:**
+- ✅ Allows incoming peer connections (faster downloads)
+- ✅ Improves upload ratios and seeding capability
+- ✅ Increases available peer pool
+- ⚠️ Without this, you can only make outgoing connections (slower downloads)
+
+**Note:** You may also need to configure port forwarding on your router:
+- Forward external port `6881` (TCP + UDP) → Your server's internal IP
+
+#### 8. Verify all services are running
 ```bash
 docker-compose ps
 ```
 
 Expected: All 10 services showing "running" status.
 
-#### 8. Access services
+#### 9. Access services
 
 | Service | URL | Default Credentials |
 |---------|-----|-------------------|
@@ -185,6 +233,186 @@ Expected: All 10 services showing "running" status.
 **Get qBittorrent password:**
 ```bash
 docker logs qbittorrent | grep "temporary password"
+```
+
+---
+
+## 🔄 Migration Guide (Upgrading from Previous Version)
+
+### Breaking Changes in v2.0
+
+**Volume Structure Change:** This version consolidates multiple volume mounts into a unified `/data` path structure to enable hardlinks and eliminate file duplication.
+
+**Required Directory Structure:**
+```
+${DOCKER_VOLUMES_PATH}/media/
+├── downloads/          # qBittorrent download location
+│   ├── tv/            # Category: tv-sonarr
+│   ├── movies/        # Category: movies-radarr
+│   └── music/         # Category: music-lidarr
+├── tv/                # Sonarr managed library (hardlinked)
+├── movies/            # Radarr managed library (hardlinked)
+└── music/             # Lidarr managed library (hardlinked)
+```
+
+**What Changed:**
+- ❌ **Old:** Separate mounts: `/downloads`, `/tv`, `/movies`, `/music`
+- ✅ **New:** Single mount: `/data` (contains all subdirectories)
+- ✅ **Why:** Enables hardlinks (same filesystem requirement)
+
+### Migration Steps
+
+#### 1. Backup Your Data
+
+```bash
+# Stop the current stack
+cd docker/arr-stack
+docker-compose down
+
+# Backup existing configuration
+tar -czf arr-stack-backup-$(date +%Y%m%d).tar.gz \
+  ${DOCKER_VOLUMES_PATH}/{gluetun,qbittorrent,prowlarr,sonarr,radarr,lidarr,bazarr,jellyseerr}
+
+# Backup existing media (if applicable)
+tar -czf media-backup-$(date +%Y%m%d).tar.gz \
+  ${DOCKER_VOLUMES_PATH}/media/
+```
+
+#### 2. Create New Directory Structure
+
+```bash
+# Create unified media structure
+mkdir -p ${DOCKER_VOLUMES_PATH}/media/downloads/{tv,movies,music}
+mkdir -p ${DOCKER_VOLUMES_PATH}/media/{tv,movies,music}
+```
+
+#### 3. Migrate Existing Downloads (if any)
+
+**Option A: Move files to new structure (recommended for active downloads)**
+```bash
+# If you have existing downloads in qbittorrent/downloads
+mv ${DOCKER_VOLUMES_PATH}/qbittorrent/downloads/* \
+   ${DOCKER_VOLUMES_PATH}/media/downloads/
+
+# Organize by type if needed
+mv ${DOCKER_VOLUMES_PATH}/media/downloads/*tv* ${DOCKER_VOLUMES_PATH}/media/downloads/tv/
+mv ${DOCKER_VOLUMES_PATH}/media/downloads/*movie* ${DOCKER_VOLUMES_PATH}/media/downloads/movies/
+```
+
+**Option B: Start fresh (recommended for new installations)**
+```bash
+# Remove old downloads directory
+rm -rf ${DOCKER_VOLUMES_PATH}/qbittorrent/downloads
+```
+
+#### 4. Migrate Existing Media Library
+
+**If you already have organized media:**
+```bash
+# Move existing media to new locations (if different from current structure)
+# Skip this if your media is already in ${DOCKER_VOLUMES_PATH}/media/{tv,movies,music}
+
+# Example:
+# mv /old/path/to/tv/* ${DOCKER_VOLUMES_PATH}/media/tv/
+# mv /old/path/to/movies/* ${DOCKER_VOLUMES_PATH}/media/movies/
+# mv /old/path/to/music/* ${DOCKER_VOLUMES_PATH}/media/music/
+```
+
+#### 5. Update docker-compose.yml
+
+```bash
+# Pull the latest version
+git pull origin master
+
+# Or manually update your docker-compose.yml with the new volume mounts
+```
+
+#### 6. Deploy Updated Stack
+
+```bash
+cd docker/arr-stack
+docker-compose up -d
+```
+
+#### 7. Reconfigure Services
+
+**You must reconfigure the following in each service:**
+
+**qBittorrent:**
+- Default Save Path: `/data/downloads`
+- Categories: Create `tv-sonarr`, `movies-radarr`, `music-lidarr`
+- Category paths: `/data/downloads/tv`, `/data/downloads/movies`, `/data/downloads/music`
+
+**Sonarr:**
+- Settings → Media Management → ✅ Use Hardlinks instead of Copy
+- Root Folder: Change from `/tv` to `/data/tv`
+- Re-add download client with category `tv-sonarr`
+
+**Radarr:**
+- Settings → Media Management → ✅ Use Hardlinks instead of Copy
+- Root Folder: Change from `/movies` to `/data/movies`
+- Re-add download client with category `movies-radarr`
+
+**Lidarr:**
+- Settings → Media Management → ✅ Use Hardlinks instead of Copy
+- Root Folder: Change from `/music` to `/data/music`
+- Re-add download client with category `music-lidarr`
+
+**Bazarr:**
+- Update Sonarr path to: `/data/tv`
+- Update Radarr path to: `/data/movies`
+
+#### 8. Verify Hardlinks Are Working
+
+```bash
+# Download a test file via Sonarr/Radarr
+# Then check if hardlinks were created:
+
+docker exec sonarr ls -li /data/downloads/tv/test-file.mkv
+docker exec sonarr ls -li /data/tv/Show/test-file.mkv
+
+# If the inode numbers (first column) match, hardlinks are working! ✓
+```
+
+#### 9. Clean Up Old Structure (Optional)
+
+**Only after verifying everything works:**
+```bash
+# Remove old downloads directory if you moved everything
+rm -rf ${DOCKER_VOLUMES_PATH}/qbittorrent/downloads
+```
+
+### Troubleshooting Migration
+
+**Services can't see media:**
+- Verify paths in each service UI match `/data/*` structure
+- Check permissions: `sudo chown -R 1000:1000 ${DOCKER_VOLUMES_PATH}/media`
+
+**Files are being copied instead of hardlinked:**
+- Ensure "Use Hardlinks instead of Copy" is enabled in *arr apps
+- Verify downloads and media are in the same `/data` parent directory
+- Check filesystem supports hardlinks (most modern filesystems do)
+
+**Active downloads lost:**
+- Re-add torrents manually in qBittorrent
+- Point to new location: `/data/downloads/[tv|movies|music]/`
+
+### Rollback Procedure
+
+If you need to rollback:
+```bash
+# Stop new stack
+docker-compose down
+
+# Restore from backup
+cd ${DOCKER_VOLUMES_PATH}
+tar -xzf /path/to/arr-stack-backup-YYYYMMDD.tar.gz
+
+# Checkout previous version
+git checkout <previous-commit>
+
+# Restart
+docker-compose up -d
 ```
 
 ---
@@ -223,8 +451,17 @@ docker logs qbittorrent | grep "temporary password"
 2. **Get password:** `docker logs qbittorrent | grep "temporary password"`
 3. **Login:** user: `admin`, password from logs
 4. **Set permanent password:** Tools → Options → Web UI
-5. **Configure bandwidth** (see [Bandwidth Management](#-bandwidth-management))
-6. **Save API credentials** for later use in *arr apps
+5. **Configure download paths:**
+   - Tools → Options → Downloads
+   - Default Save Path: `/data/downloads`
+   - **Create categories and paths:**
+     - Category: `tv-sonarr` → Path: `/data/downloads/tv`
+     - Category: `movies-radarr` → Path: `/data/downloads/movies`
+     - Category: `music-lidarr` → Path: `/data/downloads/music`
+6. **Configure bandwidth** (see [Bandwidth Management](#-bandwidth-management))
+7. **Save API credentials** for later use in *arr apps
+
+**Important:** The category paths are critical for hardlinks to work properly!
 
 ### Step 3: Configure Sonarr (TV Shows)
 
@@ -232,6 +469,7 @@ docker logs qbittorrent | grep "temporary password"
 2. **Settings → Media Management:**
    - ✅ Rename Episodes
    - ✅ Replace Illegal Characters
+   - ✅ **Use Hardlinks instead of Copy** ← IMPORTANT!
    - Episode Format: `{Series Title} - S{season:00}E{episode:00} - {Episode Title}`
 3. **Settings → Download Clients:**
    - Add → qBittorrent
@@ -240,9 +478,10 @@ docker logs qbittorrent | grep "temporary password"
    - Username: `admin`
    - Password: (your qBittorrent password)
    - Category: `tv-sonarr`
+   - ❌ **Remove Completed** (keep seeding!)
 4. **Settings → General → Security:**
    - Set API Key (save this!)
-5. **Add Root Folder:** `/tv`
+5. **Add Root Folder:** `/data/tv`
 
 ### Step 4: Configure Radarr (Movies)
 
@@ -250,6 +489,7 @@ docker logs qbittorrent | grep "temporary password"
 2. **Settings → Media Management:**
    - ✅ Rename Movies
    - ✅ Replace Illegal Characters
+   - ✅ **Use Hardlinks instead of Copy** ← IMPORTANT!
    - Movie Format: `{Movie Title} ({Release Year})`
 3. **Settings → Download Clients:**
    - Add → qBittorrent
@@ -258,15 +498,17 @@ docker logs qbittorrent | grep "temporary password"
    - Username: `admin`
    - Password: (your qBittorrent password)
    - Category: `movies-radarr`
+   - ❌ **Remove Completed** (keep seeding!)
 4. **Settings → General → Security:**
    - Set API Key (save this!)
-5. **Add Root Folder:** `/movies`
+5. **Add Root Folder:** `/data/movies`
 
 ### Step 5: Configure Lidarr (Music)
 
 1. **Access:** http://localhost:8686
 2. **Settings → Media Management:**
    - ✅ Rename Tracks
+   - ✅ **Use Hardlinks instead of Copy** ← IMPORTANT!
    - Standard Track Format: `{Artist Name} - {Album Title} - {track:00} - {Track Title}`
 3. **Settings → Download Clients:**
    - Add → qBittorrent
@@ -275,7 +517,8 @@ docker logs qbittorrent | grep "temporary password"
    - Username: `admin`
    - Password: (your qBittorrent password)
    - Category: `music-lidarr`
-4. **Add Root Folder:** `/music`
+   - ❌ **Remove Completed** (keep seeding!)
+4. **Add Root Folder:** `/data/music`
 
 ### Step 6: Configure Bazarr (Subtitles)
 
@@ -287,11 +530,13 @@ docker logs qbittorrent | grep "temporary password"
    - Address: `sonarr`
    - Port: `8989`
    - API Key: (from Sonarr)
+   - Base URL: (leave blank unless using a reverse proxy with path prefix)
 4. **Settings → Radarr:**
    - ✅ Enabled
    - Address: `radarr`
    - Port: `7878`
    - API Key: (from Radarr)
+   - Base URL: (leave blank unless using a reverse proxy with path prefix)
 5. **Settings → Subtitles:**
    - Add subtitle providers (OpenSubtitles, etc.)
    - Configure languages (English, Spanish, etc.)
@@ -442,6 +687,54 @@ If you don't:
 ---
 
 ## 🎨 Advanced Features
+
+### Hardlinks & Storage Optimization
+
+**What are Hardlinks?**
+
+Hardlinks allow the same file to exist in multiple locations without duplicating disk space. Instead of copying the file, the filesystem creates a new directory entry pointing to the same data.
+
+**How It Works:**
+```
+Before (Copy - Wastes Space):
+/data/downloads/movies/Movie.mkv       [10 GB]
+/data/movies/Movie (2024)/Movie.mkv    [10 GB]  ← DUPLICATE!
+Total: 20 GB used
+
+After (Hardlink - No Duplication):
+/data/downloads/movies/Movie.mkv       [10 GB]
+/data/movies/Movie (2024)/Movie.mkv    [Points to same data]
+Total: 10 GB used (50% space saved!)
+```
+
+**Benefits:**
+- ✅ **No Duplication**: One copy on disk, appears in multiple places
+- ✅ **Continue Seeding**: qBittorrent keeps seeding from `/data/downloads`
+- ✅ **Organized Library**: *arr apps manage clean structure in `/data/tv`, `/data/movies`, `/data/music`
+- ✅ **Delete Safety**: File persists until removed from ALL locations
+- ✅ **Instant Moves**: No data copying, instant "relocation"
+
+**Requirements:**
+- ✅ Same filesystem/volume (why we use `/data` parent directory)
+- ✅ Hardlinks enabled in *arr apps (Settings → Media Management)
+- ✅ Download client categories configured correctly
+
+**Verify Hardlinks Are Working:**
+```bash
+# Check inode numbers (should match if hardlinked)
+docker exec sonarr ls -li /data/downloads/tv/show.mkv
+docker exec sonarr ls -li /data/tv/Show/Season/show.mkv
+
+# If first column (inode) matches → hardlinks working! ✓
+```
+
+**Important Notes:**
+- Hardlinks only work within same filesystem
+- Deleting from one location doesn't affect the other
+- Space freed only when file deleted from ALL hardlinked locations
+- Cannot hardlink across different mount points
+
+---
 
 ### Quality Profiles (Recommended)
 
@@ -1199,12 +1492,12 @@ All configuration via `.env` file:
 
 ### Directory Structure
 
+**Updated in v2.0:** Unified `/data` mount structure for hardlink support.
+
 ```
 ${DOCKER_VOLUMES_PATH}/
 ├── gluetun/              # VPN configuration
-├── qbittorrent/
-│   ├── config/           # qBittorrent settings
-│   └── downloads/        # Downloaded files
+├── qbittorrent/          # qBittorrent configuration only
 ├── prowlarr/             # Prowlarr configuration
 ├── sonarr/               # Sonarr configuration
 ├── radarr/               # Radarr configuration
@@ -1213,11 +1506,21 @@ ${DOCKER_VOLUMES_PATH}/
 ├── jackett/              # Jackett configuration
 ├── flaresolverr/         # FlareSolverr (minimal data)
 ├── jellyseerr/           # Jellyseerr configuration
-└── media/
-    ├── tv/               # Organized TV shows
-    ├── movies/           # Organized movies
-    └── music/            # Organized music
+└── media/                # Unified media directory (shared by all services)
+    ├── downloads/        # qBittorrent download location
+    │   ├── tv/          # TV downloads (category: tv-sonarr)
+    │   ├── movies/      # Movie downloads (category: movies-radarr)
+    │   └── music/       # Music downloads (category: music-lidarr)
+    ├── tv/              # Sonarr organized TV (hardlinked from downloads)
+    ├── movies/          # Radarr organized movies (hardlinked from downloads)
+    └── music/           # Lidarr organized music (hardlinked from downloads)
 ```
+
+**Key Changes from Previous Version:**
+- ❌ **Removed:** `${DOCKER_VOLUMES_PATH}/qbittorrent/downloads` 
+- ✅ **Added:** `${DOCKER_VOLUMES_PATH}/media/downloads/{tv,movies,music}`
+- ✅ **Changed:** All services mount `${DOCKER_VOLUMES_PATH}/media:/data`
+- ✅ **Benefit:** Hardlinks eliminate file duplication while maintaining seeding
 
 ### Service URLs Quick Reference
 
@@ -1311,22 +1614,32 @@ When deploying via Portainer:
 
 ### Version Information
 
+- **Stack Version:** `v2.0` (Hardlinks support)
 - **Gluetun:** `v3.40.0` (Latest stable as of Oct 2025)
 - **qBittorrent:** `5.1.2` (Latest stable as of Sept 2025)
 - **Compose Version:** 3.9
 - **Total Services:** 10 (all VPN protected)
-- **Last Updated:** October 11, 2025
+- **Last Updated:** October 23, 2025
+
+**What's New in v2.0:**
+- ✨ Unified `/data` volume structure for hardlink support
+- ✨ Eliminates file duplication (saves 50% disk space)
+- ✨ Maintains seeding while organizing library
+- ⚠️ Breaking change - requires migration (see [Migration Guide](#-migration-guide-upgrading-from-previous-version))
 
 ### Important Notes
 
 1. **VPN Account Required:** Active NordVPN subscription needed
 2. **Kill Switch:** qBittorrent cannot access internet without VPN (by design)
-3. **Port Forwarding:** NordVPN doesn't support it; consider different provider if needed
-4. **Legal Use:** Only download content you have legal right to download
+3. **Firewall Configuration:** You must open port 6881 (TCP+UDP) in UFW for optimal download speeds (see step 7 in Quick Start)
+4. **Port Forwarding:** NordVPN doesn't support it; consider different provider if needed
+5. **Legal Use:** Only download content you have legal right to download
 5. **Active Downloads:** Brief interruption during VPN reconnections (auto-resume)
 6. **Shared Connection:** Adjust bandwidth if others use your internet
 7. **FlareSolverr:** Only for Cloudflare-protected indexers (adds latency)
 8. **Jellyseerr:** Perfect for family sharing with request limits
+9. **Hardlinks:** Require same filesystem - ensure `/data` is on single volume
+10. **Migration:** Upgrading from v1.x? See [Migration Guide](#-migration-guide-upgrading-from-previous-version)
 
 ---
 
