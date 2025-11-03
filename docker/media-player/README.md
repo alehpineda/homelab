@@ -26,6 +26,7 @@ Both servers have access to the same media libraries:
 - **Movies**: `${DOCKER_VOLUMES_PATH}/media/movies`
 - **Music**: `${DOCKER_VOLUMES_PATH}/media/music`
 - **YouTube**: `${DOCKER_VOLUMES_PATH}/media/youtube` (from Pinchflat)
+- **Downloads**: `${DOCKER_VOLUMES_PATH}/media/downloads` (active downloads from qBittorrent via arr-stack)
 
 ## Setup Instructions
 
@@ -64,7 +65,7 @@ PLEX_CLAIM=
 Ensure the media directories exist:
 
 ```bash
-mkdir -p ${DOCKER_VOLUMES_PATH}/media/{tv,movies,music,youtube}
+mkdir -p ${DOCKER_VOLUMES_PATH}/media/{tv,movies,music,youtube,downloads}
 mkdir -p ${DOCKER_VOLUMES_PATH}/{jellyfin,plex}
 ```
 
@@ -110,6 +111,7 @@ docker-compose logs -f plex
   - `/data/movies` for movies
   - `/data/music` for music
   - `/data/youtube` for YouTube downloads (from Pinchflat)
+  - `/data/downloads` for active downloads (optional - from qBittorrent via arr-stack)
 
 ### Plex
 - Complete the initial setup wizard in the web UI
@@ -118,6 +120,7 @@ docker-compose logs -f plex
   - `/movies` for movies
   - `/music` for music
   - `/youtube` for YouTube downloads (from Pinchflat)
+  - `/downloads` for active downloads (optional - from qBittorrent via arr-stack)
 
 ## Networking
 
