@@ -66,7 +66,7 @@ Ensure the media directories exist:
 
 ```bash
 mkdir -p ${DOCKER_VOLUMES_PATH}/media/{tv,movies,music,youtube,downloads}
-mkdir -p ${DOCKER_VOLUMES_PATH}/{jellyfin,plex}
+mkdir -p ${DOCKER_VOLUMES_PATH}/jellyfin
 ```
 
 ### 3. Plex Initial Setup (Optional)
