@@ -34,11 +34,16 @@ services:
       - SERVER_COUNTRIES=${SERVER_COUNTRIES}
       - SERVER_CATEGORIES=${SERVER_CATEGORIES}
       - UPDATER_PERIOD=${UPDATER_PERIOD:-24h}
-      - DOT=${DOT:-off}
-      - DOT_PROVIDERS=${DOT_PROVIDERS:-cloudflare}
+      - DOT=${DOT:-on}
+      - DOT_PROVIDERS=${DOT_PROVIDERS:-quad9}
+      - DOT_IPV6=${DOT_IPV6:-off}
       - DNS_ADDRESS=${DNS_ADDRESS:-127.0.0.1}
       - FIREWALL_VPN_INPUT_PORTS=${GLUETUN_BITTORRENT_PORT:-6881}
-      - SHADOWSOCKS=${SHADOWSOCKS:-on}
+      - SHADOWSOCKS=${SHADOWSOCKS:-off}
+    sysctls:
+      - net.ipv6.conf.all.disable_ipv6=1
+      - net.ipv6.conf.default.disable_ipv6=1
+      - net.ipv6.conf.lo.disable_ipv6=1
     restart: unless-stopped
     security_opt:
       - no-new-privileges:true
