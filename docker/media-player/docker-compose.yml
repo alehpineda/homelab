@@ -14,31 +14,12 @@ services:
       - ${DOCKER_VOLUMES_PATH}/media/movies:/data/movies
       - ${DOCKER_VOLUMES_PATH}/media/music:/data/music
       - ${DOCKER_VOLUMES_PATH}/media/youtube:/data/youtube
+      - ${DOCKER_VOLUMES_PATH}/media/downloads:/data/downloads
     ports:
       - "${JELLYFIN_PORT:-8096}:8096"
       - "${JELLYFIN_HTTPS_PORT:-8920}:8920"
       - "${JELLYFIN_DLNA_PORT:-1900}:1900/udp"
       - "${JELLYFIN_DISCOVERY_PORT:-7359}:7359/udp"
-    restart: unless-stopped
-    security_opt:
-      - no-new-privileges:true
-
-  plex:
-    image: lscr.io/linuxserver/plex:latest
-    container_name: plex
-    network_mode: host
-    environment:
-      - PUID=${PUID:-1000}
-      - PGID=${PGID:-1000}
-      - TZ=${TZ:-UTC}
-      - VERSION=docker
-      - PLEX_CLAIM=${PLEX_CLAIM:-}
-    volumes:
-      - ${DOCKER_VOLUMES_PATH}/plex:/config
-      - ${DOCKER_VOLUMES_PATH}/media/tv:/tv
-      - ${DOCKER_VOLUMES_PATH}/media/movies:/movies
-      - ${DOCKER_VOLUMES_PATH}/media/music:/music
-      - ${DOCKER_VOLUMES_PATH}/media/youtube:/youtube
     restart: unless-stopped
     security_opt:
       - no-new-privileges:true
