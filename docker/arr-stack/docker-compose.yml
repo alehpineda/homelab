@@ -21,8 +21,8 @@ services:
       - "${JACKETT_PORT:-9117}:9117"
       - "${FLARESOLVERR_PORT:-8191}:8191"
       - "${JELLYSEERR_PORT:-5055}:5055"
-      - "${SHADOWSOCKS_PORT:-8388}:8388/tcp"
-      - "${SHADOWSOCKS_PORT:-8388}:8388/udp"
+      - "${SOCKS5_PROXY_PORT:-1080}:1080"
+      - "${HTTP_PROXY_PORT:-8888}:8888"
     volumes:
       - ${DOCKER_VOLUMES_PATH}/gluetun:/gluetun
     environment:
@@ -39,7 +39,8 @@ services:
       - DOT_IPV6=${DOT_IPV6:-off}
       - DNS_ADDRESS=${DNS_ADDRESS:-127.0.0.1}
       - FIREWALL_VPN_INPUT_PORTS=${GLUETUN_BITTORRENT_PORT:-6881}
-      - SHADOWSOCKS=${SHADOWSOCKS:-on}
+      - HTTPPROXY=${HTTPPROXY:-on}
+      - SHADOWSOCKS=${SHADOWSOCKS:-off}
     sysctls:
       - net.ipv6.conf.all.disable_ipv6=1
       - net.ipv6.conf.default.disable_ipv6=1
