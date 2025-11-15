@@ -14,9 +14,11 @@ services:
       - "445:445"
     volumes:
       - ${STORAGE_PATH}:/storage
+      - ${ARCADE_PATH:-/mnt/arcade}:/arcade
     command: >
       -u "${SAMBA_USER:-deathscythe};${SAMBA_PASSWORD}"
       -s "storage;/storage;yes;no;no;${SAMBA_USER:-deathscythe};${SAMBA_USER:-deathscythe};Storage Share"
+      -s "arcade;/arcade;yes;no;no;${SAMBA_USER:-deathscythe};${SAMBA_USER:-deathscythe};Arcade ROMs"
       -p
     networks:
       - samba-net
