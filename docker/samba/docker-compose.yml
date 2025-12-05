@@ -1,5 +1,3 @@
-version: '3.9'
-
 services:
   samba:
     image: dperson/samba:latest
@@ -16,6 +14,7 @@ services:
       - ${STORAGE_PATH}:/storage
       - ${ARCADE_PATH:-/mnt/arcade}:/arcade
     command: >
+      -r
       -u "${SAMBA_USER:-deathscythe};${SAMBA_PASSWORD}"
       -s "storage;/storage;yes;no;no;${SAMBA_USER:-deathscythe};${SAMBA_USER:-deathscythe};Storage Share"
       -s "arcade;/arcade;yes;no;no;${SAMBA_USER:-deathscythe};${SAMBA_USER:-deathscythe};Arcade ROMs"
