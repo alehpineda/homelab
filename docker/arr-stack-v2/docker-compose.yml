@@ -43,6 +43,7 @@ services:
       - DOT=${DOT:-on}
       - DOT_PROVIDERS=${DOT_PROVIDERS:-quad9}
       - DNS_ADDRESS=${DNS_ADDRESS:-127.0.0.1}
+      - DOT_IPV6=${DOT_IPV6:-off}
 
       # Optional VPN port forwarding (mainly for pinchflat use-case; default off)
       - VPN_PORT_FORWARDING=${VPN_PORT_FORWARDING:-off}
