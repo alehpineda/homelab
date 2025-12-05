@@ -1,15 +1,14 @@
-version: '3.9'
-
 services:
   gluetun:
     image: qmcgaw/gluetun:latest
-    container_name: gluetun
-    hostname: gluetun
+    container_name: gluetun-arr-stack-v2
+    hostname: gluetun-arr-stack-v2
     cap_add:
       - NET_ADMIN
     devices:
       - /dev/net/tun:/dev/net/tun
     ports:
+      # qBittorrent + *arr stack ports (from arr-stack)
       - "${GLUETUN_BITTORRENT_PORT:-6881}:6881"
       - "${GLUETUN_BITTORRENT_PORT:-6881}:6881/udp"
       - "${QBITTORRENT_WEBUI_PORT:-8085}:8085"
@@ -21,9 +20,14 @@ services:
       - "${JACKETT_PORT:-9117}:9117"
       - "${FLARESOLVERR_PORT:-8191}:8191"
       - "${JELLYSEERR_PORT:-5055}:5055"
+      # Pinchflat UI and Gluetun control API (from pinchflat-vpn)
+      - "${PINCHFLAT_PORT:-8945}:8945"
+      - "${GLUETUN_CONTROL_PORT:-8000}:8000"
     volumes:
-      - ${DOCKER_VOLUMES_PATH}/gluetun:/gluetun
+      - ${DOCKER_VOLUMES_PATH}/gluetun-arr-stack-v2:/gluetun
+      - ./auth:/gluetun/auth:ro
     environment:
+      # VPN core settings
       - VPN_SERVICE_PROVIDER=${VPN_SERVICE_PROVIDER}
       - VPN_TYPE=${VPN_TYPE}
       - WIREGUARD_PRIVATE_KEY=${WIREGUARD_PRIVATE_KEY}
@@ -32,11 +36,31 @@ services:
       - SERVER_COUNTRIES=${SERVER_COUNTRIES}
       - SERVER_CATEGORIES=${SERVER_CATEGORIES}
       - UPDATER_PERIOD=${UPDATER_PERIOD:-24h}
+
+      # DNS / DoT (prefer arr-stack defaults but keep compatible with pinchflat)
       - DOT=${DOT:-on}
       - DOT_PROVIDERS=${DOT_PROVIDERS:-quad9}
-      - DOT_IPV6=${DOT_IPV6:-off}
       - DNS_ADDRESS=${DNS_ADDRESS:-127.0.0.1}
+      - DOT_IPV6=${DOT_IPV6:-off}
+
+      # Optional VPN port forwarding (mainly for pinchflat use-case; default off)
+      - VPN_PORT_FORWARDING=${VPN_PORT_FORWARDING:-off}
+
+      # HTTP control server (from pinchflat-vpn compose / .env.example)
+      - HTTP_CONTROL_SERVER_ADDRESS=:8000
+      - HTTP_CONTROL_SERVER_LOG=on
+      - HTTP_CONTROL_SERVER_AUTH_CONFIG_FILEPATH=/gluetun/auth/auth-config.toml
+
+      # Disable proxies by default
+      - HTTPPROXY=${HTTPPROXY:-off}
+      - SHADOWSOCKS=${SHADOWSOCKS:-off}
+
+      # Gluetun firewall for bittorrent port
       - FIREWALL_VPN_INPUT_PORTS=${GLUETUN_BITTORRENT_PORT:-6881}
+
+      # Health-related tuning (no custom Docker healthcheck; just Gluetun internals)
+      - HEALTH_VPN_DURATION_INITIAL=${HEALTH_VPN_DURATION_INITIAL:-20s}
+
     sysctls:
       - net.ipv6.conf.all.disable_ipv6=1
       - net.ipv6.conf.default.disable_ipv6=1
@@ -173,6 +197,21 @@ services:
       - TZ=${TZ:-UTC}
     volumes:
       - ${DOCKER_VOLUMES_PATH}/jellyseerr:/app/config
+    depends_on:
+      - gluetun
+    restart: unless-stopped
+
+  pinchflat:
+    image: ghcr.io/kieraneglin/pinchflat:latest
+    container_name: pinchflat
+    network_mode: "service:gluetun"
+    environment:
+      - TZ=${TZ:-UTC}
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+    volumes:
+      - ${DOCKER_VOLUMES_PATH}/pinchflat:/config
+      - ${DOCKER_VOLUMES_PATH}/media/youtube:/downloads
     depends_on:
       - gluetun
     restart: unless-stopped
