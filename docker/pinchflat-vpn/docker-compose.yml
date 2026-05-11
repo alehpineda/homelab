@@ -40,6 +40,8 @@ services:
       # DNS Configuration
       - DNS_SERVER=${DNS_SERVER:-on}
       - DNS_UPSTREAM_RESOLVERS=${DNS_UPSTREAM_RESOLVERS:-cloudflare}
+      # Disable upstream IPv6 DNS by default for consistency and leak-protection expectations
+      - DNS_UPSTREAM_IPV6=${DNS_UPSTREAM_IPV6:-off}
       # Health check settings
       - HEALTH_VPN_DURATION_INITIAL=${HEALTH_VPN_DURATION_INITIAL:-20s}
     restart: unless-stopped
