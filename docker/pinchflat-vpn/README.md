@@ -81,6 +81,7 @@ ${DOCKER_VOLUMES_PATH}/
 | `VPN_PORT_FORWARDING` | Enable port forwarding | `off` | ❌ |
 | `DNS_SERVER` | Enable Gluetun's DNS server | `on` | ❌ |
 | `DNS_UPSTREAM_RESOLVERS` | Upstream DNS provider | `cloudflare` | ❌ |
+| `DNS_UPSTREAM_IPV6` | Enable IPv6 for upstream DNS resolvers | `off` | ❌ |
 | `PINCHFLAT_PORT` | Pinchflat web UI port | `8945` | ❌ |
 | `GLUETUN_CONTROL_PORT` | Gluetun HTTP control server port | `8000` | ❌ |
 
