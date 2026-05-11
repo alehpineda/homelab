@@ -38,9 +38,10 @@ services:
       - HTTPPROXY=${HTTPPROXY:-off}
       - SHADOWSOCKS=${SHADOWSOCKS:-off}
       # DNS Configuration
-      - DOT=${DOT:-on}
-      - DOT_PROVIDERS=${DOT_PROVIDERS:-cloudflare}
-      - DNS_ADDRESS=${DNS_ADDRESS:-127.0.0.1}
+      - DNS_SERVER=${DNS_SERVER:-on}
+      - DNS_UPSTREAM_RESOLVERS=${DNS_UPSTREAM_RESOLVERS:-cloudflare}
+      # Disable upstream IPv6 DNS by default for consistency and leak-protection expectations
+      - DNS_UPSTREAM_IPV6=${DNS_UPSTREAM_IPV6:-off}
       # Health check settings
       - HEALTH_VPN_DURATION_INITIAL=${HEALTH_VPN_DURATION_INITIAL:-20s}
     restart: unless-stopped

@@ -38,10 +38,9 @@ services:
       - UPDATER_PERIOD=${UPDATER_PERIOD:-24h}
 
       # DNS / DoT (prefer arr-stack defaults but keep compatible with pinchflat)
-      - DOT=${DOT:-on}
-      - DOT_PROVIDERS=${DOT_PROVIDERS:-quad9}
-      - DNS_ADDRESS=${DNS_ADDRESS:-127.0.0.1}
-      - DOT_IPV6=${DOT_IPV6:-off}
+      - DNS_SERVER=${DNS_SERVER:-on}
+      - DNS_UPSTREAM_RESOLVERS=${DNS_UPSTREAM_RESOLVERS:-quad9}
+      - DNS_UPSTREAM_IPV6=${DNS_UPSTREAM_IPV6:-off}
 
       # Optional VPN port forwarding (mainly for pinchflat use-case; default off)
       - VPN_PORT_FORWARDING=${VPN_PORT_FORWARDING:-off}

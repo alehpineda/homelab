@@ -1,0 +1,7 @@
+# Ansible vault password file
+.vault_password_file
+
+# Backup files
+*.backup
+*.bak
+*~
