@@ -837,7 +837,7 @@ qbittorrent:
 
 #### 2. DNS Leak Protection ✅
 
-- DNS over TLS (DoT) enabled with Cloudflare
+- DNS over TLS (DoT) enabled with Quad9
 - All DNS queries encrypted via TLS
 - Gluetun runs its own DNS server (127.0.0.1)
 - No DNS queries leak to your ISP
@@ -851,7 +851,7 @@ Gluetun's DNS Server (127.0.0.1:53)
     ↓
 DNS over TLS (encrypted)
     ↓
-Cloudflare (1.1.1.1) via VPN Tunnel
+Quad9 (9.9.9.9) via VPN Tunnel
     ↓
 Internet
 ```
@@ -860,13 +860,13 @@ Internet
 1. Encrypted DNS: Queries encrypted with TLS
 2. No ISP snooping: Your ISP can't see DNS queries
 3. VPN tunnel: All DNS traffic through VPN
-4. Privacy: Cloudflare doesn't log queries
+4. Resolver flexibility: switch providers without changing app containers
 
 **DNS Configuration (in `.env`):**
 ```bash
-DOT=on                      # DNS over TLS enabled
-DOT_PROVIDERS=cloudflare    # Using Cloudflare (1.1.1.1)
-DNS_ADDRESS=127.0.0.1       # Gluetun's internal DNS server
+DNS_SERVER=on                         # Gluetun DNS server enabled
+DNS_UPSTREAM_RESOLVERS=quad9          # Using Quad9 (9.9.9.9)
+DNS_UPSTREAM_IPV6=off                 # Keep upstream IPv6 DNS disabled
 ```
 
 **Available DNS Providers:**
@@ -1307,7 +1307,7 @@ docker logs gluetun | grep -i "vpn\|connected\|error"
    ```bash
    docker logs gluetun | grep "DNS over TLS"
    ```
-2. Check DoT providers setting in `.env`
+2. Check `DNS_UPSTREAM_RESOLVERS` in `.env`
 3. Restart: `docker-compose restart`
 
 #### Kill switch not working
@@ -1462,9 +1462,9 @@ All configuration via `.env` file:
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `DOT` | `on` | DNS over TLS enabled |
-| `DOT_PROVIDERS` | `cloudflare` | DNS provider |
-| `DNS_ADDRESS` | `127.0.0.1` | Gluetun's internal DNS |
+| `DNS_SERVER` | `on` | Enable Gluetun's built-in DNS server |
+| `DNS_UPSTREAM_RESOLVERS` | `quad9` | Upstream DNS provider |
+| `DNS_UPSTREAM_IPV6` | `off` | Disable upstream IPv6 DNS lookups |
 
 #### qBittorrent Settings
 

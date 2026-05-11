@@ -79,9 +79,8 @@ ${DOCKER_VOLUMES_PATH}/
 | `SERVER_CATEGORIES` | VPN server category | `Standard VPN servers` | ❌ |
 | `UPDATER_PERIOD` | How often to check for VPN updates | `24h` | ❌ |
 | `VPN_PORT_FORWARDING` | Enable port forwarding | `off` | ❌ |
-| `DOT` | Enable DNS over TLS | `on` | ❌ |
-| `DOT_PROVIDERS` | DoT provider | `cloudflare` | ❌ |
-| `DNS_ADDRESS` | Internal DNS address | `127.0.0.1` | ❌ |
+| `DNS_SERVER` | Enable Gluetun's DNS server | `on` | ❌ |
+| `DNS_UPSTREAM_RESOLVERS` | Upstream DNS provider | `cloudflare` | ❌ |
 | `PINCHFLAT_PORT` | Pinchflat web UI port | `8945` | ❌ |
 | `GLUETUN_CONTROL_PORT` | Gluetun HTTP control server port | `8000` | ❌ |
 
