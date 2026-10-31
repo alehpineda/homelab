@@ -1,0 +1,8 @@
+---
+# Connectivity smoke. Does not configure guests or change packages.
+- name: Ping inventoried hosts
+  hosts: all
+  gather_facts: false
+  tasks:
+    - name: Check SSH connectivity
+      ansible.builtin.ping:

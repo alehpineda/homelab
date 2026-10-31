@@ -1,0 +1,9 @@
+# Non-secret overrides only. Copy to terraform.tfvars (gitignored) if you
+# need to change a default. Do not put PM_API_TOKEN_ID, PM_API_TOKEN_SECRET,
+# passwords, or private keys in this file. Set those in the environment.
+
+pm_node         = "barbatoslupusrex"
+pm_bridge       = "vmbr0"
+pm_storage      = "local-lvm"
+pm_ostemplate   = "local:vztmpl/REPLACE-with-real-vztmpl.tar.zst"
+pm_tls_insecure = false

@@ -211,3 +211,24 @@ __marimo__/
 .vault_pass
 *.vault
 vault_password
+
+# Local Ansible inventory (copy from *.example). Do not commit host lists.
+ansible/inventory/blr.yml
+ansible/group_vars/all.yml
+
+# Terraform local state, provider cache, and secret tfvars.
+# terraform.tfvars.example is not a *.tfvars file and stays committed.
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+*.tfvars.json
+tfplan
+*tfplan*
+crash.log
+crash.*.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+.terraform.tfstate.lock.info

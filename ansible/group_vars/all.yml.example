@@ -1,0 +1,9 @@
+---
+# Copy to group_vars/all.yml only for local non-secret overrides.
+# Do not put API tokens, passwords, private keys, or become passwords here.
+#
+# Do not set ansible_port in this file. Hardened hosts from
+# alehpineda/ansible-playbooks may use port 4488, while fresh LXCs often
+# still use port 22. Set ansible_port per host in inventory.
+
+ansible_user: root

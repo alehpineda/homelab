@@ -5,3 +5,7 @@
 *.backup
 *.bak
 *~
+
+# Local inventory and vars copied from the *.example files.
+inventory/blr.yml
+group_vars/all.yml
