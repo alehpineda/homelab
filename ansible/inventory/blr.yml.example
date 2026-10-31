@@ -1,0 +1,22 @@
+---
+# Copy to inventory/blr.yml (gitignored). Never commit the copy.
+#
+# Reach BRL over NetBird (100.85.104.18) or LAN (10.10.0.21).
+# Placeholder addresses below are examples. Replace example-lxc before use.
+#
+# SSH port: hosts hardened by alehpineda/ansible-playbooks may listen on 4488.
+# Fresh LXCs often still listen on 22. Set ansible_port on each host.
+
+all:
+  children:
+    pve:
+      hosts:
+        barbatoslupusrex:
+          ansible_host: 100.85.104.18
+          ansible_port: 22
+    lxc:
+      hosts:
+        example-lxc:
+          ansible_host: 10.10.0.50
+          ansible_port: 22
+          # ansible_port: 4488  # uncomment only for a guest hardened by ansible-playbooks

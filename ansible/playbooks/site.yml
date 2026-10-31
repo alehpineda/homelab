@@ -1,0 +1,5 @@
+---
+# Site entrypoint. The skeleton only imports the connectivity smoke.
+# Add real roles in a later plan; do not point this at live config from here.
+- name: Include connectivity smoke
+  ansible.builtin.import_playbook: ping.yml

@@ -1,6 +1,6 @@
 # Homelab Infrastructure as Code
 
-Ansible and Docker Compose configurations for managing homelab infrastructure across local development and staging environments.
+Docker Compose stacks, plus a Terraform (Proxmox LXC) and Ansible skeleton for the BRL node. Compose files under `docker/` are unchanged by the skeleton. The Terraform module does not manage live guests yet.
 
 ## 📋 Table of Contents
 
@@ -11,6 +11,8 @@ Ansible and Docker Compose configurations for managing homelab infrastructure ac
 - [Deployed Services](#deployed-services)
 - [Environment Configuration](#environment-configuration)
 - [Deployment](#deployment)
+- [Proxmox (BRL)](#proxmox-brl)
+- [Ansible](#ansible)
 - [Backup & Restore](#backup--restore)
 - [Troubleshooting](#troubleshooting)
 - [Contributing](#contributing)
@@ -19,8 +21,9 @@ Ansible and Docker Compose configurations for managing homelab infrastructure ac
 
 This repository contains Infrastructure as Code (IaC) for deploying and managing containerized services in a homelab environment. It uses:
 
-- **Docker Compose** for container orchestration
-- **Ansible** for configuration management and deployment automation (planned)
+- **Docker Compose** for container orchestration (existing stacks under `docker/`)
+- **Terraform** with the Telmate Proxmox provider for LXC lifecycle on BRL (skeleton only; no guests declared)
+- **Ansible** for guest connectivity checks now, and configuration later ([ansible/README.md](ansible/README.md))
 - **Environment-based configuration** for multi-environment support (local, staging, production)
 
 ## 🔧 Prerequisites
@@ -30,7 +33,8 @@ This repository contains Infrastructure as Code (IaC) for deploying and managing
 - **Docker Engine**: 20.10 or higher
 - **Docker Compose**: 2.0 or higher
 - **Git**: For version control
-- **Ansible**: 2.9+ (for automated deployments - optional)
+- **Terraform**: 1.5 or higher (optional; Proxmox skeleton under `terraform/proxmox/`)
+- **Ansible**: 2.14 or higher (optional; stub playbooks under `ansible/`)
 
 ### System Requirements
 
@@ -105,15 +109,31 @@ homelab/
 ├── README.md                 # This file
 ├── LICENSE                   # Project license
 │
-├── ansible/                  # Ansible playbooks (future)
-│   ├── inventory/           # Host inventories
-│   ├── playbooks/           # Deployment playbooks
-│   └── vars/                # Variables per environment
+├── ansible/                  # Guest connectivity stub (see ansible/README.md)
+│   ├── ansible.cfg
+│   ├── inventory/            # blr.yml.example; copy to gitignored blr.yml
+│   ├── group_vars/           # all.yml.example
+│   ├── playbooks/            # ping.yml and site.yml
+│   └── roles/                # Empty until a later plan
 │
-└── docker/                   # Docker Compose files
-    └── portainer/           # Portainer CE service
-        ├── docker-compose.yml
-        └── README.md
+├── terraform/proxmox/        # Telmate/proxmox skeleton (no guests enabled)
+│   ├── versions.tf
+│   ├── providers.tf
+│   ├── variables.tf
+│   ├── main.tf               # Commented LXC example only
+│   └── README.md
+│
+├── docs/                     # BRL facts and the LXC change runbook
+│   ├── blr.md
+│   └── runbooks/lxc-change.md
+│
+└── docker/                   # Docker Compose files (left as-is)
+    ├── portainer/
+    ├── arr-stack/
+    ├── arr-stack-v2/
+    ├── media-player/
+    ├── pinchflat-vpn/
+    └── samba/
 ```
 
 ### Volume Organization
@@ -223,15 +243,39 @@ docker-compose down
    docker-compose up -d
    ```
 
-#### Ansible Deployment (Planned)
+#### Ansible
+
+The checked-in playbooks are a connectivity stub, not a Compose deployer.
+They do not replace the Docker quick start above.
 
 ```bash
-# Deploy all services to staging
-ansible-playbook -i ansible/inventory/staging.yml ansible/playbooks/deploy-all.yml
-
-# Deploy specific service
-ansible-playbook -i ansible/inventory/staging.yml ansible/playbooks/deploy-portainer.yml
+cd ansible
+cp inventory/blr.yml.example inventory/blr.yml
+ansible-playbook --syntax-check playbooks/site.yml
 ```
+
+Details, including SSH port 4488 on hosts hardened by `alehpineda/ansible-playbooks`
+versus port 22 on a fresh LXC: [ansible/README.md](ansible/README.md).
+
+## Proxmox (BRL)
+
+LXC lifecycle for node `barbatoslupusrex` lives in [terraform/proxmox](terraform/proxmox/README.md).
+The module pins Telmate/proxmox and ships with **no** live `proxmox_lxc` resources.
+Do not `terraform apply` a create or destroy from this skeleton.
+
+Public facts (LAN `10.10.0.21`, NetBird `100.85.104.18`, CTIDs 100–113, no secrets):
+[docs/blr.md](docs/blr.md). Change order when a later plan is approved:
+[docs/runbooks/lxc-change.md](docs/runbooks/lxc-change.md).
+
+```bash
+cd terraform/proxmox
+terraform fmt -check
+terraform init -backend=false
+terraform validate
+```
+
+`validate` does not need API credentials. Keep `PM_API_URL`, `PM_API_TOKEN_ID`,
+and `PM_API_TOKEN_SECRET` in the environment when you eventually plan.
 
 ## 💾 Backup & Restore
 
@@ -368,5 +412,5 @@ See [LICENSE](LICENSE) file for details.
 
 ---
 
-**Last Updated**: October 4, 2025  
+**Last Updated**: October 31, 2026  
 **Maintained by**: [@alehpineda](https://github.com/alehpineda)
