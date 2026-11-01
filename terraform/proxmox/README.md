@@ -65,24 +65,11 @@ backend, which is another reason not to commit state.
 Optional non-secret overrides: copy `terraform.tfvars.example` to
 `terraform.tfvars`.
 
-## Import (later, not part of this skeleton)
+## Import
 
-Import is a state write. Do not import CTIDs 100–113 until a plan names
-one guest, the resource block exists (the example below is commented out
-today), and a backup or snapshot exists.
-
-Telmate import id format is `<node>/lxc/<vmid>`:
-
-```bash
-# Example only. Do not run until example_service is a real resource and
-# the VMID is the one named in an approved plan.
-# terraform import proxmox_lxc.example_service barbatoslupusrex/lxc/100
-```
-
-After import, `terraform plan` must show no destroy and no surprise
-replace. If it does, stop. `terraform state rm` drops the state entry and
-leaves the guest on the node; use it only when the runbook says the state
-entry is the problem.
+CTIDs 100-113 are declared in `ct_<id>_<name>.tf` and were imported on
+2026-11-01. See `docs/runbooks/terraform-import.md` for the env setup, the
+import commands, and the expected 0-diff plan.
 
 ## Rollback
 

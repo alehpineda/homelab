@@ -1,9 +1,9 @@
 output "target_node" {
-  description = "Proxmox node this skeleton targets. No guests are declared."
+  description = "Proxmox node that hosts the imported CTs."
   value       = var.pm_node
 }
 
 output "guest_note" {
   description = "Operator reminder. This output does not read live Proxmox state."
-  value       = "No proxmox_lxc resources are enabled. Existing CTIDs 100-113 are unmanaged."
+  value       = "CTIDs 100-113 are imported (ct_*.tf, prevent_destroy). No apply without a separate approved plan."
 }

@@ -10,6 +10,11 @@
 # the provider's permission check allows it. pm_tls_insecure has no
 # environment variable in Telmate 3.0.2-rc10; set it with pm_tls_insecure
 # (default false) if the node certificate is not trusted by this client.
+#
+# The read-only grokaudit@pve!forge token (PVEAuditor) fails Telmate's
+# up-front permission check, which asks for write privileges. import and plan
+# only read, so set TF_VAR_pm_minimum_permission_check=false for that token.
 provider "proxmox" {
-  pm_tls_insecure = var.pm_tls_insecure
+  pm_tls_insecure             = var.pm_tls_insecure
+  pm_minimum_permission_check = var.pm_minimum_permission_check
 }
