@@ -40,7 +40,7 @@ Names only. Paths and credentials stay on the node.
 
 | Name | Role in this skeleton |
 |------|------------------------|
-| `local-lvm` | Default root-disk storage for a future LXC (`pm_storage`). |
+| `data2` | Root-disk storage for all CTs and default `pm_storage`. |
 | `media` | Media storage on the node. Not wired to Terraform. |
 | SMB mounts | Present on the node. Do not encode share users or passwords in this repo. |
 

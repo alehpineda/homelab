@@ -11,9 +11,9 @@ variable "pm_bridge" {
 }
 
 variable "pm_storage" {
-  description = "Storage for a future LXC root disk. BRL container disks use local-lvm."
+  description = "Storage for a future LXC root disk. BRL container disks are on data2."
   type        = string
-  default     = "local-lvm"
+  default     = "data2"
 }
 
 variable "pm_ostemplate" {
@@ -26,4 +26,10 @@ variable "pm_tls_insecure" {
   description = "Skip TLS verification of the Proxmox API. Leave false unless the node certificate is a known self-signed cert on a trusted path."
   type        = bool
   default     = false
+}
+
+variable "pm_minimum_permission_check" {
+  description = "Run Telmate's up-front permission check. Set false only with the read-only token for import/plan."
+  type        = bool
+  default     = true
 }

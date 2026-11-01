@@ -4,6 +4,6 @@
 
 pm_node         = "barbatoslupusrex"
 pm_bridge       = "vmbr0"
-pm_storage      = "local-lvm"
+pm_storage      = "data2"
 pm_ostemplate   = "local:vztmpl/REPLACE-with-real-vztmpl.tar.zst"
 pm_tls_insecure = false

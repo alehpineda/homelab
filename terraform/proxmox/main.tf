@@ -1,8 +1,8 @@
-# This root module manages no Proxmox guests.
-#
-# CTIDs 100-113 already exist on barbatoslupusrex. Do not uncomment the
-# example, and do not terraform apply a create or destroy, until a separate
-# plan names the guest and is approved. See docs/runbooks/lxc-change.md.
+# CTIDs 100-113 on barbatoslupusrex are imported into local state from the
+# ct_<id>_<name>.tf files (docs/runbooks/terraform-import.md). Each has
+# prevent_destroy. terraform plan must show 0 to add/change/destroy.
+# Do not terraform apply until a separate plan names the change and is
+# approved. See docs/runbooks/lxc-change.md.
 #
 # Preferences for a future container: unprivileged, one service per CT,
 # explicit vmid outside 100-113, start = false until checks pass.
