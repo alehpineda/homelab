@@ -7,7 +7,7 @@ resource "proxmox_lxc" "ct_168" {
   arch         = "amd64"
   ostype       = "ubuntu"
   unprivileged = true
-  onboot       = true
+  onboot       = false
   cores        = 4
   memory       = 32768
   swap         = 512

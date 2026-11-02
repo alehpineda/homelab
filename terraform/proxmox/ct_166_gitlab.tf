@@ -7,7 +7,7 @@ resource "proxmox_lxc" "ct_166" {
   arch         = "amd64"
   ostype       = "debian"
   unprivileged = true
-  onboot       = true
+  onboot       = false
   cores        = 4
   memory       = 16384
   swap         = 512
