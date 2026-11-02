@@ -1,8 +1,8 @@
-# CT 104 jellyfin-blr-lxc. Imported from live config, see docs/runbooks/terraform-import.md.
-# Import: terraform import proxmox_lxc.ct_104 barbatoslupusrex/lxc/104
-resource "proxmox_lxc" "ct_104" {
+# CT 180 jellyfin-blr-lxc. Imported from live config, see docs/runbooks/terraform-import.md.
+# Import: terraform import proxmox_lxc.ct_180 barbatoslupusrex/lxc/180
+resource "proxmox_lxc" "ct_180" {
   target_node  = var.pm_node
-  vmid         = 104
+  vmid         = 180
   hostname     = "jellyfin-blr-lxc"
   arch         = "amd64"
   ostype       = "ubuntu"
@@ -45,9 +45,10 @@ resource "proxmox_lxc" "ct_104" {
 
   network {
     name   = "eth0"
-    bridge = "vmbr0"
+    bridge = "vmbr1"
     hwaddr = "BC:24:11:CC:9B:32"
-    ip     = "dhcp"
+    ip     = "10.10.0.80/24"
+    gw     = "10.10.0.1"
   }
 
   lifecycle {

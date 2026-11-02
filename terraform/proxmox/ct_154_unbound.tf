@@ -1,8 +1,8 @@
-# CT 103 unbound-blr-lxc. Imported from live config, see docs/runbooks/terraform-import.md.
-# Import: terraform import proxmox_lxc.ct_103 barbatoslupusrex/lxc/103
-resource "proxmox_lxc" "ct_103" {
+# CT 154 unbound-blr-lxc. Imported from live config, see docs/runbooks/terraform-import.md.
+# Import: terraform import proxmox_lxc.ct_154 barbatoslupusrex/lxc/154
+resource "proxmox_lxc" "ct_154" {
   target_node  = var.pm_node
-  vmid         = 103
+  vmid         = 154
   hostname     = "unbound-blr-lxc"
   arch         = "amd64"
   ostype       = "debian"
@@ -22,7 +22,8 @@ resource "proxmox_lxc" "ct_103" {
     name   = "eth0"
     bridge = "vmbr0"
     hwaddr = "BC:24:11:45:48:AA"
-    ip     = "dhcp"
+    ip     = "10.10.0.54/24"
+    gw     = "10.10.0.1"
   }
 
   lifecycle {

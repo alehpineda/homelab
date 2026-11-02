@@ -18,10 +18,8 @@ here or anywhere else in git.
 | API URL shape | `https://10.10.0.21:8006/api2/json` or `https://100.85.104.18:8006/api2/json` |
 | PVE version | Not recorded in this skeleton. Run `pveversion` on the node before any later apply. |
 | Virtual machines | 0 |
-| LXC guests | CTID **100–113** (14 containers). Audit on 2026-10-31: 12 running, 2 stopped. Which two are stopped is not listed here. |
+| LXC guests | 14 containers. Live check 2026-11-01: 11 running, 3 stopped (166, 167, 168). |
 
-Guest hostnames and per-CT addresses are omitted on purpose. Fill those in
-a later import plan, not in this skeleton.
 
 ## Existing CTIDs
 
@@ -29,10 +27,31 @@ These IDs already exist on the node. Do not destroy or recreate them from
 Terraform until a separate approved plan imports them and the plan output
 shows no destroy.
 
-`100` `101` `102` `103` `104` `105` `106` `107` `108` `109` `110` `111` `112` `113`
+Renumbered 2026-11-01 (Option Y): static IPs on 10.10.0.0/24, gateway
+10.10.0.1, CTID last two digits = IP last octet.
 
-New containers, if a later plan creates any, need an explicit VMID outside
-this range.
+| CTID | Hostname | IP | Bridge | State |
+|---|---|---|---|---|
+| 150 | blr-nb-lxc (NetBird) | 10.10.0.50 | vmbr0 | running |
+| 153 | adguard-blr-lxc | 10.10.0.53 | vmbr0 | running |
+| 154 | unbound-blr-lxc | 10.10.0.54 | vmbr0 | running |
+| 160 | searxng-blr-lxc | 10.10.0.60 | vmbr0 | running |
+| 161 | vaultwarden-blr-lxc | 10.10.0.61 | vmbr0 | running |
+| 162 | openbao | 10.10.0.62 | vmbr0 | running |
+| 163 | ollama-blr-lxc | 10.10.0.63 | vmbr0 | running |
+| 164 | firecrawl-blr-lxc | 10.10.0.64 | vmbr0 | running |
+| 165 | honcho-blr-lxc | 10.10.0.65 | vmbr0 | running |
+| 166 | gitlab | 10.10.0.66 | vmbr0 | stopped |
+| 167 | hermesagent | 10.10.0.67 | vmbr0 | stopped |
+| 168 | ubuntu | 10.10.0.68 | vmbr0 | stopped |
+| 180 | jellyfin-blr-lxc | 10.10.0.80 | vmbr1 | running |
+| 181 | metube | 10.10.0.81 | vmbr0 | running |
+
+DNS: AdGuard primary 10.10.0.53 (BRL), AdGuard secondary 10.10.0.1 (Flint),
+Unbound upstream 10.10.0.54:5335. DHCP option 6 = 10.10.0.53, 10.10.0.1.
+AdGuard sync installed but disabled.
+
+New containers, if a later plan creates any, need an explicit VMID not in this list.
 
 ## Storage
 

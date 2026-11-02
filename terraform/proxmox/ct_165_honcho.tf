@@ -1,28 +1,29 @@
-# CT 102 adguard-blr-lxc. Imported from live config, see docs/runbooks/terraform-import.md.
-# Import: terraform import proxmox_lxc.ct_102 barbatoslupusrex/lxc/102
-resource "proxmox_lxc" "ct_102" {
+# CT 165 honcho-blr-lxc. Imported from live config, see docs/runbooks/terraform-import.md.
+# Import: terraform import proxmox_lxc.ct_165 barbatoslupusrex/lxc/165
+resource "proxmox_lxc" "ct_165" {
   target_node  = var.pm_node
-  vmid         = 102
-  hostname     = "adguard-blr-lxc"
+  vmid         = 165
+  hostname     = "honcho-blr-lxc"
   arch         = "amd64"
-  ostype       = "debian"
+  ostype       = "ubuntu"
   unprivileged = true
   onboot       = true
-  cores        = 1
-  memory       = 512
+  cores        = 4
+  memory       = 8192
   swap         = 512
-  tags         = "adblock;community-script;storage-data2"
+  tags         = "community-script;os;storage-data2"
 
   rootfs {
     storage = var.pm_storage
-    size    = "2G"
+    size    = "32G"
   }
 
   network {
     name   = "eth0"
     bridge = "vmbr0"
-    hwaddr = "BC:24:11:53:B9:7E"
-    ip     = "dhcp"
+    hwaddr = "BC:24:11:21:F3:9F"
+    ip     = "10.10.0.65/24"
+    gw     = "10.10.0.1"
   }
 
   lifecycle {

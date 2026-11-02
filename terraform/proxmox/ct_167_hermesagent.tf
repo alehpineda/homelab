@@ -1,8 +1,8 @@
-# CT 111 hermesagent. Imported from live config, see docs/runbooks/terraform-import.md.
-# Import: terraform import proxmox_lxc.ct_111 barbatoslupusrex/lxc/111
-resource "proxmox_lxc" "ct_111" {
+# CT 167 hermesagent. Imported from live config, see docs/runbooks/terraform-import.md.
+# Import: terraform import proxmox_lxc.ct_167 barbatoslupusrex/lxc/167
+resource "proxmox_lxc" "ct_167" {
   target_node  = var.pm_node
-  vmid         = 111
+  vmid         = 167
   hostname     = "hermesagent"
   arch         = "amd64"
   ostype       = "debian"
@@ -22,7 +22,8 @@ resource "proxmox_lxc" "ct_111" {
     name   = "eth0"
     bridge = "vmbr0"
     hwaddr = "BC:24:11:F0:24:12"
-    ip     = "dhcp"
+    ip     = "10.10.0.67/24"
+    gw     = "10.10.0.1"
   }
 
   lifecycle {

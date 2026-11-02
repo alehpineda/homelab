@@ -1,28 +1,29 @@
-# CT 101 searxng-blr-lxc. Imported from live config, see docs/runbooks/terraform-import.md.
-# Import: terraform import proxmox_lxc.ct_101 barbatoslupusrex/lxc/101
-resource "proxmox_lxc" "ct_101" {
+# CT 166 gitlab. Imported from live config, see docs/runbooks/terraform-import.md.
+# Import: terraform import proxmox_lxc.ct_166 barbatoslupusrex/lxc/166
+resource "proxmox_lxc" "ct_166" {
   target_node  = var.pm_node
-  vmid         = 101
-  hostname     = "searxng-blr-lxc"
+  vmid         = 166
+  hostname     = "gitlab"
   arch         = "amd64"
   ostype       = "debian"
   unprivileged = true
   onboot       = true
-  cores        = 2
-  memory       = 2048
+  cores        = 4
+  memory       = 16384
   swap         = 512
-  tags         = "community-script;search;storage-data2"
+  tags         = "community-script;devtools;git"
 
   rootfs {
     storage = var.pm_storage
-    size    = "7G"
+    size    = "40G"
   }
 
   network {
     name   = "eth0"
     bridge = "vmbr0"
-    hwaddr = "BC:24:11:97:92:7D"
-    ip     = "dhcp"
+    hwaddr = "BC:24:11:4A:4B:A9"
+    ip     = "10.10.0.66/24"
+    gw     = "10.10.0.1"
   }
 
   lifecycle {

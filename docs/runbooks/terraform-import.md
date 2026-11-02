@@ -70,3 +70,11 @@ No changes. Your infrastructure matches the configuration.
 `terraform state rm proxmox_lxc.ct_<id>`, or delete the local state. Guests
 are untouched because import and plan never write to PVE.
 State is local and gitignored; never commit it.
+
+## 2026-11-01 renumber (Option Y)
+
+CTs were renumbered and moved to static IPs (CTID last octet = IP last octet,
+10.10.0.0/24). The `ct_*.tf` files now use the new IDs. Local state still
+points at the old IDs: `terraform state rm proxmox_lxc.ct_<old>` then
+`terraform import proxmox_lxc.ct_<new> barbatoslupusrex/lxc/<new>` for each,
+then `terraform plan` must show no changes before any apply.
