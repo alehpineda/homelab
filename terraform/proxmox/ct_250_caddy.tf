@@ -38,7 +38,7 @@ resource "proxmox_lxc" "ct_250" {
     prevent_destroy = true
     ignore_changes = [
       ostemplate, password, ssh_public_keys, start, description,
-      target_node, cmode, network, mountpoint, rootfs[0].storage,
+      target_node, cmode, network, mountpoint, rootfs[0].storage, features,
     ]
   }
 }
