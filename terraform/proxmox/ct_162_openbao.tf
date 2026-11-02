@@ -1,17 +1,17 @@
-# CT 100 blr-nb-lxc. Imported from live config, see docs/runbooks/terraform-import.md.
-# Import: terraform import proxmox_lxc.ct_100 barbatoslupusrex/lxc/100
-resource "proxmox_lxc" "ct_100" {
+# CT 162 openbao. Imported from live config, see docs/runbooks/terraform-import.md.
+# Import: terraform import proxmox_lxc.ct_162 barbatoslupusrex/lxc/162
+resource "proxmox_lxc" "ct_162" {
   target_node  = var.pm_node
-  vmid         = 100
-  hostname     = "blr-nb-lxc"
+  vmid         = 162
+  hostname     = "openbao"
   arch         = "amd64"
   ostype       = "debian"
   unprivileged = true
   onboot       = true
   cores        = 1
-  memory       = 512
+  memory       = 1024
   swap         = 512
-  tags         = "community-script;network;storage-data2;vpn"
+  tags         = "community-script;secrets;security;storage-data2"
 
   rootfs {
     storage = var.pm_storage
@@ -21,8 +21,9 @@ resource "proxmox_lxc" "ct_100" {
   network {
     name   = "eth0"
     bridge = "vmbr0"
-    hwaddr = "BC:24:11:83:58:34"
-    ip     = "dhcp"
+    hwaddr = "BC:24:11:5C:F6:8B"
+    ip     = "10.10.0.62/24"
+    gw     = "10.10.0.1"
   }
 
   lifecycle {

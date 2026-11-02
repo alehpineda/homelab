@@ -1,28 +1,37 @@
-# CT 110 gitlab. Imported from live config, see docs/runbooks/terraform-import.md.
-# Import: terraform import proxmox_lxc.ct_110 barbatoslupusrex/lxc/110
-resource "proxmox_lxc" "ct_110" {
+# CT 181 metube. Imported from live config, see docs/runbooks/terraform-import.md.
+# Import: terraform import proxmox_lxc.ct_181 barbatoslupusrex/lxc/181
+resource "proxmox_lxc" "ct_181" {
   target_node  = var.pm_node
-  vmid         = 110
-  hostname     = "gitlab"
+  vmid         = 181
+  hostname     = "metube"
   arch         = "amd64"
   ostype       = "debian"
   unprivileged = true
   onboot       = true
-  cores        = 4
-  memory       = 16384
+  cores        = 1
+  memory       = 2048
   swap         = 512
-  tags         = "community-script;devtools;git"
+  tags         = "community-script;media;storage-data2;youtube"
 
   rootfs {
     storage = var.pm_storage
-    size    = "40G"
+    size    = "10G"
+  }
+
+  mountpoint {
+    key    = "0"
+    slot   = 0
+    volume = "/media/data/media/metube"
+    mp     = "/opt/metube_downloads"
+    backup = false
   }
 
   network {
     name   = "eth0"
     bridge = "vmbr0"
-    hwaddr = "BC:24:11:4A:4B:A9"
-    ip     = "dhcp"
+    hwaddr = "BC:24:11:D8:06:85"
+    ip     = "10.10.0.81/24"
+    gw     = "10.10.0.1"
   }
 
   lifecycle {

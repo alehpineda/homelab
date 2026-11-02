@@ -1,28 +1,29 @@
-# CT 107 firecrawl-blr-lxc. Imported from live config, see docs/runbooks/terraform-import.md.
-# Import: terraform import proxmox_lxc.ct_107 barbatoslupusrex/lxc/107
-resource "proxmox_lxc" "ct_107" {
+# CT 168 ubuntu. Imported from live config, see docs/runbooks/terraform-import.md.
+# Import: terraform import proxmox_lxc.ct_168 barbatoslupusrex/lxc/168
+resource "proxmox_lxc" "ct_168" {
   target_node  = var.pm_node
-  vmid         = 107
-  hostname     = "firecrawl-blr-lxc"
+  vmid         = 168
+  hostname     = "ubuntu"
   arch         = "amd64"
-  ostype       = "debian"
+  ostype       = "ubuntu"
   unprivileged = true
   onboot       = true
   cores        = 4
-  memory       = 4096
+  memory       = 32768
   swap         = 512
-  tags         = "ai;community-script;crawler;scraping;storage-data2"
+  tags         = "community-script;os"
 
   rootfs {
     storage = var.pm_storage
-    size    = "30G"
+    size    = "128G"
   }
 
   network {
     name   = "eth0"
     bridge = "vmbr0"
-    hwaddr = "BC:24:11:4C:61:EC"
-    ip     = "dhcp"
+    hwaddr = "BC:24:11:95:E5:6E"
+    ip     = "10.10.0.68/24"
+    gw     = "10.10.0.1"
   }
 
   lifecycle {

@@ -1,8 +1,8 @@
-# CT 105 ollama-blr-lxc. Imported from live config, see docs/runbooks/terraform-import.md.
-# Import: terraform import proxmox_lxc.ct_105 barbatoslupusrex/lxc/105
-resource "proxmox_lxc" "ct_105" {
+# CT 163 ollama-blr-lxc. Imported from live config, see docs/runbooks/terraform-import.md.
+# Import: terraform import proxmox_lxc.ct_163 barbatoslupusrex/lxc/163
+resource "proxmox_lxc" "ct_163" {
   target_node  = var.pm_node
-  vmid         = 105
+  vmid         = 163
   hostname     = "ollama-blr-lxc"
   arch         = "amd64"
   ostype       = "ubuntu"
@@ -22,7 +22,8 @@ resource "proxmox_lxc" "ct_105" {
     name   = "eth0"
     bridge = "vmbr0"
     hwaddr = "BC:24:11:DB:3D:D7"
-    ip     = "dhcp"
+    ip     = "10.10.0.63/24"
+    gw     = "10.10.0.1"
     ip6    = "auto"
   }
 

@@ -1,28 +1,29 @@
-# CT 108 honcho-blr-lxc. Imported from live config, see docs/runbooks/terraform-import.md.
-# Import: terraform import proxmox_lxc.ct_108 barbatoslupusrex/lxc/108
-resource "proxmox_lxc" "ct_108" {
+# CT 164 firecrawl-blr-lxc. Imported from live config, see docs/runbooks/terraform-import.md.
+# Import: terraform import proxmox_lxc.ct_164 barbatoslupusrex/lxc/164
+resource "proxmox_lxc" "ct_164" {
   target_node  = var.pm_node
-  vmid         = 108
-  hostname     = "honcho-blr-lxc"
+  vmid         = 164
+  hostname     = "firecrawl-blr-lxc"
   arch         = "amd64"
-  ostype       = "ubuntu"
+  ostype       = "debian"
   unprivileged = true
   onboot       = true
   cores        = 4
-  memory       = 8192
+  memory       = 4096
   swap         = 512
-  tags         = "community-script;os;storage-data2"
+  tags         = "ai;community-script;crawler;scraping;storage-data2"
 
   rootfs {
     storage = var.pm_storage
-    size    = "32G"
+    size    = "30G"
   }
 
   network {
     name   = "eth0"
     bridge = "vmbr0"
-    hwaddr = "BC:24:11:21:F3:9F"
-    ip     = "dhcp"
+    hwaddr = "BC:24:11:4C:61:EC"
+    ip     = "10.10.0.64/24"
+    gw     = "10.10.0.1"
   }
 
   lifecycle {

@@ -1,28 +1,29 @@
-# CT 106 vaultwarden-blr-lxc. Imported from live config, see docs/runbooks/terraform-import.md.
-# Import: terraform import proxmox_lxc.ct_106 barbatoslupusrex/lxc/106
-resource "proxmox_lxc" "ct_106" {
+# CT 150 blr-nb-lxc. Imported from live config, see docs/runbooks/terraform-import.md.
+# Import: terraform import proxmox_lxc.ct_150 barbatoslupusrex/lxc/150
+resource "proxmox_lxc" "ct_150" {
   target_node  = var.pm_node
-  vmid         = 106
-  hostname     = "vaultwarden-blr-lxc"
+  vmid         = 150
+  hostname     = "blr-nb-lxc"
   arch         = "amd64"
   ostype       = "debian"
   unprivileged = true
   onboot       = true
-  cores        = 4
-  memory       = 6144
+  cores        = 1
+  memory       = 512
   swap         = 512
-  tags         = "community-script;password-manager;storage-data2"
+  tags         = "community-script;network;storage-data2;vpn"
 
   rootfs {
     storage = var.pm_storage
-    size    = "20G"
+    size    = "4G"
   }
 
   network {
     name   = "eth0"
     bridge = "vmbr0"
-    hwaddr = "BC:24:11:35:AB:A4"
-    ip     = "dhcp"
+    hwaddr = "BC:24:11:83:58:34"
+    ip     = "10.10.0.50/24"
+    gw     = "10.10.0.1"
   }
 
   lifecycle {

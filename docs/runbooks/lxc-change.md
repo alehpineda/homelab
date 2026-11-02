@@ -19,7 +19,7 @@ Record the snapshot name or the vzdump archive path outside git. Do not
 paste tokens or backup encryption secrets into the repo.
 
 Confirm you are on the intended guest (VMID and hostname). Existing
-CTIDs **100–113** are already in use. See [docs/blr.md](../blr.md).
+CTIDs **150, 153, 154, 160–168, 180, 181** are in use (renumbered 2026-11-01, Option Y). See [docs/blr.md](../blr.md).
 
 ## 2. Plan
 
@@ -52,7 +52,7 @@ terraform apply tfplan
 ```
 
 `tfplan` is the file saved from the reviewed `terraform plan -out=tfplan`.
-Watch for VMID collisions with 100–113.
+Watch for VMID collisions with in-use CTIDs.
 
 ## 5. Verify with Ansible
 
@@ -89,7 +89,7 @@ merge commit. No guest restore is required for that git-only change.
 
 ## Stop conditions
 
-- Plan shows destroy of any CTID in 100–113.
+- Plan shows destroy of any in-use CTID.
 - Plan shows a create you did not name in the approved change.
 - Backup or snapshot failed.
 - API token would be written into `terraform.tfvars`, `.env`, or shell history you commit.
