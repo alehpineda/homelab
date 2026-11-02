@@ -78,3 +78,13 @@ CTs were renumbered and moved to static IPs (CTID last octet = IP last octet,
 points at the old IDs: `terraform state rm proxmox_lxc.ct_<old>` then
 `terraform import proxmox_lxc.ct_<new> barbatoslupusrex/lxc/<new>` for each,
 then `terraform plan` must show no changes before any apply.
+
+## CT 250 caddy (pending import)
+
+`ct_250_caddy.tf` declares CT 250. Import with the read-only token:
+
+    terraform import proxmox_lxc.ct_250 barbatoslupusrex/lxc/250
+
+Live state on barbatos (`~/forge-tf/mod/terraform.tfstate`) still holds the
+pre-renumber addresses ct_100..ct_113. Re-key it to the new IDs (state rm the
+old addresses, import 150/153/154/160-168/180/181/250) before any plan.
