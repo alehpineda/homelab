@@ -5,5 +5,5 @@ output "target_node" {
 
 output "guest_note" {
   description = "Operator reminder. This output does not read live Proxmox state."
-  value       = "CTIDs 150,151,153,154,160-169,171-174,180,181,250 are declared (ct_*.tf, prevent_destroy). No apply without a separate approved plan. 169 and 171-174 were imported 2026-11-03. CT 250 is already imported. CT 151 is pending import."
+  value       = "CTIDs 150,151,153,154,160-169,171-174,180,181,250 are declared (ct_*.tf, prevent_destroy). No apply without a separate approved plan. 151, 169, and 171-174 were imported 2026-11-03. CT 250 is already imported."
 }
