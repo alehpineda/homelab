@@ -18,7 +18,7 @@ here or anywhere else in git.
 | API URL shape | `https://10.10.0.21:8006/api2/json` or `https://100.85.104.18:8006/api2/json` |
 | PVE version | Not recorded in this skeleton. Run `pveversion` on the node before any later apply. |
 | Virtual machines | 0 |
-| LXC guests | 14 containers. Live check 2026-11-01: 11 running, 3 stopped (166, 167, 168). |
+| LXC guests | 20 containers. Live check 2026-11-03: 17 running, 3 stopped (166, 167, 168). |
 
 
 ## Existing CTIDs
@@ -44,14 +44,26 @@ Renumbered 2026-11-01 (Option Y): static IPs on 10.10.0.0/24, gateway
 | 166 | gitlab | 10.10.0.66 | vmbr0 | stopped |
 | 167 | hermesagent | 10.10.0.67 | vmbr0 | stopped |
 | 168 | ubuntu | 10.10.0.68 | vmbr0 | stopped |
+| 169 | postiz-blr-lxc | 10.10.0.69 | vmbr0 | running |
+| 171 | grafana-blr-lxc | 10.10.0.71 | vmbr0 | running |
+| 172 | prometheus-blr-lxc | 10.10.0.72 | vmbr0 | running |
+| 173 | loki-blr-lxc | 10.10.0.73 | vmbr0 | running |
+| 174 | pve-exporter-blr-lxc | 10.10.0.74 | vmbr0 | running |
 | 180 | jellyfin-blr-lxc | 10.10.0.80 | vmbr1 | running |
 | 181 | metube | 10.10.0.81 | vmbr0 | running |
+| 250 | caddy-blr-lxc | 10.10.0.250 | vmbr0 | running |
 
 DNS: AdGuard primary 10.10.0.53 (BRL), AdGuard secondary 10.10.0.1 (Flint),
 Unbound upstream 10.10.0.54:5335. DHCP option 6 = 10.10.0.53, 10.10.0.1.
-AdGuard sync installed but disabled.
+AdGuard sync installed but disabled. `grafana.alehpineda.com` rewrites to
+10.10.0.250 (Caddy on CT 250). Monitoring wiring, without secrets, is in
+[blr-monitoring.md](blr-monitoring.md).
+
+Flint DHCP reservations for 10.10.0.71–10.10.0.74 (MACs on CTs 171–174)
+are still pending.
 
 New containers, if a later plan creates any, need an explicit VMID not in this list.
+There is no CT 170.
 
 ## Storage
 

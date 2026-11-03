@@ -1,22 +1,23 @@
 # Terraform skeleton for BRL (Proxmox LXC)
 
 Minimal Telmate/proxmox root module for the standalone node
-`barbatoslupusrex`. It declares **no** `proxmox_lxc` resources. The example
-guest in `main.tf` is commented out. Running apply from this tree today
-should not create or destroy a container.
+`barbatoslupusrex`. Live guests are declared in `ct_<id>_<name>.tf` for
+import. The example guest in `main.tf` is commented out. Running apply
+from this tree is not approved and must not create or destroy a container.
 
 This directory does not approve an apply. Create and destroy of any guest,
-including CTIDs 150, 153, 154, 160–168, 180, 181, wait for a separate approved plan. Follow
+including CTIDs 150, 153, 154, 160–169, 171–174, 180, 181, and 250, wait for a separate approved plan. Follow
 [docs/runbooks/lxc-change.md](../../docs/runbooks/lxc-change.md).
 
 Node facts (no secrets): [docs/blr.md](../../docs/blr.md).
+Monitoring and Postiz wiring: [docs/blr-monitoring.md](../../docs/blr-monitoring.md).
 
 | Fact | Value |
 |------|--------|
 | Node | `barbatoslupusrex` |
 | LAN | `10.10.0.21` |
 | NetBird | `100.85.104.18` |
-| Existing CTIDs | 150, 153, 154, 160–168, 180, 181 |
+| Existing CTIDs | 150, 153, 154, 160–169, 171–174, 180, 181, 250 |
 | Provider | `telmate/proxmox` `3.0.2-rc10` |
 
 `3.0.2-rc10` is the latest registry tag as of 2026-10-31 and is still a
@@ -67,9 +68,11 @@ Optional non-secret overrides: copy `terraform.tfvars.example` to
 
 ## Import
 
-CTIDs 150, 153, 154, 160–168, 180, 181 are declared in `ct_<id>_<name>.tf` and were imported on
-2026-11-01. See `docs/runbooks/terraform-import.md` for the env setup, the
-import commands, and the expected 0-diff plan.
+CTIDs 150, 153, 154, 160–168, 180, and 181 are declared in `ct_<id>_<name>.tf` and were imported on
+2026-11-01. CT 250 (caddy), CT 169 (postiz), and CTs 171–174 (monitoring)
+are declared and still pending import. See `docs/runbooks/terraform-import.md`
+for the env setup, the import commands, and the expected 0-diff plan.
+Import only with an approved plan. Do not apply.
 
 ## Rollback
 

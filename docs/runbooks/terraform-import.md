@@ -81,10 +81,32 @@ then `terraform plan` must show no changes before any apply.
 
 ## CT 250 caddy (pending import)
 
-`ct_250_caddy.tf` declares CT 250. Import with the read-only token:
+`ct_250_caddy.tf` declares CT 250. Import only after a separate plan is
+approved, with the read-only token. `terraform plan` after import must show
+no changes (0-diff) before any apply. This note does not approve apply.
 
     terraform import proxmox_lxc.ct_250 barbatoslupusrex/lxc/250
 
 Live state on barbatos (`~/forge-tf/mod/terraform.tfstate`) still holds the
 pre-renumber addresses ct_100..ct_113. Re-key it to the new IDs (state rm the
 old addresses, import 150/153/154/160-168/180/181/250) before any plan.
+
+## CTs 169 and 171–174 (pending import)
+
+Declared 2026-11-03 from live pct facts (Postiz CT 169 from 2026-11-02;
+Grafana, Prometheus, Loki, and pve-exporter from 2026-11-03). Import only
+with an approved plan and the read-only token above. A following
+`terraform plan` must be 0-diff. Do not apply as part of importing.
+
+```bash
+terraform import proxmox_lxc.ct_169 barbatoslupusrex/lxc/169
+terraform import proxmox_lxc.ct_171 barbatoslupusrex/lxc/171
+terraform import proxmox_lxc.ct_172 barbatoslupusrex/lxc/172
+terraform import proxmox_lxc.ct_173 barbatoslupusrex/lxc/173
+terraform import proxmox_lxc.ct_174 barbatoslupusrex/lxc/174
+terraform plan -detailed-exitcode   # exit 0 expected
+```
+
+These IDs were created after the 2026-11-01 import. They are not in the
+pre-renumber state. There is no CT 170. Guest wiring (no secrets) is in
+[docs/blr-monitoring.md](../blr-monitoring.md).

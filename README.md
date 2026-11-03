@@ -260,11 +260,12 @@ versus port 22 on a fresh LXC: [ansible/README.md](ansible/README.md).
 ## Proxmox (BRL)
 
 LXC lifecycle for node `barbatoslupusrex` lives in [terraform/proxmox](terraform/proxmox/README.md).
-The module pins Telmate/proxmox and ships with **no** live `proxmox_lxc` resources.
+The module pins Telmate/proxmox and declares existing guests for import.
 Do not `terraform apply` a create or destroy from this skeleton.
 
-Public facts (LAN `10.10.0.21`, NetBird `100.85.104.18`, CTIDs 100–113, no secrets):
-[docs/blr.md](docs/blr.md). Change order when a later plan is approved:
+Public facts (LAN `10.10.0.21`, NetBird `100.85.104.18`, CTIDs 150, 153, 154, 160–169, 171–174, 180, 181, 250, no secrets):
+[docs/blr.md](docs/blr.md). Monitoring and Postiz wiring:
+[docs/blr-monitoring.md](docs/blr-monitoring.md). Change order when a later plan is approved:
 [docs/runbooks/lxc-change.md](docs/runbooks/lxc-change.md).
 
 ```bash
