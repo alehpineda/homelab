@@ -171,3 +171,37 @@ Nesting, keyctl, and `/dev/net/tun` stay on the node; Telmate rc10 does
 not model them, and `ignore_changes` matches CT 150. The network block
 documents eth0 on vmbr1, `BC:24:11:0F:E8:D0`, `10.10.0.51/24`, gateway
 `10.10.0.1` (`network` is ignored after import).
+
+## CTs 155 and 156 (pending import)
+
+Declared 2026-11-03 from live pct for AdGuard B and AdGuard sync. Not
+imported. Import only, from `~/forge-tf/mod/`, with the read-only token.
+Do not apply. A following plan must be 0-diff.
+
+```bash
+terraform import proxmox_lxc.ct_155 barbatoslupusrex/lxc/155
+terraform import proxmox_lxc.ct_156 barbatoslupusrex/lxc/156
+terraform plan -detailed-exitcode   # exit 0 expected
+```
+
+Tags are the live pct strings, with no `storage-data2` suffix: CT 155
+`adblock;community-script`, CT 156 `community-script;os`. Telmate's tag
+diff suppress sorts and dedupes, so order alone does not plan a change;
+the strings still match pct. `nameserver` is omitted on both (live pct
+has none). Do not set `nameserver = "10.10.0.53"`; that was an in-place
+change on 169 and 171–174.
+
+`timezone` (`America/Chicago` on 155) is not in the Telmate schema.
+`features` (`nesting=1,keyctl=1` on 155) are omitted like CT 153. Telmate
+copies features into state only when the block is already set, so leaving
+it unset keeps the plan at 0-diff and leaves `ignore_changes` identical
+to CT 153. Live net0 has no firewall flag, so the network blocks omit
+`firewall`. CT 156 memory is 256 (the provider default is 512). Rootfs
+size is `2G` on `var.pm_storage` (`data2`); `rootfs[0].storage` is
+ignored after import, size is not.
+
+The network blocks document the live NICs (`network` is ignored after
+import):
+
+- CT 155 eth0 on vmbr1, `BC:24:11:9D:BE:3C`, `10.10.0.55/24`, gateway `10.10.0.1`
+- CT 156 eth0 on vmbr0, `BC:24:11:27:FD:2D`, `10.10.0.56/24`, gateway `10.10.0.1`
