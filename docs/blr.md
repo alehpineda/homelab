@@ -18,7 +18,7 @@ here or anywhere else in git.
 | API URL shape | `https://10.10.0.21:8006/api2/json` or `https://100.85.104.18:8006/api2/json` |
 | PVE version | Not recorded in this skeleton. Run `pveversion` on the node before any later apply. |
 | Virtual machines | 0 |
-| LXC guests | 20 containers. Live check 2026-11-03: 17 running, 3 stopped (166, 167, 168). |
+| LXC guests | 21 containers. 18 running, 3 stopped (166, 167, 168). CT 151 recorded 2026-11-03. |
 
 
 ## Existing CTIDs
@@ -33,6 +33,7 @@ Renumbered 2026-11-01 (Option Y): static IPs on 10.10.0.0/24, gateway
 | CTID | Hostname | IP | Bridge | State |
 |---|---|---|---|---|
 | 150 | blr-nb-lxc (NetBird) | 10.10.0.50 | vmbr0 | running |
+| 151 | blr-nb-lxc-b (NetBird peer B) | 10.10.0.51 | vmbr1 | running |
 | 153 | adguard-blr-lxc | 10.10.0.53 | vmbr0 | running |
 | 154 | unbound-blr-lxc | 10.10.0.54 | vmbr0 | running |
 | 160 | searxng-blr-lxc | 10.10.0.60 | vmbr0 | running |

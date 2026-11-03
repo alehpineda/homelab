@@ -6,7 +6,7 @@ import. The example guest in `main.tf` is commented out. Running apply
 from this tree is not approved and must not create or destroy a container.
 
 This directory does not approve an apply. Create and destroy of any guest,
-including CTIDs 150, 153, 154, 160–169, 171–174, 180, 181, and 250, wait for a separate approved plan. Follow
+including CTIDs 150, 151, 153, 154, 160–169, 171–174, 180, 181, and 250, wait for a separate approved plan. Follow
 [docs/runbooks/lxc-change.md](../../docs/runbooks/lxc-change.md).
 
 Node facts (no secrets): [docs/blr.md](../../docs/blr.md).
@@ -17,7 +17,7 @@ Monitoring and Postiz wiring: [docs/blr-monitoring.md](../../docs/blr-monitoring
 | Node | `barbatoslupusrex` |
 | LAN | `10.10.0.21` |
 | NetBird | `100.85.104.18` |
-| Existing CTIDs | 150, 153, 154, 160–169, 171–174, 180, 181, 250 |
+| Existing CTIDs | 150, 151, 153, 154, 160–169, 171–174, 180, 181, 250 |
 | Provider | `telmate/proxmox` `3.0.2-rc10` |
 
 `3.0.2-rc10` is the latest registry tag as of 2026-10-31 and is still a
@@ -70,11 +70,14 @@ Optional non-secret overrides: copy `terraform.tfvars.example` to
 
 CTIDs 150, 153, 154, 160–168, 180, and 181 are declared in `ct_<id>_<name>.tf` and were imported on
 2026-11-01. CT 250 (caddy), CT 169 (postiz), and CTs 171–174 (monitoring)
-were imported by 2026-11-03. See `docs/runbooks/terraform-import.md`
-for the env setup, the import commands, and the expected 0-diff plan.
-Import only with an approved plan. Do not apply. Tags on 169 and 171–174
-match the live community-script values, and those files omit `nameserver`
-so the guests keep inheriting host DNS.
+were imported by 2026-11-03. CT 151 (`blr-nb-lxc-b`, NetBird peer B) is
+declared and pending import from `~/forge-tf/mod/`. See
+`docs/runbooks/terraform-import.md` for the env setup, the import
+commands, and the expected 0-diff plan. Import only with an approved
+plan. Do not apply. Tags on 169 and 171–174 match the live
+community-script values, and those files omit `nameserver` so the guests
+keep inheriting host DNS. CT 151 copies CT 150's tags; confirm them with
+`pct config 151` before expecting a 0-diff plan.
 
 ## Rollback
 
