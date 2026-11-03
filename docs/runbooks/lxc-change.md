@@ -19,7 +19,7 @@ Record the snapshot name or the vzdump archive path outside git. Do not
 paste tokens or backup encryption secrets into the repo.
 
 Confirm you are on the intended guest (VMID and hostname). Existing
-CTIDs **150, 151, 153, 154, 160–169, 171–174, 180, 181, 250** are in use (renumbered 2026-11-01, Option Y; 169 added 2026-11-02; 151 and 171–174 added 2026-11-03). There is no CT 170. See [docs/blr.md](../blr.md).
+CTIDs **150, 151, 153, 154, 155, 156, 160–169, 171–174, 180, 181, 250** are in use (renumbered 2026-11-01, Option Y; 169 added 2026-11-02; 151, 155, 156, and 171–174 added 2026-11-03). There is no CT 170. See [docs/blr.md](../blr.md).
 
 ## 2. Plan
 

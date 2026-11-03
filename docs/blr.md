@@ -18,7 +18,7 @@ here or anywhere else in git.
 | API URL shape | `https://10.10.0.21:8006/api2/json` or `https://100.85.104.18:8006/api2/json` |
 | PVE version | Not recorded in this skeleton. Run `pveversion` on the node before any later apply. |
 | Virtual machines | 0 |
-| LXC guests | 21 containers. 18 running, 3 stopped (166, 167, 168). CT 151 recorded 2026-11-03. |
+| LXC guests | 23 containers. CT 155 and CT 156 recorded 2026-11-03 from pct (onboot=1, listed running). Prior check: 18 running, 3 stopped (166, 167, 168). |
 
 
 ## Existing CTIDs
@@ -36,6 +36,8 @@ Renumbered 2026-11-01 (Option Y): static IPs on 10.10.0.0/24, gateway
 | 151 | blr-nb-lxc-b (NetBird peer B) | 10.10.0.51 | vmbr1 | running |
 | 153 | adguard-blr-lxc | 10.10.0.53 | vmbr0 | running |
 | 154 | unbound-blr-lxc | 10.10.0.54 | vmbr0 | running |
+| 155 | adguard-blr-lxc-b (AG-B) | 10.10.0.55 | vmbr1 | running |
+| 156 | adguardsync-blr-lxc | 10.10.0.56 | vmbr0 | running |
 | 160 | searxng-blr-lxc | 10.10.0.60 | vmbr0 | running |
 | 161 | vaultwarden-blr-lxc | 10.10.0.61 | vmbr0 | running |
 | 162 | openbao | 10.10.0.62 | vmbr0 | running |
@@ -56,7 +58,9 @@ Renumbered 2026-11-01 (Option Y): static IPs on 10.10.0.0/24, gateway
 
 DNS: AdGuard primary 10.10.0.53 (BRL), AdGuard secondary 10.10.0.1 (Flint),
 Unbound upstream 10.10.0.54:5335. DHCP option 6 = 10.10.0.53, 10.10.0.1.
-AdGuard sync installed but disabled. `grafana.alehpineda.com` rewrites to
+AdGuard sync installed but disabled. CT 155 `adguard-blr-lxc-b` is
+10.10.0.55 on vmbr1. CT 156 `adguardsync-blr-lxc` is 10.10.0.56 on vmbr0.
+`grafana.alehpineda.com` rewrites to
 10.10.0.250 (Caddy on CT 250). Monitoring wiring, without secrets, is in
 [blr-monitoring.md](blr-monitoring.md).
 
