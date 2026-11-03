@@ -1,7 +1,8 @@
 # CTIDs 150, 153, 154, 160–169, 171–174, 180, 181, 250 on barbatoslupusrex are
 # declared in ct_<id>_<name>.tf (docs/runbooks/terraform-import.md). Each has
 # prevent_destroy. terraform plan must show 0 to add/change/destroy.
-# 169, 171–174, and 250 are pending import. There is no CT 170.
+# 169 and 171–174 were imported 2026-11-03. CT 250 is already imported.
+# There is no CT 170.
 # Do not terraform apply until a separate plan names the change and is
 # approved. See docs/runbooks/lxc-change.md.
 #

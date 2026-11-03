@@ -77,26 +77,35 @@ CTs were renumbered and moved to static IPs (CTID last octet = IP last octet,
 10.10.0.0/24). The `ct_*.tf` files now use the new IDs. Local state still
 points at the old IDs: `terraform state rm proxmox_lxc.ct_<old>` then
 `terraform import proxmox_lxc.ct_<new> barbatoslupusrex/lxc/<new>` for each,
-then `terraform plan` must show no changes before any apply.
+then `terraform plan` must show no changes before any apply. That
+re-key was already done before the 2026-11-03 import. Current state is
+under Applied below.
 
-## CT 250 caddy (pending import)
+## CT 250 caddy (imported)
 
-`ct_250_caddy.tf` declares CT 250. Import only after a separate plan is
-approved, with the read-only token. `terraform plan` after import must show
-no changes (0-diff) before any apply. This note does not approve apply.
+`ct_250_caddy.tf` declares CT 250. It was already in state on barbatos
+before the 2026-11-03 import below, and that run skipped it. Rebuild
+command, if state is recreated, still uses the read-only token. A
+following `terraform plan` must be 0-diff. This note does not approve
+apply.
 
     terraform import proxmox_lxc.ct_250 barbatoslupusrex/lxc/250
 
-Live state on barbatos (`~/forge-tf/mod/terraform.tfstate`) still holds the
-pre-renumber addresses ct_100..ct_113. Re-key it to the new IDs (state rm the
-old addresses, import 150/153/154/160-168/180/181/250) before any plan.
+Current state is `~/forge-tf/mod/terraform.tfstate` on barbatos (20
+resources after the 2026-11-03 import). It is no longer the pre-renumber
+ct_100..ct_113 state.
 
-## CTs 169 and 171–174 (pending import)
+## CTs 169 and 171–174 (imported 2026-11-03)
 
 Declared 2026-11-03 from live pct facts (Postiz CT 169 from 2026-11-02;
-Grafana, Prometheus, Loki, and pve-exporter from 2026-11-03). Import only
-with an approved plan and the read-only token above. A following
-`terraform plan` must be 0-diff. Do not apply as part of importing.
+Grafana, Prometheus, Loki, and pve-exporter from 2026-11-03) and imported
+the same day. See Applied below. A following `terraform plan` must be
+0-diff. Do not apply as part of importing.
+
+Tags in git match the live community-script values. `nameserver` is
+omitted: the live CTs have an empty nameserver and inherit host DNS.
+Setting `nameserver = "10.10.0.53"` or the short tags from the first
+declaration shows an in-place change.
 
 ```bash
 terraform import proxmox_lxc.ct_169 barbatoslupusrex/lxc/169
@@ -107,6 +116,31 @@ terraform import proxmox_lxc.ct_174 barbatoslupusrex/lxc/174
 terraform plan -detailed-exitcode   # exit 0 expected
 ```
 
-These IDs were created after the 2026-11-01 import. They are not in the
-pre-renumber state. There is no CT 170. Guest wiring (no secrets) is in
+These IDs were created after the 2026-11-01 import. There is no CT 170.
+Guest wiring (no secrets) is in
 [docs/blr-monitoring.md](../blr-monitoring.md).
+
+## Applied (2026-11-03)
+
+Import only. Nothing was applied.
+
+- Approval: user "Yes", Forge 1:1 (t229u), about 10:56 AM CT.
+- Repo tip at import: `047631c`. That tip still drifted on tags and
+  `nameserver` for 169 and 171–174. The alignment is in git after this
+  note.
+- Host: barbatos. Tree: `~/forge-tf/mod` (a detached copy, not a git
+  repo). Binary: `~/forge-tf/terraform` v1.9.8. Synced from
+  `~/forge-tf/homelab` at `047631c`, then `terraform/proxmox/*.tf` copied
+  into `mod/`.
+- State: `~/forge-tf/mod/terraform.tfstate`. Backup taken before the
+  imports: `~/forge-tf/mod/terraform.tfstate.bak-20261103-105730`.
+- Token: `grokaudit@pve!forge` (read-only). The secret was copied to a
+  mode-600 temp file, shredded after the run, and never printed.
+- Imported: `ct_169`, `ct_171`, `ct_172`, `ct_173`, `ct_174` (each
+  "Import successful"). Skipped: `ct_250` (already in state). State then
+  held 20 resources.
+- First plan: exit 2, 0 add / 5 change / 0 destroy. Drift was `tags`
+  only (live values are the community-script tags).
+- After setting those tags: exit 2, 0/5/0, adding
+  `nameserver = "10.10.0.53"`. Live CTs have no nameserver set.
+- After removing `nameserver`: exit 0, no changes.
