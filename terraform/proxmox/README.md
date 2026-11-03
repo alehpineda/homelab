@@ -69,15 +69,15 @@ Optional non-secret overrides: copy `terraform.tfvars.example` to
 ## Import
 
 CTIDs 150, 153, 154, 160–168, 180, and 181 are declared in `ct_<id>_<name>.tf` and were imported on
-2026-11-01. CT 250 (caddy), CT 169 (postiz), and CTs 171–174 (monitoring)
-were imported by 2026-11-03. CT 151 (`blr-nb-lxc-b`, NetBird peer B) is
-declared and pending import from `~/forge-tf/mod/`. See
+2026-11-01. CT 250 (caddy), CT 151 (`blr-nb-lxc-b`, NetBird peer B), CT 169
+(postiz), and CTs 171–174 (monitoring) were imported by 2026-11-03. See
 `docs/runbooks/terraform-import.md` for the env setup, the import
 commands, and the expected 0-diff plan. Import only with an approved
 plan. Do not apply. Tags on 169 and 171–174 match the live
 community-script values, and those files omit `nameserver` so the guests
-keep inheriting host DNS. CT 151 copies CT 150's tags; confirm them with
-`pct config 151` before expecting a 0-diff plan.
+keep inheriting host DNS. CT 151 tags are `network;storage-data2;vpn` and
+`nameserver` is `10.10.0.1`. State backup from the import:
+`~/forge-tf/mod/terraform.tfstate.bak-20261103-ct151`.
 
 ## Rollback
 

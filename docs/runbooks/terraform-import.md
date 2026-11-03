@@ -145,21 +145,28 @@ Import only. Nothing was applied.
   `nameserver = "10.10.0.53"`. Live CTs have no nameserver set.
 - After removing `nameserver`: exit 0, no changes.
 
-## CT 151 blr-nb-lxc-b (pending import)
+## CT 151 blr-nb-lxc-b (imported 2026-11-03)
 
-Declared 2026-11-03 from live facts for NetBird peer B. Not imported.
-State on barbatos (`~/forge-tf/mod/terraform.tfstate`) still has the 20
-resources from Applied above. Import only, from `~/forge-tf/mod/`, with
-the read-only token. Do not apply. A following plan must be 0-diff.
+Declared 2026-11-03 from live facts for NetBird peer B and imported the
+same day from `~/forge-tf/mod/` on barbatos. Import only. Do not apply.
+A following `terraform plan` must be 0-diff.
+
+State backup taken before the import:
+`~/forge-tf/mod/terraform.tfstate.bak-20261103-ct151`.
+
+Plan against tip `4679654` (the declaration, before this alignment) was
+0 add / 1 change / 0 destroy. Live tags are
+`network;storage-data2;vpn` (the file had copied CT 150's
+`community-script;` prefix). Live `nameserver` is `10.10.0.1`; omitting
+it would clear the value on apply. Hostname `blr-nb-lxc-b`, unprivileged,
+vmbr1, MAC `BC:24:11:0F:E8:D0`, and `10.10.0.51/24` already matched.
+This note records that alignment. It does not approve apply.
 
 ```bash
 terraform import proxmox_lxc.ct_151 barbatoslupusrex/lxc/151
-terraform plan -detailed-exitcode   # exit 0 expected
+terraform plan -detailed-exitcode   # exit 0 expected after the tag and nameserver alignment
 ```
 
-Tags copy CT 150 (`community-script;network;storage-data2;vpn`). Confirm
-with `pct config 151` first. A different live tag string is an in-place
-change, the same drift class as 169 and 171–174. `nameserver` is omitted.
 Nesting, keyctl, and `/dev/net/tun` stay on the node; Telmate rc10 does
 not model them, and `ignore_changes` matches CT 150. The network block
 documents eth0 on vmbr1, `BC:24:11:0F:E8:D0`, `10.10.0.51/24`, gateway

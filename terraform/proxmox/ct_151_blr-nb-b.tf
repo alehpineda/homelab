@@ -1,6 +1,7 @@
-# CT 151 blr-nb-lxc-b (NetBird peer B). Declared from live config, pending import.
+# CT 151 blr-nb-lxc-b (NetBird peer B). Imported 2026-11-03 from live config.
 # See docs/runbooks/terraform-import.md.
 # Import: terraform import proxmox_lxc.ct_151 barbatoslupusrex/lxc/151
+# State backup: ~/forge-tf/mod/terraform.tfstate.bak-20261103-ct151
 # nesting, keyctl, and /dev/net/tun are pct features. Telmate rc10 does not
 # model them. ignore_changes matches ct_150.
 resource "proxmox_lxc" "ct_151" {
@@ -14,7 +15,8 @@ resource "proxmox_lxc" "ct_151" {
   cores        = 1
   memory       = 512
   swap         = 512
-  tags         = "community-script;network;storage-data2;vpn"
+  nameserver   = "10.10.0.1"
+  tags         = "network;storage-data2;vpn"
 
   rootfs {
     storage = var.pm_storage
