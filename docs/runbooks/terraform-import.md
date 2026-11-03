@@ -144,3 +144,23 @@ Import only. Nothing was applied.
 - After setting those tags: exit 2, 0/5/0, adding
   `nameserver = "10.10.0.53"`. Live CTs have no nameserver set.
 - After removing `nameserver`: exit 0, no changes.
+
+## CT 151 blr-nb-lxc-b (pending import)
+
+Declared 2026-11-03 from live facts for NetBird peer B. Not imported.
+State on barbatos (`~/forge-tf/mod/terraform.tfstate`) still has the 20
+resources from Applied above. Import only, from `~/forge-tf/mod/`, with
+the read-only token. Do not apply. A following plan must be 0-diff.
+
+```bash
+terraform import proxmox_lxc.ct_151 barbatoslupusrex/lxc/151
+terraform plan -detailed-exitcode   # exit 0 expected
+```
+
+Tags copy CT 150 (`community-script;network;storage-data2;vpn`). Confirm
+with `pct config 151` first. A different live tag string is an in-place
+change, the same drift class as 169 and 171–174. `nameserver` is omitted.
+Nesting, keyctl, and `/dev/net/tun` stay on the node; Telmate rc10 does
+not model them, and `ignore_changes` matches CT 150. The network block
+documents eth0 on vmbr1, `BC:24:11:0F:E8:D0`, `10.10.0.51/24`, gateway
+`10.10.0.1` (`network` is ignored after import).
