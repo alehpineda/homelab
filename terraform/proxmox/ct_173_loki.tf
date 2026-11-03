@@ -13,8 +13,8 @@ resource "proxmox_lxc" "ct_173" {
   cores        = 1
   memory       = 1024
   swap         = 512
-  nameserver   = "10.10.0.53"
-  tags         = "loki;monitoring"
+  # nameserver omitted: the live CT has an empty nameserver and uses host DNS.
+  tags         = "community-script;logs;monitoring"
 
   rootfs {
     storage = var.pm_storage

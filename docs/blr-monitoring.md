@@ -4,8 +4,12 @@ Human source of truth for guests and wiring that already exist on
 `barbatoslupusrex`. Terraform declares the LXCs only
 (`terraform/proxmox/ct_169_postiz.tf`, `ct_171_grafana.tf`,
 `ct_172_prometheus.tf`, `ct_173_loki.tf`, `ct_174_pve_exporter.tf`).
-Import is a separate approved step. Do not `terraform apply` from this
-note.
+Those five guests were imported 2026-11-03. Do not `terraform apply`
+from this note.
+
+Terraform `tags` on 169 and 171–174 mirror the community-script defaults
+on the live guests. `nameserver` is omitted in those files: the live CTs
+have an empty nameserver and inherit host DNS.
 
 In-guest files stay on the guests. This page does not contain passwords,
 API tokens, Grafana admin credentials, Caddyfile bodies, AdGuard YAML, or

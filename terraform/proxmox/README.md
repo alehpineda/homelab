@@ -70,9 +70,11 @@ Optional non-secret overrides: copy `terraform.tfvars.example` to
 
 CTIDs 150, 153, 154, 160–168, 180, and 181 are declared in `ct_<id>_<name>.tf` and were imported on
 2026-11-01. CT 250 (caddy), CT 169 (postiz), and CTs 171–174 (monitoring)
-are declared and still pending import. See `docs/runbooks/terraform-import.md`
+were imported by 2026-11-03. See `docs/runbooks/terraform-import.md`
 for the env setup, the import commands, and the expected 0-diff plan.
-Import only with an approved plan. Do not apply.
+Import only with an approved plan. Do not apply. Tags on 169 and 171–174
+match the live community-script values, and those files omit `nameserver`
+so the guests keep inheriting host DNS.
 
 ## Rollback
 

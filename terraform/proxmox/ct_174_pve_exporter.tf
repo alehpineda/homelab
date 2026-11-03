@@ -13,8 +13,8 @@ resource "proxmox_lxc" "ct_174" {
   cores        = 1
   memory       = 512
   swap         = 512
-  nameserver   = "10.10.0.53"
-  tags         = "pve-exporter;monitoring"
+  # nameserver omitted: the live CT has an empty nameserver and uses host DNS.
+  tags         = "community-script;monitoring"
 
   rootfs {
     storage = var.pm_storage

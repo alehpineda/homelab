@@ -13,8 +13,8 @@ resource "proxmox_lxc" "ct_172" {
   cores        = 2
   memory       = 2048
   swap         = 512
-  nameserver   = "10.10.0.53"
-  tags         = "prometheus;monitoring"
+  # nameserver omitted: the live CT has an empty nameserver and uses host DNS.
+  tags         = "community-script;monitoring"
 
   rootfs {
     storage = var.pm_storage
