@@ -106,20 +106,35 @@ Packaged units compared for this encoding, not by editing a guest:
 | Debian 13 (`systemd 257.13-1~deb13u1`) | util-linux 2.41.5 | `-o '-- \\u'` plus `--noreset`. Console form lists `115200,57600,38400,9600` before `-`. |
 
 `--autologin` adds `login -f`. `--login-options` (`-o`) is what the stock
-units pass to `login`, and it is how `-f` gets replaced. The drop-in
-removes `-o` on both distros. Both agetty builds accept the tty-then-baud
-order. The encoded command is the one measured on CT 175:
+units pass to `login`, and it is how `-f` gets replaced. Each drop-in
+starts with a blank `ExecStart=` and then sets the command measured for
+that distro. The role reads the guest distro and refuses to write a
+drop-in when it is not the distro recorded for that hostname.
+
+Ubuntu 24.04, measured on CT 175 (`ollama-blr-lxc`). No `--noreset`. Tty,
+then baud. `$TERM`:
 
 ```
 ExecStart=-/sbin/agetty --autologin root --noclear - $TERM
 ExecStart=-/sbin/agetty --autologin root --noclear --keep-baud - 115200,38400,9600 $TERM
 ```
 
-The operator validated that CT 175 result. CT 250 is approved for the same
-commands. A separate live CT 250 setup was still in progress when this
-role was written, so this repository does not record a second measurement.
-CT 250's stock Debian 13 unit is not copied in. The root password is not
-read or changed. SSH stays key-only; this role does not edit `sshd`.
+Debian 13, measured on CT 250 (`caddy-blr-lxc`). Stock flags kept, `-o`
+removed, `--autologin root` added. Baud list, then tty. `${TERM}`:
+
+```
+ExecStart=-/sbin/agetty --autologin root --noreset --noclear - ${TERM}
+ExecStart=-/sbin/agetty --autologin root --noreset --noclear --keep-baud 115200,57600,38400,9600 - ${TERM}
+```
+
+CT 250's live run restarted `container-getty@tty1`, `container-getty@tty2`,
+and `console-getty`. Root shells were verified on all three. No tty1
+session was active beforehand. The root password was left in place. SSH
+stays without password authentication. Caddy stayed active and was not
+restarted; its admin endpoint returned HTTP 200, and an HTTP 308 was
+observed. CT 176 was not changed. The on-guest files are not copied into
+git; the lines above are the measured contents. This playbook was not
+run for that measurement.
 
 Anyone who can open the Proxmox console for that guest gets a root shell
 without a password. That is the console permission boundary. It is root

@@ -92,14 +92,18 @@ includes `--autologin root`. A `login -f root` shell was verified on tty2
 and on `/dev/console`, and the operator then validated autologin in the
 console. The root password was left in place, SSH stays key-only, and
 Ollama on CT 175 returned HTTP 200. That pilot did not change CT 250 or
-CT 176. The operator later approved the same getty commands for CT 250
-and left CT 176 unchanged.
+CT 176. CT 250 was later measured on Debian 13: stock getty flags kept,
+`-o` removed, and `--autologin root` added. Restarts were
+`container-getty@tty1`, `container-getty@tty2`, and `console-getty`, with
+root shells on each. No tty1 session was active beforehand. The root
+password stayed, SSH stayed without password authentication, and Caddy
+stayed active (admin HTTP 200, an HTTP 308 observed, service not
+restarted). CT 176 stayed unchanged.
 
 This Terraform variable still does not install getty units or set `cmode`.
-The opt-in encoding is `ansible/playbooks/console-autologin.yml`, for
-CT 175 and CT 250 only. `site.yml` does not import it, and this change
-does not run it. CT 250's separate live setup is not a second measurement
-recorded here.
+The opt-in encoding is `ansible/playbooks/console-autologin.yml`, with a
+separate measured ExecStart for Ubuntu 24.04 and Debian 13. `site.yml`
+does not import it, and this change does not run it.
 
 Supply it only for a new guest whose approved plan sets
 `password = var.lxc_root_password`:

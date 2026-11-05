@@ -20,30 +20,52 @@ def main() -> None:
     inventory = read(ANSIBLE / "inventory" / "blr.yml.example")
     ct176 = read(REPO / "terraform" / "proxmox" / "ct_176_forge-ws.tf")
 
-    container = "-/sbin/agetty --autologin root --noclear - $TERM"
-    console = "-/sbin/agetty --autologin root --noclear --keep-baud - 115200,38400,9600 $TERM"
+    ubuntu_container = "-/sbin/agetty --autologin root --noclear - $TERM"
+    ubuntu_console = "-/sbin/agetty --autologin root --noclear --keep-baud - 115200,38400,9600 $TERM"
+    debian_container = "-/sbin/agetty --autologin root --noreset --noclear - ${TERM}"
+    debian_console = (
+        "-/sbin/agetty --autologin root --noreset --noclear --keep-baud "
+        "115200,57600,38400,9600 - ${TERM}"
+    )
     required = [
         "console_autologin_enabled: false",
         "ollama-blr-lxc: 10.10.0.63",
         "caddy-blr-lxc: 10.10.0.250",
-        f'console_autologin_container_execstart: "{container}"',
-        f'console_autologin_console_execstart: "{console}"',
+        "ollama-blr-lxc: ubuntu-24.04",
+        "caddy-blr-lxc: debian-13",
+        f'container: "{ubuntu_container}"',
+        f'console: "{ubuntu_console}"',
+        f'container: "{debian_container}"',
+        f'console: "{debian_console}"',
     ]
     for item in required:
         if item not in defaults:
             raise SystemExit(f"defaults missing {item!r}")
-    if "forge-ws-blr-lxc" in defaults.split("console_autologin_allowed:", 1)[1].split("console_autologin_container_execstart:", 1)[0]:
+    allowed = defaults.split("console_autologin_allowed:", 1)[1].split("console_autologin_host_os:", 1)[0]
+    if "forge-ws-blr-lxc" in allowed:
         raise SystemExit("allow-list must not name CT 176")
     if "10.10.0.76" in defaults:
         raise SystemExit("allow-list must not name CT 176's address")
-    for forbidden in (" -o ", "-o '", '--login-options', "/dev/tty", "/dev/pts", "/dev/console"):
-        if forbidden in container or forbidden in console:
-            raise SystemExit(f"measured ExecStart contains {forbidden!r}")
+    if "--noreset" in ubuntu_container or "--noreset" in ubuntu_console:
+        raise SystemExit("Ubuntu 24.04 measurement does not include --noreset")
+    if "--noreset" not in debian_container or "--noreset" not in debian_console:
+        raise SystemExit("Debian 13 measurement keeps --noreset")
+    if " - 115200,38400,9600 $TERM" not in ubuntu_console:
+        raise SystemExit("Ubuntu console measurement is tty then baud")
+    if "115200,57600,38400,9600 - ${TERM}" not in debian_console:
+        raise SystemExit("Debian console measurement is baud then tty")
+    for line in (ubuntu_container, ubuntu_console, debian_container, debian_console):
+        for forbidden in (" -o ", "-o '", "--login-options", "/dev/tty", "/dev/pts", "/dev/console"):
+            if forbidden in line:
+                raise SystemExit(f"measured ExecStart contains {forbidden!r}")
 
     for item in (
         "ExecStart=",
         "ExecStart={{ console_autologin_container_execstart }}",
         "ExecStart={{ console_autologin_console_execstart }}",
+        "console_autologin_detected_os",
+        "ubuntu-24.04",
+        "debian-13",
         "inventory_hostname in console_autologin_allowed",
         "console_autologin_enabled | bool",
         "daemon_reload: true",

@@ -110,8 +110,9 @@ does not enable automatic root login. The read-only comparison is
 complete. CT 170, CT 171, and CT 181 omit the prompt because guest agetty
 overrides `ExecStart` with `--autologin root`. `cmode` is `tty` on those
 guests and on CT 175 and CT 250. The operator validated the CT 175 pilot
-(effective `--autologin root`, `login -f root` on tty2 and `/dev/console`)
-and approved the same commands for CT 250. CT 176 keeps the deathscythe
+(effective `--autologin root`, `login -f root` on tty2 and `/dev/console`).
+CT 250's measured Debian 13 lines keep `--noreset` and the stock baud
+order, drop `-o`, and add `--autologin root`. CT 176 keeps the deathscythe
 login. Root passwords stay as they are, and SSH stays key-only. The
 Ansible role `console_autologin` is the opt-in encoding. Rollback of the
 drop-ins is in [ansible/README.md](../../ansible/README.md). CT 176's

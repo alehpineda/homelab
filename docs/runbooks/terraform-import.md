@@ -246,8 +246,10 @@ Automatic root login, a console that opens a root shell with no prompt,
 is a separate behavior and is not configured by `var.lxc_root_password`.
 The read-only comparison is complete: CT 170, CT 171, and CT 181 use
 guest agetty `--autologin root`, and `cmode` `tty` is the same on CT 175
-and CT 250. The operator validated CT 175 autologin and approved the same
-getty commands for CT 250. CT 176 stays unchanged. Root passwords stay in
+and CT 250. The operator validated CT 175 autologin. CT 250 was measured separately
+on Debian 13: stock getty flags kept, `-o` removed, `--autologin root`
+added, with root shells on tty1, tty2, and the console. CT 176 stays
+unchanged. Root passwords stay in
 place and SSH stays key-only. The opt-in encoding is
 `ansible/playbooks/console-autologin.yml`. No declared `ct_*.tf` sets `password`.
 Existing guest passwords stay the

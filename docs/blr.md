@@ -104,8 +104,11 @@ when a prompt asks. They are not automatic root login. The read-only
 comparison is complete: CT 170, CT 171, and CT 181 omit the prompt via
 guest agetty `--autologin root`, while `cmode` `tty` matches CT 175 and
 CT 250. The operator validated CT 175 autologin after the 4:26 PM CT
-pilot on 2026-11-05, then approved the same getty commands for CT 250.
-CT 176 stays without them. The opt-in Ansible role is
+pilot on 2026-11-05. CT 250 was then measured on Debian 13 with stock
+getty flags kept, `-o` removed, and `--autologin root` added. Root shells
+were verified on `container-getty@tty1`, `container-getty@tty2`, and
+`console-getty`. Caddy was not restarted. CT 176 stays without autologin.
+The opt-in Ansible role is
 `console_autologin`; running it is a separate approval. The root password
 stays in place and SSH stays key-only. CT 176 stays declared
 without a `password` argument; its login is the deathscythe account. A

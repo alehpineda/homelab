@@ -2,7 +2,7 @@
 # Drop-in only. Vendor units keep TTYPath (/dev/pts/%I, /dev/console),
 # StandardInput=tty, and StandardOutput=tty. A blank ExecStart= clears the
 # distro command, including Ubuntu 24.04 "-o '-p -- \\u'" and Debian 13
-# "-o '-- \\u'", before the measured CT 175 command is set.
+# "-o '-- \\u'", before the measured command for that distro is set.
 - name: Skip guests that have not opted in
   ansible.builtin.debug:
     msg: "console autologin is off for {{ inventory_hostname }}"
@@ -16,14 +16,47 @@
         that:
           - inventory_hostname in console_autologin_allowed
           - (ansible_host | default('')) == console_autologin_allowed[inventory_hostname]
-          - "'-o' not in console_autologin_container_execstart"
-          - "'-o' not in console_autologin_console_execstart"
-          - "' --noclear - ' in console_autologin_container_execstart"
-          - "' --keep-baud - ' in console_autologin_console_execstart"
+          - inventory_hostname in console_autologin_host_os
+          - console_autologin_host_os[inventory_hostname] in console_autologin_variants
         fail_msg: >-
           {{ inventory_hostname }} ({{ ansible_host | default('no ansible_host') }})
           is not an approved console-autologin guest. CT 176 stays unchanged.
           Allowed: {{ console_autologin_allowed | to_json }}
+
+    - name: Read the guest distro
+      ansible.builtin.setup:
+        gather_subset:
+          - min
+
+    - name: Select the measured ExecStart for this distro
+      ansible.builtin.set_fact:
+        console_autologin_detected_os: >-
+          {{
+            'ubuntu-24.04'
+            if (ansible_distribution == 'Ubuntu' and ansible_distribution_major_version | string == '24')
+            else (
+              'debian-13'
+              if (ansible_distribution == 'Debian' and ansible_distribution_major_version | string == '13')
+              else 'unsupported'
+            )
+          }}
+        console_autologin_container_execstart: >-
+          {{ console_autologin_variants[console_autologin_host_os[inventory_hostname]].container }}
+        console_autologin_console_execstart: >-
+          {{ console_autologin_variants[console_autologin_host_os[inventory_hostname]].console }}
+
+    - name: Refuse a guest whose distro is not the measured one
+      ansible.builtin.assert:
+        that:
+          - console_autologin_detected_os == console_autologin_host_os[inventory_hostname]
+          - "'-o' not in console_autologin_container_execstart"
+          - "'-o' not in console_autologin_console_execstart"
+          - "'--autologin root' in console_autologin_container_execstart"
+          - "'--autologin root' in console_autologin_console_execstart"
+        fail_msg: >-
+          {{ inventory_hostname }} detected {{ console_autologin_detected_os }},
+          expected {{ console_autologin_host_os[inventory_hostname] }}.
+          The drop-in was not written.
 
     - name: Require vendor getty units
       ansible.builtin.stat:
