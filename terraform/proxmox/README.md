@@ -6,7 +6,7 @@ import. The example guest in `main.tf` is commented out. Running apply
 from this tree is not approved and must not create or destroy a container.
 
 This directory does not approve an apply. Create and destroy of any guest,
-including CTIDs 150, 151, 153, 154, 155, 156, 160–169, 171–174, 180, 181, and 250, wait for a separate approved plan. Follow
+including CTIDs 150, 151, 153, 154, 155, 156, 160–162, 164–169, 171–175, 180, 181, and 250, wait for a separate approved plan. Follow
 [docs/runbooks/lxc-change.md](../../docs/runbooks/lxc-change.md).
 
 Node facts (no secrets): [docs/blr.md](../../docs/blr.md).
@@ -17,7 +17,7 @@ Monitoring and Postiz wiring: [docs/blr-monitoring.md](../../docs/blr-monitoring
 | Node | `barbatoslupusrex` |
 | LAN | `10.10.0.21` |
 | NetBird | `100.85.104.18` |
-| Existing CTIDs | 150, 151, 153, 154, 155, 156, 160–169, 171–174, 180, 181, 250 |
+| Existing CTIDs | 150, 151, 153, 154, 155, 156, 160–162, 164–169, 171–175, 180, 181, 250 |
 | Provider | `telmate/proxmox` `3.0.2-rc10` |
 
 `3.0.2-rc10` is the latest registry tag as of 2026-10-31 and is still a
@@ -82,6 +82,14 @@ keep inheriting host DNS. CT 151 tags are `network;storage-data2;vpn` and
 and CT 156 tags are `community-script;os` (pct order; no `storage-data2`
 suffix). Both omit `nameserver`. State backup from the CT 151 import:
 `~/forge-tf/mod/terraform.tfstate.bak-20261103-ct151`.
+
+CT 175 (`ollama-blr-lxc`) replaces destroyed CT 163. `ct_163_ollama.tf` is
+gone. Before import, `terraform state rm proxmox_lxc.ct_163` (state only;
+CT 163 is already gone), then
+`terraform import proxmox_lxc.ct_175 barbatoslupusrex/lxc/175`. A following
+plan must be 0-diff. Do not apply. Features, DRI devices, the models
+dataset, and the `OLLAMA_MODELS` drop-in are documented in
+`docs/runbooks/terraform-import.md` and `docs/runbooks/ollama-models.md`.
 
 ## Rollback
 

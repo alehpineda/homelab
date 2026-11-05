@@ -205,3 +205,57 @@ import):
 
 - CT 155 eth0 on vmbr1, `BC:24:11:9D:BE:3C`, `10.10.0.55/24`, gateway `10.10.0.1`
 - CT 156 eth0 on vmbr0, `BC:24:11:27:FD:2D`, `10.10.0.56/24`, gateway `10.10.0.1`
+
+## CT 175 ollama (pending import; replaces destroyed CT 163)
+
+Declared 2026-11-05 from live pct after CT 163 was destroyed and rebuilt
+as CT 175 (`ollama-blr-lxc`, still `10.10.0.63`). The old address in state
+is `proxmox_lxc.ct_163`. Import only, from `~/forge-tf/mod/`, with the
+read-only token. Do not apply. A following plan must be 0-diff.
+
+CT 163 is gone on the node. Removing `ct_163_ollama.tf` while
+`proxmox_lxc.ct_163` is still in state makes the next plan a destroy of
+that address. `prevent_destroy` rejects the plan, so apply cannot run,
+and CT 175 cannot be imported on top of the stale address. `terraform
+state rm` drops the state entry only. It does not contact the node and
+does not delete a guest.
+
+Back up `~/forge-tf/mod/terraform.tfstate` before the `state rm`, same
+pattern as CT 151. If `ct_163` is already absent, skip the `state rm`.
+
+```bash
+terraform state rm proxmox_lxc.ct_163
+terraform import proxmox_lxc.ct_175 barbatoslupusrex/lxc/175
+terraform plan -detailed-exitcode   # exit 0 expected
+```
+
+Live facts this declaration records:
+
+- vmid 175, hostname `ollama-blr-lxc`, ostype ubuntu, unprivileged, onboot
+- 8 cores, memory 32768, swap 4096 (other guests declare swap 512; this
+  one matches pct)
+- rootfs `data2:vm-175-disk-0,size=24G` via `var.pm_storage` and size
+  `24G`. `rootfs[0].storage` is ignored after import. Size is not.
+- tags `ai;community-script;storage-data2`
+- net0 eth0 vmbr0, MAC `BC:24:11:DB:3D:D7`, `10.10.0.63/24`, gateway
+  `10.10.0.1`, `ip6=auto`. No firewall flag, so the network block omits
+  `firewall`. `network` is ignored after import.
+- mp0 `/media/ollama-models,mp=/mnt/ollama-models,backup=0`, declared like
+  CT 180 and CT 181 (`volume`, `mp`, `backup = false`). `mountpoint` is
+  ignored after import, so a Telmate read that does not round-trip the
+  bind cannot replace the guest.
+- `timezone` `America/Chicago` is not in the Telmate schema.
+- `features` `nesting=1,keyctl=1` are omitted like CT 155. Telmate copies
+  features into state only when the block is already set, so leaving it
+  unset keeps the plan at 0-diff and leaves `ignore_changes` identical
+  to the sibling CTs.
+- `dev0` `/dev/dri/renderD128,gid=993` and `dev1` `/dev/dri/card0,gid=44`
+  are not in the Telmate schema. They stay on the node. They are not
+  declared as mountpoints.
+
+Host ZFS dataset `media/ollama-models` (mount `/media/ollama-models`, used
+about 203G, refquota 400G on 2026-11-05) is not managed here. Guest
+`OLLAMA_MODELS` is Ansible. See [ollama-models.md](ollama-models.md).
+
+`vzdump` job `forge-backup-ssd` already includes 175 and excludes 163.
+No job change is part of this import.

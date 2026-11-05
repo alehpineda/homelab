@@ -1,5 +1,6 @@
 ---
-# Site entrypoint. The skeleton only imports the connectivity smoke.
-# Add real roles in a later plan; do not point this at live config from here.
+# Site entrypoint. Imports the connectivity smoke only.
+# playbooks/ollama.yml sets OLLAMA_MODELS on CT 175 and is not imported
+# here. Run it only from a separate approved plan.
 - name: Include connectivity smoke
   ansible.builtin.import_playbook: ping.yml

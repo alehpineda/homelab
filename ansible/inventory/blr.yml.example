@@ -20,6 +20,11 @@ all:
           ansible_host: 10.10.0.50
           ansible_port: 22
           # ansible_port: 4488  # uncomment only for a guest hardened by ansible-playbooks
+        # CT 175. playbooks/ollama.yml targets this host. site.yml does not.
+        # Port 22: community-script LXC, not an ansible-playbooks harden.
+        ollama-blr-lxc:
+          ansible_host: 10.10.0.63
+          ansible_port: 22
         # Uncomment in the local gitignored copy. Fresh monitoring/Postiz LXCs listen on 22.
         # postiz-blr-lxc:            # CT 169
         #   ansible_host: 10.10.0.69

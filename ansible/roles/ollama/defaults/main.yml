@@ -1,0 +1,15 @@
+---
+# Guest path of CT 175 mp0. The host path is /media/ollama-models
+# (ZFS dataset media/ollama-models). This role does not create that dataset.
+ollama_models_dir: /mnt/ollama-models
+
+# Community-script unit. It has historically set HOME=/root, so the models
+# directory defaults to root:root and is not recursed. Override owner or
+# group in the gitignored inventory if the unit User= is not root.
+ollama_service_name: ollama
+ollama_unit_path: /etc/systemd/system/ollama.service
+ollama_dropin_dir: /etc/systemd/system/ollama.service.d
+ollama_dropin_filename: models.conf
+ollama_models_owner: root
+ollama_models_group: root
+ollama_models_mode: "0755"

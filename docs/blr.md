@@ -18,7 +18,7 @@ here or anywhere else in git.
 | API URL shape | `https://10.10.0.21:8006/api2/json` or `https://100.85.104.18:8006/api2/json` |
 | PVE version | Not recorded in this skeleton. Run `pveversion` on the node before any later apply. |
 | Virtual machines | 0 |
-| LXC guests | 23 containers. CT 155 and CT 156 recorded 2026-11-03 from pct (onboot=1, listed running). Prior check: 18 running, 3 stopped (166, 167, 168). |
+| LXC guests | 23 containers. CT 175 replaced destroyed CT 163 on 2026-11-05 (same count). CT 155 and CT 156 recorded 2026-11-03 from pct (onboot=1, listed running). Prior check: 18 running, 3 stopped (166, 167, 168). |
 
 
 ## Existing CTIDs
@@ -28,7 +28,8 @@ Terraform until a separate approved plan imports them and the plan output
 shows no destroy.
 
 Renumbered 2026-11-01 (Option Y): static IPs on 10.10.0.0/24, gateway
-10.10.0.1, CTID last two digits = IP last octet.
+10.10.0.1, CTID last two digits = IP last octet. CT 175 keeps
+`10.10.0.63` from the destroyed CT 163, so its last octet is not 175.
 
 | CTID | Hostname | IP | Bridge | State |
 |---|---|---|---|---|
@@ -41,7 +42,6 @@ Renumbered 2026-11-01 (Option Y): static IPs on 10.10.0.0/24, gateway
 | 160 | searxng-blr-lxc | 10.10.0.60 | vmbr0 | running |
 | 161 | vaultwarden-blr-lxc | 10.10.0.61 | vmbr0 | running |
 | 162 | openbao | 10.10.0.62 | vmbr0 | running |
-| 163 | ollama-blr-lxc | 10.10.0.63 | vmbr0 | running |
 | 164 | firecrawl-blr-lxc | 10.10.0.64 | vmbr0 | running |
 | 165 | honcho-blr-lxc | 10.10.0.65 | vmbr0 | running |
 | 166 | gitlab | 10.10.0.66 | vmbr0 | stopped |
@@ -52,6 +52,7 @@ Renumbered 2026-11-01 (Option Y): static IPs on 10.10.0.0/24, gateway
 | 172 | prometheus-blr-lxc | 10.10.0.72 | vmbr0 | running |
 | 173 | loki-blr-lxc | 10.10.0.73 | vmbr0 | running |
 | 174 | pve-exporter-blr-lxc | 10.10.0.74 | vmbr0 | running |
+| 175 | ollama-blr-lxc | 10.10.0.63 | vmbr0 | running |
 | 180 | jellyfin-blr-lxc | 10.10.0.80 | vmbr1 | running |
 | 181 | metube | 10.10.0.81 | vmbr0 | running |
 | 250 | caddy-blr-lxc | 10.10.0.250 | vmbr0 | running |
@@ -68,7 +69,10 @@ Flint DHCP reservations for 10.10.0.71–10.10.0.74 (MACs on CTs 171–174)
 are still pending.
 
 New containers, if a later plan creates any, need an explicit VMID not in this list.
-There is no CT 170.
+There is no CT 163 (destroyed 2026-11-05; Ollama is CT 175) and no CT 170.
+Models for CT 175 live on the host ZFS dataset below, bind-mounted at
+guest `/mnt/ollama-models`. Ansible sets `OLLAMA_MODELS` there; see
+[runbooks/ollama-models.md](runbooks/ollama-models.md).
 
 ## Storage
 
@@ -76,8 +80,9 @@ Names only. Paths and credentials stay on the node.
 
 | Name | Role in this skeleton |
 |------|------------------------|
-| `data2` | Root-disk storage for all CTs and default `pm_storage`. |
+| `data2` | Root-disk storage for all CTs and default `pm_storage`. CT 175 rootfs is 24G on `data2`. |
 | `media` | Media storage on the node. Not wired to Terraform. |
+| `media/ollama-models` | ZFS dataset, host mount `/media/ollama-models`. CT 175 mp0 binds it at guest `/mnt/ollama-models` with `backup=0`. Measured 2026-11-05: used about 203G, refquota 400G. Not a Terraform resource. |
 | SMB mounts | Present on the node. Do not encode share users or passwords in this repo. |
 
 ## API access
