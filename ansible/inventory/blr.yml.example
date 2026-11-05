@@ -36,3 +36,6 @@ all:
         # pve-exporter-blr-lxc:      # CT 174
         #   ansible_host: 10.10.0.74
         #   ansible_port: 22
+        # forge-ws-blr-lxc:          # CT 176 — declared, not created. Uncomment only after the guest exists.
+        #   ansible_host: 10.10.0.76
+        #   ansible_port: 22

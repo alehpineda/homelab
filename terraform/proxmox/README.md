@@ -6,7 +6,7 @@ import. The example guest in `main.tf` is commented out. Running apply
 from this tree is not approved and must not create or destroy a container.
 
 This directory does not approve an apply. Create and destroy of any guest,
-including CTIDs 150, 151, 153, 154, 155, 156, 160–169, 171–174, 180, 181, and 250, wait for a separate approved plan. Follow
+including CTIDs 150, 151, 153, 154, 155, 156, 160–169, 171–174, 176, 180, 181, and 250, wait for a separate approved plan. CT 176 is declared and does not exist yet. Follow
 [docs/runbooks/lxc-change.md](../../docs/runbooks/lxc-change.md).
 
 Node facts (no secrets): [docs/blr.md](../../docs/blr.md).
@@ -18,6 +18,7 @@ Monitoring and Postiz wiring: [docs/blr-monitoring.md](../../docs/blr-monitoring
 | LAN | `10.10.0.21` |
 | NetBird | `100.85.104.18` |
 | Existing CTIDs | 150, 151, 153, 154, 155, 156, 160–169, 171–174, 180, 181, 250 |
+| Declared, not created | 176 (`forge-ws-blr-lxc`, 10.10.0.76) |
 | Provider | `telmate/proxmox` `3.0.2-rc10` |
 
 `3.0.2-rc10` is the latest registry tag as of 2026-10-31 and is still a
@@ -72,8 +73,9 @@ CTIDs 150, 153, 154, 160–168, 180, and 181 are declared in `ct_<id>_<name>.tf`
 2026-11-01. CT 250 (caddy), CT 151 (`blr-nb-lxc-b`, NetBird peer B), CT 169
 (postiz), and CTs 171–174 (monitoring) were imported by 2026-11-03. CT 155
 (`adguard-blr-lxc-b`, AG-B) and CT 156 (`adguardsync-blr-lxc`) are declared
-and pending import from `~/forge-tf/mod/`. See
-`docs/runbooks/terraform-import.md` for the env setup, the import
+and pending import from `~/forge-tf/mod/`. CT 176 (`forge-ws-blr-lxc`) is
+declared and not created; do not import or apply it from this declaration.
+See `docs/runbooks/terraform-import.md` for the env setup, the import
 commands, and the expected 0-diff plan. Import only with an approved
 plan. Do not apply. Tags on 169 and 171–174 match the live
 community-script values, and those files omit `nameserver` so the guests
