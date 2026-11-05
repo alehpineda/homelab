@@ -205,3 +205,24 @@ import):
 
 - CT 155 eth0 on vmbr1, `BC:24:11:9D:BE:3C`, `10.10.0.55/24`, gateway `10.10.0.1`
 - CT 156 eth0 on vmbr0, `BC:24:11:27:FD:2D`, `10.10.0.56/24`, gateway `10.10.0.1`
+
+## CT 176 forge-ws-blr-lxc (declared, not created)
+
+Declared 2026-11-05. The guest is not on the node. Do not import it and do
+not apply from the declaration. Create (`pct create`, with
+`nesting=1,keyctl=1`, or a later plan written for that create) is a
+separate approved step. After the guest exists, import only:
+
+```bash
+terraform import proxmox_lxc.ct_176 barbatoslupusrex/lxc/176
+terraform plan -detailed-exitcode   # exit 0 expected after MAC alignment
+```
+
+`features` (`nesting=1,keyctl=1`) and `timezone` (`America/Chicago`) are
+pct create settings. Both are omitted like CT 155 so `ignore_changes`
+stays identical to that file. `hwaddr` is omitted: Proxmox assigns a
+`BC:24:11` address at create, and that MAC is recorded on import.
+`nameserver` is omitted (Flint option 6 / host DNS). Rootfs is
+`var.pm_storage` (`data2`) at `40G`. Intended NIC, documented only
+(`network` is ignored after import): eth0 on vmbr0, `10.10.0.76/24`,
+gateway `10.10.0.1`. Tags: `forge;workstation;desktop`.
