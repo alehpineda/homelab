@@ -67,6 +67,77 @@ backend, which is another reason not to commit state.
 Optional non-secret overrides: copy `terraform.tfvars.example` to
 `terraform.tfvars`.
 
+## Console root password (future create only)
+
+`var.lxc_root_password` is the Telmate `proxmox_lxc.password` argument: the
+Proxmox API `password` field, which sets the console root password inside
+the guest at create. It does not change SSH (`PermitRootLogin`,
+`PasswordAuthentication`, or `ssh_public_keys`).
+
+Supply it only for a new guest whose approved plan sets
+`password = var.lxc_root_password`:
+
+```bash
+# from a secret store; the value must not be written to git or tfvars
+export TF_VAR_lxc_root_password='<from-your-secret-store>'
+```
+
+Leave the variable unset for `plan` and `import`. It defaults to `null`,
+has no example value, and is `sensitive`. A blank string fails the
+variable validation when Terraform evaluates variables (`terraform plan`).
+`terraform validate` does not run that rule. `terraform.tfvars.example`
+does not contain the key.
+
+Checked against telmate/proxmox `3.0.2-rc10` (`resourceLxc`, the resource
+registered as `proxmox_lxc`) and proxmox-api-go
+`v0.0.0-20260830211552-9cba66824699`:
+
+- Schema: `password` is optional, `Sensitive`, and `ForceNew` ("Proxmox
+  doesn't support password changes") in `proxmox/resource_lxc.go`.
+- Create (not clone) copies it onto `ConfigLxc.Password`. `CreateLxc`
+  JSON-encodes the struct (`password,omitempty`) and POSTs the container.
+  An empty string is omitted.
+- `UpdateConfig` deletes `password` before `SetLxcConfig`, so an in-place
+  update does not send a password. The clone path calls `UpdateConfig`
+  after the clone, so a clone does not send one either.
+- Read leaves `d.Set("password", ...)` commented ("Only applicable on
+  create and not readable"). Import therefore stores no password.
+
+`terraform providers schema -json` on the installed `3.0.2-rc10` plugin
+reports `proxmox_lxc.password` as optional and sensitive. That JSON does
+not include `ForceNew`. `ForceNew: true` is in `resource_lxc.go` at the
+tag the lock file installs, next to the comment the provider binary still
+contains.
+
+`ForceNew` means a password difference is a replacement plan. Every
+`proxmox_lxc` in this module already lists `password` in
+`lifecycle.ignore_changes`, so that difference is ignored on update and
+the guest is not rotated or replaced. Create still applies the initial
+value. Do not remove `password` from `ignore_changes` to try to rotate one.
+
+State: after a create that set `password`, Terraform keeps the config
+value because Read does not refresh it. `sensitive` redacts the CLI plan.
+The local `terraform.tfstate` still holds the plaintext string. `*.tfstate`
+and `*.tfvars` are gitignored. Keep the state file on the operator host,
+mode-restricted, and out of git. This root module has no remote backend, so
+nothing here encrypts state. `terraform state pull` and a failed `CreateLxc`
+error can include the API parameter map (the provider formats that map into
+the error). Treat those logs as secret. `prevent_destroy` on each guest
+rejects a destroy. The Proxmox guest `protection` flag is a separate API
+field and this change does not set it.
+
+Day-1 passwords on guests that already exist were set when those containers
+were created. This module does not read, receive, or rotate them. Live
+console root passwords for CT 175 and CT 250 were applied outside this
+change. CT 176 (`proxmox_lxc.ct_176`) has no `password` argument and stays
+that way: login remains the deathscythe account. Open pull request
+[#19](https://github.com/alehpineda/homelab/pull/19) owns the CT 175
+declaration (`ct_175_ollama.tf`). This change does not add that file and
+does not set `password` on CT 175.
+
+The commented `example_service` block in `main.tf` shows the two lines a
+future create needs. Uncommenting it is not approval to apply.
+
 ## Import
 
 CTIDs 150, 153, 154, 160–168, 180, and 181 are declared in `ct_<id>_<name>.tf` and were imported on

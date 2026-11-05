@@ -91,5 +91,14 @@ merge commit. No guest restore is required for that git-only change.
 
 - Plan shows destroy of any in-use CTID.
 - Plan shows a create you did not name in the approved change.
+- Plan replaces a guest because `password` differs. `password` is ForceNew
+  in Telmate 3.0.2-rc10. `ignore_changes` must keep that diff off the plan.
+  Removing it does not rotate the console password in place.
 - Backup or snapshot failed.
-- API token would be written into `terraform.tfvars`, `.env`, or shell history you commit.
+- API token or `TF_VAR_lxc_root_password` would be written into
+  `terraform.tfvars`, `.env`, or shell history you commit.
+
+`var.lxc_root_password` is unset by default. Setting it is not approval to
+apply, and it does not change passwords already on the node. Those were
+set on day 1. CT 176 keeps the deathscythe login; its resource has no
+`password` argument. CT 175's declaration is pull request #19.

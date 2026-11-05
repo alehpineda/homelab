@@ -11,6 +11,10 @@
 # Preferences for a future container: unprivileged, one service per CT,
 # explicit vmid outside the in-use CTIDs, start = false until checks pass.
 # Telmate crashes if rootfs is omitted, so the example includes it.
+# A future create that should have a console root password sets
+# `password = var.lxc_root_password` and keeps `password` in ignore_changes.
+# Existing ct_*.tf resources do not set password. CT 176 stays that way
+# (deathscythe login). Open PR 19 owns the CT 175 declaration; do not add it here.
 
 # resource "proxmox_lxc" "example_service" {
 #   target_node  = var.pm_node
@@ -42,4 +46,19 @@
 #     bridge = var.pm_bridge
 #     ip     = "dhcp"
 #   }
+#
+#   # Create-time console root password. Uncomment only on a new guest whose
+#   # approved plan names this create. Export TF_VAR_lxc_root_password first.
+#   # password = var.lxc_root_password
+#
+#   # lifecycle {
+#   #   prevent_destroy = true
+#   #   # password is ForceNew in Telmate 3.0.2-rc10. ignore_changes keeps a
+#   #   # later value from replacing the guest. The provider drops password
+#   #   # on update, and Read does not return it.
+#   #   ignore_changes = [
+#   #     ostemplate, password, ssh_public_keys, start, description,
+#   #     target_node, cmode, network, mountpoint, rootfs[0].storage,
+#   #   ]
+#   # }
 # }

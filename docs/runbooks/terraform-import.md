@@ -47,7 +47,13 @@ No changes. Your infrastructure matches the configuration.
 
 ## Why each ignore_changes entry exists
 
-- `ostemplate`, `password`, `ssh_public_keys`, `start`: create-time only, not read back.
+- `ostemplate`, `ssh_public_keys`, `start`: create-time only, not read back.
+- `password`: create-time console root password. On telmate/proxmox
+  `3.0.2-rc10`, `proxmox_lxc` marks it `Sensitive` and `ForceNew`, sends it
+  only from `CreateLxc`, deletes it inside `UpdateConfig`, and does not
+  read it back. `ignore_changes` is what stops a later value from planning
+  a replacement. See `terraform/proxmox/README.md`. Imported guests keep
+  the password set on day 1. Do not drop `password` from `ignore_changes`.
 - `description`: community-scripts HTML blob; not worth tracking.
 - `target_node`, `cmode`, `network`, `mountpoint`, `rootfs[0].storage`: Telmate
   rc10 import leaves these null in state. Without ignoring them, plan shows
@@ -226,3 +232,24 @@ stays identical to that file. `hwaddr` is omitted: Proxmox assigns a
 `var.pm_storage` (`data2`) at `40G`. Intended NIC, documented only
 (`network` is ignored after import): eth0 on vmbr0, `10.10.0.76/24`,
 gateway `10.10.0.1`. Tags: `forge;workstation;desktop`.
+
+`ct_176_forge-ws.tf` does not set `password`. Login for that guest stays
+the deathscythe account. `var.lxc_root_password` is for a later create
+that opts in. It is not applied to CT 176, and this declaration does not
+change SSH root-password policy.
+
+## Create-time console root password
+
+`var.lxc_root_password` (sensitive, default `null`) is documented in
+`terraform/proxmox/README.md`. No declared `ct_*.tf` sets `password`.
+Existing guest passwords stay the day-1 values already on the guests.
+Live passwords for CT 175 and CT 250 were applied outside this repo and
+are not imported here. CT 175's Terraform declaration is open pull
+request #19; this note does not add `ct_175_ollama.tf`.
+
+A future create sets `password = var.lxc_root_password` and keeps
+`password` in `ignore_changes`. Export `TF_VAR_lxc_root_password` from a
+secret store for that create only. Do not write it into state you commit.
+After create, the plaintext password sits in local `terraform.tfstate`
+because Telmate does not read it back and `sensitive` only redacts the
+CLI. State stays gitignored. `prevent_destroy` stays on the guest.

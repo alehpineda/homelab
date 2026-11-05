@@ -33,3 +33,23 @@ variable "pm_minimum_permission_check" {
   type        = bool
   default     = true
 }
+
+# Console root password for a future proxmox_lxc create. Telmate's `password`
+# argument is the Proxmox API `password` field (root inside the guest at
+# create). It is not an SSH daemon setting. Leave this null for plan and
+# import. Supply a real value only with TF_VAR_lxc_root_password from a
+# secret store, and only for a resource that sets `password` on create.
+# No default secret. Do not put the value in terraform.tfvars or git.
+variable "lxc_root_password" {
+  description = "Sensitive create-time console root password for a future proxmox_lxc. Null leaves every declared guest unchanged. Set TF_VAR_lxc_root_password from a secret store. Never commit the value."
+  type        = string
+  sensitive   = true
+  default     = null
+
+  validation {
+    # The conditional operator evaluates only the chosen branch, so trimspace
+    # is not called when the variable is null.
+    condition     = var.lxc_root_password == null ? true : length(trimspace(var.lxc_root_password)) > 0
+    error_message = "lxc_root_password must be null or a non-empty value supplied outside git."
+  }
+}
