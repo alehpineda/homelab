@@ -77,16 +77,27 @@ the guest at create. It does not change SSH (`PermitRootLogin`,
 ### Password and automatic login are different
 
 A configured password lets root authenticate when a prompt asks for one.
-Automatic root login is the desired console parity: the console opens a
-root shell with no login prompt. This variable does not configure that.
-Telmate `password` is not PVE `cmode`, and it does not write getty or
-autologin configuration inside the guest.
+Automatic root login opens a root shell with no login prompt. This variable
+does not configure that. Telmate `password` is not PVE `cmode`, and it does
+not write getty or autologin configuration inside the guest.
 
-Live root passwords on the node succeed. CT 175 still presents a login
-prompt. A read-only comparison of PVE `cmode` and the guest getty
-configuration is in progress. The cause is not settled here. This change
-does not add autologin, set `cmode`, or edit guest getty. A follow-up
-waits for that comparison to be verified and for explicit approval.
+The read-only comparison is complete. CT 170, CT 171, and CT 181 omit the
+login prompt because their guest agetty units override `ExecStart` with
+`--autologin root`. `cmode` is `tty` on those guests and on CT 175 and
+CT 250, so `cmode` does not account for the difference.
+
+On 2026-11-05 at 4:26 PM CT the operator approved a CT 175-only pilot.
+Getty overrides were applied on that guest, outside this repository. The
+effective `ExecStart` includes `--autologin root`. A `login -f root` shell
+was verified on tty2 and on `/dev/console`. The tty1 session that was
+already open was left as-is until that user logs out and opens the console
+again. That visible Console check is still pending, so a new session is
+not recorded here as still prompting. The existing root password was left
+in place, SSH stays key-only, and Ollama on CT 175 returned HTTP 200.
+CT 250 and CT 176 were not changed.
+
+This pull request does not encode that pilot. It does not add autologin,
+set `cmode`, or edit guest getty.
 
 Supply it only for a new guest whose approved plan sets
 `password = var.lxc_root_password`:
@@ -147,7 +158,8 @@ change. CT 176 (`proxmox_lxc.ct_176`) has no `password` argument and stays
 that way: login remains the deathscythe account. Open pull request
 [#19](https://github.com/alehpineda/homelab/pull/19) owns the CT 175
 declaration (`ct_175_ollama.tf`). This change does not add that file and
-does not set `password` on CT 175.
+does not set `password` on CT 175. The live CT 175 agetty autologin
+pilot is also outside this change; see the section above.
 
 The commented `example_service` block in `main.tf` shows the two lines a
 future create needs. Uncommenting it is not approval to apply.

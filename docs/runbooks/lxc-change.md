@@ -89,10 +89,9 @@ merge commit. No guest restore is required for that git-only change.
 
 ## Stop conditions
 
-- Plan adds autologin, changes `cmode`, or edits guest getty. Automatic
-  root login is outside the password variable. It waits for a verified
-  read-only comparison of PVE `cmode` and guest getty, plus explicit
-  approval.
+- Plan adds autologin, changes `cmode`, or edits guest getty. Those
+  settings are outside this password variable. The CT 175 agetty pilot is
+  already live on the guest and is not encoded in this repository.
 - Plan shows destroy of any in-use CTID.
 - Plan shows a create you did not name in the approved change.
 - Plan replaces a guest because `password` differs. `password` is ForceNew
@@ -105,10 +104,17 @@ merge commit. No guest restore is required for that git-only change.
 `var.lxc_root_password` is unset by default. Setting it is not approval to
 apply, and it does not change passwords already on the node. Those were
 set on day 1. The variable sets a root password a prompt can accept. It
-does not enable automatic root login. Live root passwords succeed, and
-CT 175 still presents a login prompt. A read-only comparison of PVE
-`cmode` and guest getty configuration is in progress. Do not add
-autologin, change `cmode`, or edit guest getty until that comparison is
-verified and explicitly approved. CT 176 keeps the deathscythe login; its
+does not enable automatic root login. The read-only comparison is
+complete. CT 170, CT 171, and CT 181 omit the prompt because guest agetty
+overrides `ExecStart` with `--autologin root`. `cmode` is `tty` on those
+guests and on CT 175 and CT 250. A CT 175-only pilot was approved at
+4:26 PM CT on 2026-11-05 and applied on the guest: effective `ExecStart`
+includes `--autologin root`, and a `login -f root` shell was verified on
+tty2 and `/dev/console`. The already-open tty1 session stays until that
+user logs out and reopens the console. That visible Console check is
+pending, so a new session is not described as still prompting. The root
+password was left in place, SSH stays key-only, and Ollama returned
+HTTP 200. CT 250 and CT 176 were not changed. This password change does
+not encode the pilot. CT 176 keeps the deathscythe login; its
 resource has no `password` argument. CT 175's declaration is pull request
 #19.

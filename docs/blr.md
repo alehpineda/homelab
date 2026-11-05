@@ -100,10 +100,18 @@ Guest console root passwords are not in this repo. Containers already on
 the node got theirs when they were created (day 1). Terraform does not
 read those values back and does not rotate them. CT 175 and CT 250 live
 passwords were applied outside this tree. Those passwords authenticate
-when a prompt asks. They are not automatic root login. CT 175 still
-presents a login prompt. A read-only comparison of PVE `cmode` and guest
-getty configuration is in progress. Autologin stays out of this tree until
-that comparison is verified and explicitly approved. CT 176 stays declared
+when a prompt asks. They are not automatic root login. The read-only
+comparison is complete: CT 170, CT 171, and CT 181 omit the prompt via
+guest agetty `--autologin root`, while `cmode` `tty` matches CT 175 and
+CT 250. A CT 175-only getty pilot was approved at 4:26 PM CT on
+2026-11-05 and applied on the guest. Effective `ExecStart` includes
+`--autologin root`. A `login -f root` shell was verified on tty2 and
+`/dev/console`. The already-open tty1 session remains until that user
+logs out and reopens the console, so a new session is not described as
+still prompting. That visible Console check is pending. The root password
+was left in place, SSH stays key-only, and Ollama returned HTTP 200.
+CT 250 and CT 176 were not changed. This tree does not encode the pilot.
+CT 176 stays declared
 without a `password` argument; its login is the deathscythe account. A
 future create can opt in with `TF_VAR_lxc_root_password` as described in
 [terraform/proxmox/README.md](../terraform/proxmox/README.md). Open pull
