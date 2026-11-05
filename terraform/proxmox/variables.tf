@@ -41,7 +41,7 @@ variable "pm_minimum_permission_check" {
 # secret store, and only for a resource that sets `password` on create.
 # No default secret. Do not put the value in terraform.tfvars or git.
 variable "lxc_root_password" {
-  description = "Sensitive create-time console root password for a future proxmox_lxc. Sets the root password only and does not configure automatic console login. Null leaves every declared guest unchanged. Set TF_VAR_lxc_root_password from a secret store. Never commit the value."
+  description = "Sensitive create-time console root password for a future proxmox_lxc. Sets the root password only. Getty autologin is the opt-in Ansible role console_autologin, not this variable. Null leaves every declared guest unchanged. Set TF_VAR_lxc_root_password from a secret store. Never commit the value."
   type        = string
   sensitive   = true
   default     = null

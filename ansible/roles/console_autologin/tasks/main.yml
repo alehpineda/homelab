@@ -1,0 +1,148 @@
+---
+# Drop-in only. Vendor units keep TTYPath (/dev/pts/%I, /dev/console),
+# StandardInput=tty, and StandardOutput=tty. A blank ExecStart= clears the
+# distro command, including Ubuntu 24.04 "-o '-p -- \\u'" and Debian 13
+# "-o '-- \\u'", before the measured CT 175 command is set.
+- name: Skip guests that have not opted in
+  ansible.builtin.debug:
+    msg: "console autologin is off for {{ inventory_hostname }}"
+  when: not (console_autologin_enabled | bool)
+
+- name: Apply console root autologin
+  when: console_autologin_enabled | bool
+  block:
+    - name: Refuse hosts outside CT 175 and CT 250
+      ansible.builtin.assert:
+        that:
+          - inventory_hostname in console_autologin_allowed
+          - (ansible_host | default('')) == console_autologin_allowed[inventory_hostname]
+          - "'-o' not in console_autologin_container_execstart"
+          - "'-o' not in console_autologin_console_execstart"
+          - "' --noclear - ' in console_autologin_container_execstart"
+          - "' --keep-baud - ' in console_autologin_console_execstart"
+        fail_msg: >-
+          {{ inventory_hostname }} ({{ ansible_host | default('no ansible_host') }})
+          is not an approved console-autologin guest. CT 176 stays unchanged.
+          Allowed: {{ console_autologin_allowed | to_json }}
+
+    - name: Require vendor getty units
+      ansible.builtin.stat:
+        path: "{{ item }}"
+      loop:
+        - /usr/lib/systemd/system/container-getty@.service
+        - /lib/systemd/system/container-getty@.service
+        - /usr/lib/systemd/system/console-getty.service
+        - /lib/systemd/system/console-getty.service
+      register: console_autologin_vendor_units
+
+    - name: Fail when a vendor getty unit is missing
+      ansible.builtin.assert:
+        that:
+          - >-
+            console_autologin_vendor_units.results
+            | selectattr('item', 'search', 'container-getty@')
+            | selectattr('stat.exists')
+            | list
+            | length > 0
+          - >-
+            console_autologin_vendor_units.results
+            | selectattr('item', 'search', 'console-getty.service')
+            | selectattr('stat.exists')
+            | list
+            | length > 0
+        fail_msg: Vendor container-getty@.service and console-getty.service must both exist.
+
+    - name: Create getty drop-in directories
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        owner: root
+        group: root
+        mode: "0755"
+      loop:
+        - /etc/systemd/system/container-getty@.service.d
+        - /etc/systemd/system/console-getty.service.d
+
+    - name: Install container-getty autologin drop-in
+      ansible.builtin.copy:
+        dest: /etc/systemd/system/container-getty@.service.d/autologin.conf
+        owner: root
+        group: root
+        mode: "0644"
+        content: |
+          [Service]
+          ExecStart=
+          ExecStart={{ console_autologin_container_execstart }}
+      register: console_autologin_container_dropin
+
+    - name: Install console-getty autologin drop-in
+      ansible.builtin.copy:
+        dest: /etc/systemd/system/console-getty.service.d/autologin.conf
+        owner: root
+        group: root
+        mode: "0644"
+        content: |
+          [Service]
+          ExecStart=
+          ExecStart={{ console_autologin_console_execstart }}
+      register: console_autologin_console_dropin
+
+    - name: Reload systemd after a drop-in change
+      ansible.builtin.systemd:
+        daemon_reload: true
+      when:
+        - not ansible_check_mode
+        - >-
+          console_autologin_container_dropin.changed
+          or console_autologin_console_dropin.changed
+
+    - name: List active container gettys
+      ansible.builtin.command: >-
+        systemctl list-units --type=service --state=running --no-legend --plain
+        container-getty@*
+      register: console_autologin_active_container
+      changed_when: false
+      when:
+        - not ansible_check_mode
+        - console_autologin_container_dropin.changed
+
+    - name: Restart active container gettys only when their drop-in changed
+      ansible.builtin.command: systemctl try-restart {{ item.split()[0] }}
+      loop: "{{ console_autologin_active_container.stdout_lines | default([], true) }}"
+      when:
+        - not ansible_check_mode
+        - console_autologin_container_dropin.changed
+        - item | trim | length > 0
+      changed_when: true
+
+    - name: Restart console-getty only when its drop-in changed
+      ansible.builtin.command: systemctl try-restart console-getty.service
+      when:
+        - not ansible_check_mode
+        - console_autologin_console_dropin.changed
+      changed_when: true
+
+    - name: Read merged getty ExecStart
+      ansible.builtin.command: systemctl show -p ExecStart --value {{ item }}
+      when: not ansible_check_mode
+      loop:
+        - container-getty@.service
+        - console-getty.service
+      register: console_autologin_merged
+      changed_when: false
+
+    - name: Confirm the merged units autologin root without login -o
+      when: not ansible_check_mode
+      ansible.builtin.assert:
+        that:
+          - item.rc == 0
+          - "'--autologin' in item.stdout"
+          - "'root' in item.stdout"
+          - "'-o' not in item.stdout"
+          - "'/dev/' not in item.stdout"
+        fail_msg: >-
+          {{ item.item }} ExecStart is missing --autologin root, still passes
+          login -o, or hardcodes a tty. stdout={{ item.stdout }}
+      loop: "{{ console_autologin_merged.results | default([], true) }}"
+      loop_control:
+        label: "{{ item.item }}"

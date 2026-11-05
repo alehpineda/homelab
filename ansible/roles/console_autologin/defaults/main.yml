@@ -1,0 +1,16 @@
+---
+# Opt-in only. The playbook sets this true for its host pattern.
+# A host that includes the role without the flag is left unchanged.
+console_autologin_enabled: false
+
+# Inventory hostname -> ansible_host. CT 176 is intentionally absent.
+# Adding a guest here is a separate approval.
+console_autologin_allowed:
+  ollama-blr-lxc: 10.10.0.63
+  caddy-blr-lxc: 10.10.0.250
+
+# Measured on CT 175. The leading "-" is systemd's ignore-failure prefix.
+# agetty's own "-" is the tty: stdin is the unit TTYPath, not a hardcoded device.
+# No "-o" login options. Those replace the "-f" argument that --autologin adds.
+console_autologin_container_execstart: "-/sbin/agetty --autologin root --noclear - $TERM"
+console_autologin_console_execstart: "-/sbin/agetty --autologin root --noclear --keep-baud - 115200,38400,9600 $TERM"

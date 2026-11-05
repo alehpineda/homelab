@@ -21,8 +21,9 @@ SSH port **4488**. Fresh LXCs often still listen on **22**. Set
 | `inventory/blr.yml` | Local copy. Gitignored. |
 | `group_vars/all.yml.example` | Non-secret defaults. |
 | `playbooks/ping.yml` | `ansible.builtin.ping` only. |
-| `playbooks/site.yml` | Imports the ping playbook. |
-| `roles/` | Empty until a later plan adds roles. |
+| `playbooks/site.yml` | Imports the ping playbook. Does not import console autologin. |
+| `playbooks/console-autologin.yml` | Opt-in root console autologin. Not run by `site.yml`. |
+| `roles/console_autologin/` | Getty drop-ins for that playbook. Default off. |
 
 ## Inventory
 
@@ -61,6 +62,94 @@ ansible-playbook playbooks/ping.yml --limit barbatoslupusrex
 
 Prefer NetBird when you are off-LAN. Confirm `ansible_port` before retrying
 a timeout: **4488** on hardened hosts, **22** on a fresh LXC.
+
+## Console root autologin
+
+`playbooks/console-autologin.yml` targets the `console_autologin` inventory
+group and sets `console_autologin_enabled: true`. The role default is
+`false`, and the example group is empty, so a copied inventory does not
+select a guest. `site.yml` does not import the playbook. Opening this
+change is not approval to run it.
+
+Approved members are only:
+
+| Inventory hostname | Address | Guest |
+|---|---|---|
+| `ollama-blr-lxc` | `10.10.0.63` | CT 175 |
+| `caddy-blr-lxc` | `10.10.0.250` | CT 250 |
+
+CT 176 (`forge-ws-blr-lxc`) is not a member. The role rejects any other
+hostname or address. In the gitignored inventory, replace the empty group
+with:
+
+```yaml
+console_autologin:
+  hosts:
+    ollama-blr-lxc:
+      ansible_host: 10.10.0.63
+      ansible_port: 22
+    caddy-blr-lxc:
+      ansible_host: 10.10.0.250
+      ansible_port: 22
+```
+
+The role writes two drop-ins and leaves vendor `TTYPath` in place
+(`/dev/pts/%I` for `container-getty@.service`, `/dev/console` for
+`console-getty.service`). agetty's `-` uses that inherited tty. A blank
+`ExecStart=` clears the distro command first.
+
+Packaged units compared for this encoding, not by editing a guest:
+
+| Distro | systemd | Stock `ExecStart` login options |
+|---|---|---|
+| Ubuntu 24.04 (`systemd 255.4-1ubuntu8.18`) | util-linux 2.39.3 | `-o '-p -- \\u'` on both gettys. Console form is tty `-`, then `115200,38400,9600`. |
+| Debian 13 (`systemd 257.13-1~deb13u1`) | util-linux 2.41.5 | `-o '-- \\u'` plus `--noreset`. Console form lists `115200,57600,38400,9600` before `-`. |
+
+`--autologin` adds `login -f`. `--login-options` (`-o`) is what the stock
+units pass to `login`, and it is how `-f` gets replaced. The drop-in
+removes `-o` on both distros. Both agetty builds accept the tty-then-baud
+order. The encoded command is the one measured on CT 175:
+
+```
+ExecStart=-/sbin/agetty --autologin root --noclear - $TERM
+ExecStart=-/sbin/agetty --autologin root --noclear --keep-baud - 115200,38400,9600 $TERM
+```
+
+The operator validated that CT 175 result. CT 250 is approved for the same
+commands. A separate live CT 250 setup was still in progress when this
+role was written, so this repository does not record a second measurement.
+CT 250's stock Debian 13 unit is not copied in. The root password is not
+read or changed. SSH stays key-only; this role does not edit `sshd`.
+
+Anyone who can open the Proxmox console for that guest gets a root shell
+without a password. That is the console permission boundary. It is root
+inside the guest. Unprivileged container root is not host root. `pct enter`
+is a different path and is already root.
+
+The first run that changes a drop-in reloads systemd and `try-restart`s
+`console-getty` plus active `container-getty@` instances. That closes
+those console sessions. A second run with the same files does not restart
+them. The play still reads the merged `ExecStart` and fails if `-o` is
+present, `--autologin root` is missing, or a `/dev/` path was hardcoded.
+
+### Rollback
+
+On the guest, as root:
+
+```bash
+rm -f /etc/systemd/system/container-getty@.service.d/autologin.conf
+rm -f /etc/systemd/system/console-getty.service.d/autologin.conf
+rmdir /etc/systemd/system/container-getty@.service.d 2>/dev/null || true
+rmdir /etc/systemd/system/console-getty.service.d 2>/dev/null || true
+systemctl daemon-reload
+systemctl try-restart console-getty.service
+systemctl list-units --type=service --state=running --no-legend --plain 'container-getty@*' \
+  | awk '{print $1}' | while read -r unit; do systemctl try-restart "$unit"; done
+```
+
+Vendor `ExecStart` returns, including its `-o` login options, so the
+console prompts again. The root password and SSH configuration stay as
+they were. This pull request does not run the rollback.
 
 ## Secrets
 

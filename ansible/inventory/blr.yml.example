@@ -39,3 +39,7 @@ all:
         # forge-ws-blr-lxc:          # CT 176 — declared, not created. Uncomment only after the guest exists.
         #   ansible_host: 10.10.0.76
         #   ansible_port: 22
+    # Console root autologin. Empty until the gitignored copy lists the two
+    # approved guests. CT 176 is not a member. See ansible/README.md.
+    console_autologin:
+      hosts: {}

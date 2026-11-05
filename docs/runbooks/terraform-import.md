@@ -243,17 +243,13 @@ change SSH root-password policy.
 `var.lxc_root_password` (sensitive, default `null`) is documented in
 `terraform/proxmox/README.md`. It sets the create-time root password only.
 Automatic root login, a console that opens a root shell with no prompt,
-is a separate behavior and is not configured here. The read-only
-comparison is complete: CT 170, CT 171, and CT 181 use guest agetty
-`--autologin root`, and `cmode` `tty` is the same on CT 175 and CT 250.
-A CT 175-only getty pilot was approved at 4:26 PM CT on 2026-11-05 and
-applied on the guest. Effective `ExecStart` includes `--autologin root`.
-A `login -f root` shell was verified on tty2 and `/dev/console`. The
-already-open tty1 session remains until logout and a Console reopen, and
-that visible check is pending. A new session is not described as still
-prompting. The root password was left in place, SSH stays key-only, and
-Ollama returned HTTP 200. CT 250 and CT 176 were not changed. This note
-does not encode the pilot. No declared `ct_*.tf` sets `password`.
+is a separate behavior and is not configured by `var.lxc_root_password`.
+The read-only comparison is complete: CT 170, CT 171, and CT 181 use
+guest agetty `--autologin root`, and `cmode` `tty` is the same on CT 175
+and CT 250. The operator validated CT 175 autologin and approved the same
+getty commands for CT 250. CT 176 stays unchanged. Root passwords stay in
+place and SSH stays key-only. The opt-in encoding is
+`ansible/playbooks/console-autologin.yml`. No declared `ct_*.tf` sets `password`.
 Existing guest passwords stay the
 day-1 values already on the guests. Live passwords for CT 175 and CT 250
 were applied outside this repo and are not imported here. CT 175's

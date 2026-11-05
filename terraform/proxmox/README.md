@@ -87,17 +87,19 @@ login prompt because their guest agetty units override `ExecStart` with
 CT 250, so `cmode` does not account for the difference.
 
 On 2026-11-05 at 4:26 PM CT the operator approved a CT 175-only pilot.
-Getty overrides were applied on that guest, outside this repository. The
-effective `ExecStart` includes `--autologin root`. A `login -f root` shell
-was verified on tty2 and on `/dev/console`. The tty1 session that was
-already open was left as-is until that user logs out and opens the console
-again. That visible Console check is still pending, so a new session is
-not recorded here as still prompting. The existing root password was left
-in place, SSH stays key-only, and Ollama on CT 175 returned HTTP 200.
-CT 250 and CT 176 were not changed.
+Getty overrides were applied on that guest. The effective `ExecStart`
+includes `--autologin root`. A `login -f root` shell was verified on tty2
+and on `/dev/console`, and the operator then validated autologin in the
+console. The root password was left in place, SSH stays key-only, and
+Ollama on CT 175 returned HTTP 200. That pilot did not change CT 250 or
+CT 176. The operator later approved the same getty commands for CT 250
+and left CT 176 unchanged.
 
-This pull request does not encode that pilot. It does not add autologin,
-set `cmode`, or edit guest getty.
+This Terraform variable still does not install getty units or set `cmode`.
+The opt-in encoding is `ansible/playbooks/console-autologin.yml`, for
+CT 175 and CT 250 only. `site.yml` does not import it, and this change
+does not run it. CT 250's separate live setup is not a second measurement
+recorded here.
 
 Supply it only for a new guest whose approved plan sets
 `password = var.lxc_root_password`:

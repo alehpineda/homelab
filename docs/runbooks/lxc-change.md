@@ -89,9 +89,11 @@ merge commit. No guest restore is required for that git-only change.
 
 ## Stop conditions
 
-- Plan adds autologin, changes `cmode`, or edits guest getty. Those
-  settings are outside this password variable. The CT 175 agetty pilot is
-  already live on the guest and is not encoded in this repository.
+- Plan enables console autologin for a guest other than CT 175
+  (`ollama-blr-lxc`) or CT 250 (`caddy-blr-lxc`). CT 176 stays out.
+  Terraform does not model getty units. The encoding is
+  `ansible/playbooks/console-autologin.yml`, and this runbook's approval
+  to edit git is not approval to run that playbook.
 - Plan shows destroy of any in-use CTID.
 - Plan shows a create you did not name in the approved change.
 - Plan replaces a guest because `password` differs. `password` is ForceNew
@@ -107,14 +109,11 @@ set on day 1. The variable sets a root password a prompt can accept. It
 does not enable automatic root login. The read-only comparison is
 complete. CT 170, CT 171, and CT 181 omit the prompt because guest agetty
 overrides `ExecStart` with `--autologin root`. `cmode` is `tty` on those
-guests and on CT 175 and CT 250. A CT 175-only pilot was approved at
-4:26 PM CT on 2026-11-05 and applied on the guest: effective `ExecStart`
-includes `--autologin root`, and a `login -f root` shell was verified on
-tty2 and `/dev/console`. The already-open tty1 session stays until that
-user logs out and reopens the console. That visible Console check is
-pending, so a new session is not described as still prompting. The root
-password was left in place, SSH stays key-only, and Ollama returned
-HTTP 200. CT 250 and CT 176 were not changed. This password change does
-not encode the pilot. CT 176 keeps the deathscythe login; its
+guests and on CT 175 and CT 250. The operator validated the CT 175 pilot
+(effective `--autologin root`, `login -f root` on tty2 and `/dev/console`)
+and approved the same commands for CT 250. CT 176 keeps the deathscythe
+login. Root passwords stay as they are, and SSH stays key-only. The
+Ansible role `console_autologin` is the opt-in encoding. Rollback of the
+drop-ins is in [ansible/README.md](../../ansible/README.md). CT 176's
 resource has no `password` argument. CT 175's declaration is pull request
 #19.

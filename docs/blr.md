@@ -103,15 +103,11 @@ passwords were applied outside this tree. Those passwords authenticate
 when a prompt asks. They are not automatic root login. The read-only
 comparison is complete: CT 170, CT 171, and CT 181 omit the prompt via
 guest agetty `--autologin root`, while `cmode` `tty` matches CT 175 and
-CT 250. A CT 175-only getty pilot was approved at 4:26 PM CT on
-2026-11-05 and applied on the guest. Effective `ExecStart` includes
-`--autologin root`. A `login -f root` shell was verified on tty2 and
-`/dev/console`. The already-open tty1 session remains until that user
-logs out and reopens the console, so a new session is not described as
-still prompting. That visible Console check is pending. The root password
-was left in place, SSH stays key-only, and Ollama returned HTTP 200.
-CT 250 and CT 176 were not changed. This tree does not encode the pilot.
-CT 176 stays declared
+CT 250. The operator validated CT 175 autologin after the 4:26 PM CT
+pilot on 2026-11-05, then approved the same getty commands for CT 250.
+CT 176 stays without them. The opt-in Ansible role is
+`console_autologin`; running it is a separate approval. The root password
+stays in place and SSH stays key-only. CT 176 stays declared
 without a `password` argument; its login is the deathscythe account. A
 future create can opt in with `TF_VAR_lxc_root_password` as described in
 [terraform/proxmox/README.md](../terraform/proxmox/README.md). Open pull

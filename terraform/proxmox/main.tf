@@ -14,9 +14,8 @@
 # A future create that should have a console root password sets
 # `password = var.lxc_root_password` and keeps `password` in ignore_changes.
 # That sets a password a prompt can accept. It does not enable automatic
-# root login. The CT 175 agetty --autologin root pilot is live on the guest
-# and is not encoded here. The already-open tty1 session waits for that
-# user's logout and Console reopen. CT 250 and CT 176 were not part of it.
+# root login. Getty autologin for CT 175 and CT 250 is the opt-in Ansible
+# role console_autologin. CT 176 stays without that role.
 # Existing ct_*.tf resources do not set password. CT 176 stays that way
 # (deathscythe login). Open PR 19 owns the CT 175 declaration; do not add it here.
 
