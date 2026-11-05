@@ -99,9 +99,13 @@ See [terraform/proxmox/README.md](../terraform/proxmox/README.md) and
 Guest console root passwords are not in this repo. Containers already on
 the node got theirs when they were created (day 1). Terraform does not
 read those values back and does not rotate them. CT 175 and CT 250 live
-passwords were applied outside this tree. CT 176 stays declared without a
-`password` argument; its login is the deathscythe account. A future create
-can opt in with `TF_VAR_lxc_root_password` as described in
+passwords were applied outside this tree. Those passwords authenticate
+when a prompt asks. They are not automatic root login. CT 175 still
+presents a login prompt. A read-only comparison of PVE `cmode` and guest
+getty configuration is in progress. Autologin stays out of this tree until
+that comparison is verified and explicitly approved. CT 176 stays declared
+without a `password` argument; its login is the deathscythe account. A
+future create can opt in with `TF_VAR_lxc_root_password` as described in
 [terraform/proxmox/README.md](../terraform/proxmox/README.md). Open pull
 request #19 owns the CT 175 declaration. SSH root-password policy is
 unchanged.

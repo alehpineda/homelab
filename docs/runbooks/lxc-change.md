@@ -89,6 +89,10 @@ merge commit. No guest restore is required for that git-only change.
 
 ## Stop conditions
 
+- Plan adds autologin, changes `cmode`, or edits guest getty. Automatic
+  root login is outside the password variable. It waits for a verified
+  read-only comparison of PVE `cmode` and guest getty, plus explicit
+  approval.
 - Plan shows destroy of any in-use CTID.
 - Plan shows a create you did not name in the approved change.
 - Plan replaces a guest because `password` differs. `password` is ForceNew
@@ -100,5 +104,11 @@ merge commit. No guest restore is required for that git-only change.
 
 `var.lxc_root_password` is unset by default. Setting it is not approval to
 apply, and it does not change passwords already on the node. Those were
-set on day 1. CT 176 keeps the deathscythe login; its resource has no
-`password` argument. CT 175's declaration is pull request #19.
+set on day 1. The variable sets a root password a prompt can accept. It
+does not enable automatic root login. Live root passwords succeed, and
+CT 175 still presents a login prompt. A read-only comparison of PVE
+`cmode` and guest getty configuration is in progress. Do not add
+autologin, change `cmode`, or edit guest getty until that comparison is
+verified and explicitly approved. CT 176 keeps the deathscythe login; its
+resource has no `password` argument. CT 175's declaration is pull request
+#19.

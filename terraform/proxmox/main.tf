@@ -13,6 +13,9 @@
 # Telmate crashes if rootfs is omitted, so the example includes it.
 # A future create that should have a console root password sets
 # `password = var.lxc_root_password` and keeps `password` in ignore_changes.
+# That sets a password a prompt can accept. It does not enable automatic
+# root login. CT 175 still prompts after a working root password. Autologin
+# waits for a verified cmode/getty comparison and explicit approval.
 # Existing ct_*.tf resources do not set password. CT 176 stays that way
 # (deathscythe login). Open PR 19 owns the CT 175 declaration; do not add it here.
 

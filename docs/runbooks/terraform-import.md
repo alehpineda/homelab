@@ -241,11 +241,17 @@ change SSH root-password policy.
 ## Create-time console root password
 
 `var.lxc_root_password` (sensitive, default `null`) is documented in
-`terraform/proxmox/README.md`. No declared `ct_*.tf` sets `password`.
-Existing guest passwords stay the day-1 values already on the guests.
-Live passwords for CT 175 and CT 250 were applied outside this repo and
-are not imported here. CT 175's Terraform declaration is open pull
-request #19; this note does not add `ct_175_ollama.tf`.
+`terraform/proxmox/README.md`. It sets the create-time root password only.
+Automatic root login, a console that opens a root shell with no prompt,
+is a separate behavior and is not configured here. Live root passwords
+succeed, and CT 175 still presents a login prompt. A read-only comparison
+of PVE `cmode` and guest getty configuration is in progress. Autologin
+waits for that comparison to be verified and for explicit approval. No
+declared `ct_*.tf` sets `password`. Existing guest passwords stay the
+day-1 values already on the guests. Live passwords for CT 175 and CT 250
+were applied outside this repo and are not imported here. CT 175's
+Terraform declaration is open pull request #19; this note does not add
+`ct_175_ollama.tf`.
 
 A future create sets `password = var.lxc_root_password` and keeps
 `password` in `ignore_changes`. Export `TF_VAR_lxc_root_password` from a

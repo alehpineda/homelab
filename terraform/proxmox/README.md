@@ -74,6 +74,20 @@ Proxmox API `password` field, which sets the console root password inside
 the guest at create. It does not change SSH (`PermitRootLogin`,
 `PasswordAuthentication`, or `ssh_public_keys`).
 
+### Password and automatic login are different
+
+A configured password lets root authenticate when a prompt asks for one.
+Automatic root login is the desired console parity: the console opens a
+root shell with no login prompt. This variable does not configure that.
+Telmate `password` is not PVE `cmode`, and it does not write getty or
+autologin configuration inside the guest.
+
+Live root passwords on the node succeed. CT 175 still presents a login
+prompt. A read-only comparison of PVE `cmode` and the guest getty
+configuration is in progress. The cause is not settled here. This change
+does not add autologin, set `cmode`, or edit guest getty. A follow-up
+waits for that comparison to be verified and for explicit approval.
+
 Supply it only for a new guest whose approved plan sets
 `password = var.lxc_root_password`:
 
