@@ -116,3 +116,26 @@ future create can opt in with `TF_VAR_lxc_root_password` as described in
 [terraform/proxmox/README.md](../terraform/proxmox/README.md). Open pull
 request #19 owns the CT 175 declaration. SSH root-password policy is
 unchanged.
+
+## CT 175 Ollama, 2026-11-06
+
+The guest API is Ollama **0.40.15**, upgraded from 0.35.1. The rollback
+copy on the guest is `/root/ollama-backup-0.35.1-20261106` (binary,
+libraries, unit, and the models drop-in). A Proxmox snapshot and vzdump
+were not available for that upgrade.
+
+`/mnt/ollama-models` is still mounted, about 203G, and the models drop-in
+is still in place. A check of all 28 guests found names, CTIDs, and tags
+unchanged aside from CT 175. Live tags there are `ai;storage-data2`.
+`community-script` was removed: the guest is a custom official install,
+`/usr/bin/update` is absent, and the community-script layout does not match.
+
+`ornith:9b` ran inference on the GPU: 33/33 layers, Vulkan, Arc Pro B60.
+`tev1:4b` fails to load. That repair is still open. This page does not
+say that every installed model runs.
+
+Open pull request #19 still declares
+`tags = "ai;community-script;storage-data2"` in `ct_175_ollama.tf`, and
+that pull request conflicts with master. This branch does not add or edit
+that declaration. The follow-up on #19 is to set the tags to
+`ai;storage-data2`.

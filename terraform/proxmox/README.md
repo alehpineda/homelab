@@ -167,6 +167,12 @@ declaration (`ct_175_ollama.tf`). This change does not add that file and
 does not set `password` on CT 175. The live CT 175 agetty autologin
 pilot is also outside this change; see the section above.
 
+CT 175's Ollama API is 0.40.15 (from 0.35.1 on 2026-11-06). Live tags are
+`ai;storage-data2`. Pull request #19 still has
+`ai;community-script;storage-data2` and conflicts with master. The tag
+correction belongs on that declaration, not in this branch. Facts are in
+[docs/blr.md](../../docs/blr.md).
+
 The commented `example_service` block in `main.tf` shows the two lines a
 future create needs. Uncommenting it is not approval to apply.
 

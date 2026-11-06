@@ -256,7 +256,11 @@ Existing guest passwords stay the
 day-1 values already on the guests. Live passwords for CT 175 and CT 250
 were applied outside this repo and are not imported here. CT 175's
 Terraform declaration is open pull request #19; this note does not add
-`ct_175_ollama.tf`.
+`ct_175_ollama.tf`. That file still sets
+`tags = "ai;community-script;storage-data2"`. Live CT 175 tags are
+`ai;storage-data2`, and the API is Ollama 0.40.15. #19 conflicts with
+master. The tag string has to be corrected there before a 0-diff import.
+Details are in [docs/blr.md](../blr.md).
 
 A future create sets `password = var.lxc_root_password` and keeps
 `password` in `ignore_changes`. Export `TF_VAR_lxc_root_password` from a
