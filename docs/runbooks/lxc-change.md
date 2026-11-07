@@ -19,7 +19,11 @@ Record the snapshot name or the vzdump archive path outside git. Do not
 paste tokens or backup encryption secrets into the repo.
 
 Confirm you are on the intended guest (VMID and hostname). Existing
-CTIDs **150, 151, 153, 154, 155, 156, 160–169, 171–174, 180, 181, 250** are in use (renumbered 2026-11-01, Option Y; 169 added 2026-11-02; 151, 155, 156, and 171–174 added 2026-11-03). There is no CT 170. CT 176 is declared for `forge-ws-blr-lxc` and is not on the node. See [docs/blr.md](../blr.md).
+CTIDs **150, 151, 153, 154, 155, 156, 160–162, 164–169, 171–176, 180, 181, 250**
+are in use (renumbered 2026-11-01, Option Y; 169 added 2026-11-02; 151,
+155, 156, and 171–174 added 2026-11-03; CT 175 replaced destroyed CT 163
+on 2026-11-05). There is no CT 163 and no CT 170. CT 176 (`forge-ws-blr-lxc`)
+is on the node; its create-time Terraform fields are ignored. See [docs/blr.md](../blr.md).
 
 ## 2. Plan
 
@@ -56,7 +60,9 @@ Watch for VMID collisions with in-use CTIDs.
 
 ## 5. Verify with Ansible
 
-Ansible in this repo is a connectivity stub. It does not configure guests.
+`playbooks/site.yml` only imports the connectivity stub. `playbooks/ollama.yml`
+sets `OLLAMA_MODELS` on CT 175 and is not imported there. Running it is a
+separate approved step. See [ollama-models.md](ollama-models.md).
 
 From `ansible/`, using a **local** inventory copied from
 `inventory/blr.yml.example` (do not commit it):

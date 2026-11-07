@@ -1,10 +1,12 @@
-# CTIDs 150, 151, 153, 154, 155, 156, 160–169, 171–174, 176, 180, 181, 250 on
-# barbatoslupusrex are declared in ct_<id>_<name>.tf
+# CTIDs 150, 151, 153, 154, 155, 156, 160–162, 164–169, 171–176, 180, 181, 250
+# on barbatoslupusrex are declared in ct_<id>_<name>.tf
 # (docs/runbooks/terraform-import.md). Each has prevent_destroy. For guests
 # already imported, terraform plan must show 0 to add/change/destroy.
 # 151, 169, and 171–174 were imported 2026-11-03. CT 250 is already imported.
-# 155 and 156 are pending import. CT 176 is declared and not created; a plan
-# that adds it is not approval to apply. There is no CT 170.
+# 155 and 156 are pending import. CT 175 replaces destroyed CT 163 and is
+# pending state rm of proxmox_lxc.ct_163 plus import. CT 176 create-time
+# fields are ignored; a plan that changes the existing guest is not approval
+# to apply. There is no CT 163 and no CT 170.
 # Do not terraform apply until a separate plan names the change and is
 # approved. See docs/runbooks/lxc-change.md.
 #
@@ -18,7 +20,7 @@
 # (Debian 13) is the opt-in Ansible role console_autologin, one measured
 # ExecStart per distro. CT 176 stays without that role.
 # Existing ct_*.tf resources do not set password. CT 176 stays that way
-# (deathscythe login). Open PR 19 owns the CT 175 declaration; do not add it here.
+# (deathscythe login). CT 175 is ct_175_ollama.tf and does not set password.
 
 # resource "proxmox_lxc" "example_service" {
 #   target_node  = var.pm_node

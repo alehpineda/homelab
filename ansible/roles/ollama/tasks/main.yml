@@ -1,0 +1,75 @@
+---
+# Ensures OLLAMA_MODELS points at the mp0 bind. Does not install Ollama,
+# edit the official-installer unit, or create the host ZFS dataset.
+# CT 175 runs Ollama 0.40.15 from the official installer.
+# The drop-in only adds OLLAMA_MODELS. GPU inference (Vulkan on the
+# Intel Arc Pro B60) stays outside this role.
+
+- name: Check whether the ollama unit is installed
+  ansible.builtin.stat:
+    path: "{{ ollama_unit_path }}"
+  register: ollama_unit
+
+- name: Require the official-installer ollama unit
+  ansible.builtin.assert:
+    that:
+      - ollama_unit.stat.exists
+    fail_msg: >-
+      {{ ollama_unit_path }} is missing. This role does not install Ollama
+      {{ ollama_version }}. The official installer on CT 175 owns the unit.
+
+- name: Confirm the models path is a mountpoint
+  ansible.builtin.command:
+    argv:
+      - findmnt
+      - --mountpoint
+      - "{{ ollama_models_dir }}"
+      - --noheadings
+  register: ollama_models_mount
+  changed_when: false
+  failed_when: false
+
+- name: Fail when the models path is not the mp0 bind
+  ansible.builtin.assert:
+    that:
+      - ollama_models_mount.rc == 0
+    fail_msg: >-
+      {{ ollama_models_dir }} is not a mountpoint. CT 175 mp0 must already
+      bind host /media/ollama-models here. This role does not create the
+      ZFS dataset or the pct mount, so a missing mount must not become a
+      directory on the 24G rootfs.
+
+- name: Ensure the models directory ownership
+  ansible.builtin.file:
+    path: "{{ ollama_models_dir }}"
+    state: directory
+    owner: "{{ ollama_models_owner }}"
+    group: "{{ ollama_models_group }}"
+    mode: "{{ ollama_models_mode }}"
+
+- name: Ensure the systemd drop-in directory exists
+  ansible.builtin.file:
+    path: "{{ ollama_dropin_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Ensure the OLLAMA_MODELS drop-in
+  ansible.builtin.copy:
+    dest: "{{ ollama_dropin_dir }}/{{ ollama_dropin_filename }}"
+    owner: root
+    group: root
+    mode: "0644"
+    content: |
+      # Managed by the ansible ollama role. Keeps models on the mp0 bind.
+      [Service]
+      Environment=OLLAMA_MODELS={{ ollama_models_dir }}
+  register: ollama_dropin
+
+- name: Reload systemd and restart ollama when the drop-in changes
+  ansible.builtin.systemd:
+    name: "{{ ollama_service_name }}"
+    state: restarted
+    daemon_reload: true
+  when: ollama_dropin.changed

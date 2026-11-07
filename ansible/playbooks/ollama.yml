@@ -1,0 +1,11 @@
+---
+# Ensures OLLAMA_MODELS=/mnt/ollama-models on CT 175 via a systemd drop-in.
+# Does not install Ollama, create the ZFS dataset, or change mp0.
+# Not imported by site.yml. See ansible/README.md and
+# docs/runbooks/ollama-models.md. Do not run this against the live guest
+# until a separate plan says so.
+- name: Ensure Ollama models path
+  hosts: ollama-blr-lxc
+  gather_facts: false
+  roles:
+    - role: ollama

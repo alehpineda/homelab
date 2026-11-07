@@ -53,3 +53,9 @@ variable "lxc_root_password" {
     error_message = "lxc_root_password must be null or a non-empty value supplied outside git."
   }
 }
+
+variable "ct176_ssh_public_keys" {
+  description = "SSH authorized public keys for CT176. Only needed when (re)creating CT176; public keys only."
+  type        = string
+  default     = ""
+}

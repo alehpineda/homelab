@@ -212,26 +212,91 @@ import):
 - CT 155 eth0 on vmbr1, `BC:24:11:9D:BE:3C`, `10.10.0.55/24`, gateway `10.10.0.1`
 - CT 156 eth0 on vmbr0, `BC:24:11:27:FD:2D`, `10.10.0.56/24`, gateway `10.10.0.1`
 
-## CT 176 forge-ws-blr-lxc (declared, not created)
+## CT 175 ollama (pending import; replaces destroyed CT 163)
 
-Declared 2026-11-05. The guest is not on the node. Do not import it and do
-not apply from the declaration. Create (`pct create`, with
-`nesting=1,keyctl=1`, or a later plan written for that create) is a
-separate approved step. After the guest exists, import only:
+Declared 2026-11-05 from live pct after CT 163 was destroyed and rebuilt
+as CT 175 (`ollama-blr-lxc`, still `10.10.0.63`). The old address in state
+is `proxmox_lxc.ct_163`. Import only, from `~/forge-tf/mod/`, with the
+read-only token. Do not apply. A following plan must be 0-diff.
+
+CT 163 is gone on the node. Removing `ct_163_ollama.tf` while
+`proxmox_lxc.ct_163` is still in state makes the next plan a destroy of
+that address. `prevent_destroy` rejects the plan, so apply cannot run,
+and CT 175 cannot be imported on top of the stale address. `terraform
+state rm` drops the state entry only. It does not contact the node and
+does not delete a guest.
+
+Back up `~/forge-tf/mod/terraform.tfstate` before the `state rm`, same
+pattern as CT 151. If `ct_163` is already absent, skip the `state rm`.
+
+```bash
+terraform state rm proxmox_lxc.ct_163
+terraform import proxmox_lxc.ct_175 barbatoslupusrex/lxc/175
+terraform plan -detailed-exitcode   # exit 0 expected
+```
+
+Live facts this declaration records:
+
+- vmid 175, hostname `ollama-blr-lxc`, ostype ubuntu, unprivileged, onboot
+- 8 cores, memory 32768, swap 4096 (other guests declare swap 512; this
+  one matches pct)
+- rootfs `data2:vm-175-disk-0,size=24G` via `var.pm_storage` and size
+  `24G`. `rootfs[0].storage` is ignored after import. Size is not.
+- tags `ai;storage-data2` (the `community-script` tag was removed on
+  2026-11-06 when the guest moved to the official Ollama installer)
+- net0 eth0 vmbr0, MAC `BC:24:11:DB:3D:D7`, `10.10.0.63/24`, gateway
+  `10.10.0.1`, `ip6=auto`. No firewall flag, so the network block omits
+  `firewall`. `network` is ignored after import.
+- mp0 `/media/ollama-models,mp=/mnt/ollama-models,backup=0`, declared like
+  CT 180 and CT 181 (`volume`, `mp`, `backup = false`). `mountpoint` is
+  ignored after import, so a Telmate read that does not round-trip the
+  bind cannot replace the guest.
+- `timezone` `America/Chicago` is not in the Telmate schema.
+- `features` `nesting=1,keyctl=1` are omitted like CT 155. Telmate copies
+  features into state only when the block is already set, so leaving it
+  unset keeps the plan at 0-diff and leaves `ignore_changes` identical
+  to the sibling CTs.
+- `dev0` `/dev/dri/renderD128,gid=993` and `dev1` `/dev/dri/card0,gid=44`
+  are the Intel Arc Pro B60 passthrough. They are not in the Telmate
+  schema. They stay on the node and are not declared as mountpoints.
+  Inference on that GPU uses Vulkan.
+- Ollama on the guest is **0.40.15**, installed by the official installer
+  on 2026-11-06 (was community-script 0.35.1). This module does not pin
+  or install the binary. The guest copy of the previous install is
+  `/root/ollama-backup-0.35.1-20261106`.
+
+Host ZFS dataset `media/ollama-models` (mount `/media/ollama-models`, used
+about 203G, refquota 400G on 2026-11-05) is not managed here. Guest
+`/mnt/ollama-models` is that dataset via mp0. `OLLAMA_MODELS` is Ansible.
+See [ollama-models.md](ollama-models.md).
+
+`vzdump` job `forge-backup-ssd` already includes 175 and excludes 163.
+No job change is part of this import.
+
+## CT 176 forge-ws-blr-lxc
+
+Declared 2026-11-05. Create-time inputs are backported and ignored so the
+existing guest is not modified. This section does not authorize apply or
+guest replacement. Day-1: XFCE 4.20 + xrdp + Grok Bot 0.78.5 + Google Chrome
+stable from Google's apt repo, set as the default browser. Import only with
+a separate approved plan:
 
 ```bash
 terraform import proxmox_lxc.ct_176 barbatoslupusrex/lxc/176
 terraform plan -detailed-exitcode   # exit 0 expected after MAC alignment
 ```
 
-`features` (`nesting=1,keyctl=1`) and `timezone` (`America/Chicago`) are
-pct create settings. Both are omitted like CT 155 so `ignore_changes`
-stays identical to that file. `hwaddr` is omitted: Proxmox assigns a
-`BC:24:11` address at create, and that MAC is recorded on import.
+`ostemplate`, `ssh_public_keys`, `start`, and `features` are create-time
+only and listed in `ignore_changes`. Nesting matches the apply tree
+(`features { nesting = true }`); keyctl was not explicitly enabled.
+`timezone` (`America/Chicago`) stays omitted. `hwaddr` is omitted: Proxmox
+assigns a `BC:24:11` address at create, and that MAC is recorded on import.
 `nameserver` is omitted (Flint option 6 / host DNS). Rootfs is
 `var.pm_storage` (`data2`) at `40G`. Intended NIC, documented only
 (`network` is ignored after import): eth0 on vmbr0, `10.10.0.76/24`,
 gateway `10.10.0.1`. Tags: `forge;workstation;desktop`.
+`ct176_ssh_public_keys` defaults to empty and is only needed when
+(re)creating CT176; public keys only.
 
 `ct_176_forge-ws.tf` does not set `password`. Login for that guest stays
 the deathscythe account. `var.lxc_root_password` is for a later create
@@ -254,13 +319,9 @@ place and SSH stays key-only. The opt-in encoding is
 `ansible/playbooks/console-autologin.yml`. No declared `ct_*.tf` sets `password`.
 Existing guest passwords stay the
 day-1 values already on the guests. Live passwords for CT 175 and CT 250
-were applied outside this repo and are not imported here. CT 175's
-Terraform declaration is open pull request #19; this note does not add
-`ct_175_ollama.tf`. That file still sets
-`tags = "ai;community-script;storage-data2"`. Live CT 175 tags are
-`ai;storage-data2`, and the API is Ollama 0.40.15. #19 conflicts with
-master. The tag string has to be corrected there before a 0-diff import.
-Details are in [docs/blr.md](../blr.md).
+were applied outside this repo and are not imported here.
+`ct_175_ollama.tf` records tags `ai;storage-data2` and Ollama 0.40.15
+from the official installer. Details are in [docs/blr.md](../blr.md).
 
 A future create sets `password = var.lxc_root_password` and keeps
 `password` in `ignore_changes`. Export `TF_VAR_lxc_root_password` from a
