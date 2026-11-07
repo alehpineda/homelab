@@ -6,7 +6,7 @@ import. The example guest in `main.tf` is commented out. Running apply
 from this tree is not approved and must not create or destroy a container.
 
 This directory does not approve an apply. Create and destroy of any guest,
-including CTIDs 150, 151, 153, 154, 155, 156, 160–169, 171–174, 176, 180, 181, and 250, wait for a separate approved plan. CT 176 create-time fields are declared and ignored so the existing guest is not modified. Follow
+including CTIDs 150, 151, 153, 154, 155, 156, 160–162, 164–169, 171–176, 180, 181, and 250, wait for a separate approved plan. CT 176 create-time fields are declared and ignored so the existing guest is not modified. Follow
 [docs/runbooks/lxc-change.md](../../docs/runbooks/lxc-change.md).
 
 Node facts (no secrets): [docs/blr.md](../../docs/blr.md).
@@ -17,7 +17,7 @@ Monitoring and Postiz wiring: [docs/blr-monitoring.md](../../docs/blr-monitoring
 | Node | `barbatoslupusrex` |
 | LAN | `10.10.0.21` |
 | NetBird | `100.85.104.18` |
-| Existing CTIDs | 150, 151, 153, 154, 155, 156, 160–169, 171–174, 176, 180, 181, 250 |
+| Existing CTIDs | 150, 151, 153, 154, 155, 156, 160–162, 164–169, 171–176, 180, 181, 250 |
 | CT 176 day-1 | XFCE 4.20 + xrdp + Grok Bot 0.78.5 + Google Chrome stable (default browser) |
 | Provider | `telmate/proxmox` `3.0.2-rc10` |
 
@@ -87,6 +87,18 @@ keep inheriting host DNS. CT 151 tags are `network;storage-data2;vpn` and
 and CT 156 tags are `community-script;os` (pct order; no `storage-data2`
 suffix). Both omit `nameserver`. State backup from the CT 151 import:
 `~/forge-tf/mod/terraform.tfstate.bak-20261103-ct151`.
+
+CT 175 (`ollama-blr-lxc`) replaces destroyed CT 163. `ct_163_ollama.tf` is
+gone. Before import, `terraform state rm proxmox_lxc.ct_163` (state only;
+CT 163 is already gone), then
+`terraform import proxmox_lxc.ct_175 barbatoslupusrex/lxc/175`. A following
+plan must be 0-diff. Do not apply. Tags are `ai;storage-data2`. The guest
+runs Ollama 0.40.15 from the official installer (upgraded from
+community-script 0.35.1 on 2026-11-06). Models stay on ZFS
+`media/ollama-models`, mounted at guest `/mnt/ollama-models`. GPU
+inference is Vulkan on the Intel Arc Pro B60. Features, DRI devices, the
+models dataset, and the `OLLAMA_MODELS` drop-in are documented in
+`docs/runbooks/terraform-import.md` and `docs/runbooks/ollama-models.md`.
 
 ## Rollback
 

@@ -113,8 +113,8 @@ homelab/
 │   ├── ansible.cfg
 │   ├── inventory/            # blr.yml.example; copy to gitignored blr.yml
 │   ├── group_vars/           # all.yml.example
-│   ├── playbooks/            # ping.yml and site.yml
-│   └── roles/                # Empty until a later plan
+│   ├── playbooks/            # ping.yml, site.yml, and ollama.yml
+│   └── roles/                # ollama (OLLAMA_MODELS drop-in)
 │
 ├── terraform/proxmox/        # Telmate/proxmox skeleton (no guests enabled)
 │   ├── versions.tf
@@ -245,8 +245,9 @@ docker-compose down
 
 #### Ansible
 
-The checked-in playbooks are a connectivity stub, not a Compose deployer.
-They do not replace the Docker quick start above.
+The checked-in `site.yml` is a connectivity stub, not a Compose deployer.
+It does not replace the Docker quick start above. `playbooks/ollama.yml`
+only ensures `OLLAMA_MODELS` on CT 175 and is not imported by `site.yml`.
 
 ```bash
 cd ansible
@@ -263,7 +264,7 @@ LXC lifecycle for node `barbatoslupusrex` lives in [terraform/proxmox](terraform
 The module pins Telmate/proxmox and declares existing guests for import.
 Do not `terraform apply` a create or destroy from this skeleton.
 
-Public facts (LAN `10.10.0.21`, NetBird `100.85.104.18`, CTIDs 150, 151, 153, 154, 155, 156, 160–169, 171–174, 176, 180, 181, 250 on the node, CT 176 create-time fields ignored, no secrets):
+Public facts (LAN `10.10.0.21`, NetBird `100.85.104.18`, CTIDs 150, 151, 153, 154, 155, 156, 160–162, 164–169, 171–176, 180, 181, 250 on the node, CT 176 create-time fields ignored, no secrets):
 [docs/blr.md](docs/blr.md). Monitoring and Postiz wiring:
 [docs/blr-monitoring.md](docs/blr-monitoring.md). Change order when a later plan is approved:
 [docs/runbooks/lxc-change.md](docs/runbooks/lxc-change.md).
