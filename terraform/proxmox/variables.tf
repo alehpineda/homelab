@@ -33,3 +33,9 @@ variable "pm_minimum_permission_check" {
   type        = bool
   default     = true
 }
+
+variable "ct176_ssh_public_keys" {
+  description = "SSH authorized public keys for CT176. Only needed when (re)creating CT176; public keys only."
+  type        = string
+  default     = ""
+}
