@@ -3,8 +3,8 @@
 # (docs/runbooks/terraform-import.md). Each has prevent_destroy. For guests
 # already imported, terraform plan must show 0 to add/change/destroy.
 # 151, 169, and 171–174 were imported 2026-11-03. CT 250 is already imported.
-# 155 and 156 are pending import. CT 176 is declared and not created; a plan
-# that adds it is not approval to apply. There is no CT 170.
+# 155 and 156 are pending import. CT 176 create-time fields are ignored; a plan
+# that changes the existing guest is not approval to apply. There is no CT 170.
 # Do not terraform apply until a separate plan names the change and is
 # approved. See docs/runbooks/lxc-change.md.
 #
