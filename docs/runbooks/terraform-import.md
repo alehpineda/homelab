@@ -47,7 +47,13 @@ No changes. Your infrastructure matches the configuration.
 
 ## Why each ignore_changes entry exists
 
-- `ostemplate`, `password`, `ssh_public_keys`, `start`: create-time only, not read back.
+- `ostemplate`, `ssh_public_keys`, `start`: create-time only, not read back.
+- `password`: create-time console root password. On telmate/proxmox
+  `3.0.2-rc10`, `proxmox_lxc` marks it `Sensitive` and `ForceNew`, sends it
+  only from `CreateLxc`, deletes it inside `UpdateConfig`, and does not
+  read it back. `ignore_changes` is what stops a later value from planning
+  a replacement. See `terraform/proxmox/README.md`. Imported guests keep
+  the password set on day 1. Do not drop `password` from `ignore_changes`.
 - `description`: community-scripts HTML blob; not worth tracking.
 - `target_node`, `cmode`, `network`, `mountpoint`, `rootfs[0].storage`: Telmate
   rc10 import leaves these null in state. Without ignoring them, plan shows
@@ -291,3 +297,35 @@ assigns a `BC:24:11` address at create, and that MAC is recorded on import.
 gateway `10.10.0.1`. Tags: `forge;workstation;desktop`.
 `ct176_ssh_public_keys` defaults to empty and is only needed when
 (re)creating CT176; public keys only.
+
+`ct_176_forge-ws.tf` does not set `password`. Login for that guest stays
+the deathscythe account. `var.lxc_root_password` is for a later create
+that opts in. It is not applied to CT 176, and this declaration does not
+change SSH root-password policy.
+
+## Create-time console root password
+
+`var.lxc_root_password` (sensitive, default `null`) is documented in
+`terraform/proxmox/README.md`. It sets the create-time root password only.
+Automatic root login, a console that opens a root shell with no prompt,
+is a separate behavior and is not configured by `var.lxc_root_password`.
+The read-only comparison is complete: CT 170, CT 171, and CT 181 use
+guest agetty `--autologin root`, and `cmode` `tty` is the same on CT 175
+and CT 250. The operator validated CT 175 autologin. CT 250 was measured separately
+on Debian 13: stock getty flags kept, `-o` removed, `--autologin root`
+added, with root shells on tty1, tty2, and the console. CT 176 stays
+unchanged. Root passwords stay in
+place and SSH stays key-only. The opt-in encoding is
+`ansible/playbooks/console-autologin.yml`. No declared `ct_*.tf` sets `password`.
+Existing guest passwords stay the
+day-1 values already on the guests. Live passwords for CT 175 and CT 250
+were applied outside this repo and are not imported here.
+`ct_175_ollama.tf` records tags `ai;storage-data2` and Ollama 0.40.15
+from the official installer. Details are in [docs/blr.md](../blr.md).
+
+A future create sets `password = var.lxc_root_password` and keeps
+`password` in `ignore_changes`. Export `TF_VAR_lxc_root_password` from a
+secret store for that create only. Do not write it into state you commit.
+After create, the plaintext password sits in local `terraform.tfstate`
+because Telmate does not read it back and `sensitive` only redacts the
+CLI. State stays gitignored. `prevent_destroy` stays on the guest.

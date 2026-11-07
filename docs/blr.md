@@ -102,3 +102,45 @@ or a secret store. Do not commit them.
 
 See [terraform/proxmox/README.md](../terraform/proxmox/README.md) and
 [docs/runbooks/lxc-change.md](runbooks/lxc-change.md).
+
+## Console root passwords
+
+Guest console root passwords are not in this repo. Containers already on
+the node got theirs when they were created (day 1). Terraform does not
+read those values back and does not rotate them. CT 175 and CT 250 live
+passwords were applied outside this tree. Those passwords authenticate
+when a prompt asks. They are not automatic root login. The read-only
+comparison is complete: CT 170, CT 171, and CT 181 omit the prompt via
+guest agetty `--autologin root`, while `cmode` `tty` matches CT 175 and
+CT 250. The operator validated CT 175 autologin after the 4:26 PM CT
+pilot on 2026-11-05. CT 250 was then measured on Debian 13 with stock
+getty flags kept, `-o` removed, and `--autologin root` added. Root shells
+were verified on `container-getty@tty1`, `container-getty@tty2`, and
+`console-getty`. Caddy was not restarted. CT 176 stays without autologin.
+The opt-in Ansible role is
+`console_autologin`; running it is a separate approval. The root password
+stays in place and SSH stays key-only. CT 176 stays declared
+without a `password` argument; its login is the deathscythe account. A
+future create can opt in with `TF_VAR_lxc_root_password` as described in
+[terraform/proxmox/README.md](../terraform/proxmox/README.md). CT 175 is
+declared in `ct_175_ollama.tf` with tags `ai;storage-data2`. SSH
+root-password policy is unchanged.
+
+## CT 175 Ollama, 2026-11-06
+
+The guest API is Ollama **0.40.15**, upgraded from 0.35.1. The rollback
+copy on the guest is `/root/ollama-backup-0.35.1-20261106` (binary,
+libraries, unit, and the models drop-in). A Proxmox snapshot and vzdump
+were not available for that upgrade.
+
+`/mnt/ollama-models` is still mounted, about 203G, and the models drop-in
+is still in place. A check of all 28 guests found names, CTIDs, and tags
+unchanged aside from CT 175. Live tags there are `ai;storage-data2`.
+`community-script` was removed: the guest is a custom official install,
+`/usr/bin/update` is absent, and the community-script layout does not match.
+
+`ornith:9b` ran inference on the GPU: 33/33 layers, Vulkan, Arc Pro B60.
+`tev1:4b` fails to load. That repair is still open. This page does not
+say that every installed model runs.
+
+`ct_175_ollama.tf` declares those live tags: `ai;storage-data2`.

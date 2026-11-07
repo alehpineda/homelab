@@ -1,0 +1,28 @@
+---
+# Opt-in only. The playbook sets this true for its host pattern.
+# A host that includes the role without the flag is left unchanged.
+console_autologin_enabled: false
+
+# Inventory hostname -> ansible_host. CT 176 is intentionally absent.
+# Adding a guest here is a separate approval.
+console_autologin_allowed:
+  ollama-blr-lxc: 10.10.0.63
+  caddy-blr-lxc: 10.10.0.250
+
+# Which measured distro each approved guest is.
+console_autologin_host_os:
+  ollama-blr-lxc: ubuntu-24.04
+  caddy-blr-lxc: debian-13
+
+# Leading "-" is systemd's ignore-failure prefix. agetty's "-" is the tty
+# (stdin is the unit TTYPath). Neither variant passes "-o" to login.
+# Ubuntu 24.04, measured on CT 175. Tty, then baud. No --noreset.
+# Debian 13, measured on CT 250. Stock flags kept, "-o" removed,
+# --autologin added. Baud list, then tty. ${TERM} as measured.
+console_autologin_variants:
+  ubuntu-24.04:
+    container: "-/sbin/agetty --autologin root --noclear - $TERM"
+    console: "-/sbin/agetty --autologin root --noclear --keep-baud - 115200,38400,9600 $TERM"
+  debian-13:
+    container: "-/sbin/agetty --autologin root --noreset --noclear - ${TERM}"
+    console: "-/sbin/agetty --autologin root --noreset --noclear --keep-baud 115200,57600,38400,9600 - ${TERM}"

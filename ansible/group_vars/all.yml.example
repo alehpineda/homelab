@@ -7,3 +7,6 @@
 # still use port 22. Set ansible_port per host in inventory.
 
 ansible_user: root
+
+# console_autologin_enabled stays false here. The console-autologin playbook
+# turns it on only for the console_autologin inventory group.

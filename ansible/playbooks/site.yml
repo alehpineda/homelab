@@ -1,6 +1,7 @@
 ---
 # Site entrypoint. Imports the connectivity smoke only.
 # playbooks/ollama.yml sets OLLAMA_MODELS on CT 175 and is not imported
-# here. Run it only from a separate approved plan.
+# here. The console autologin playbook is opt-in and is not imported
+# here. Run either only from a separate approved plan.
 - name: Include connectivity smoke
   ansible.builtin.import_playbook: ping.yml

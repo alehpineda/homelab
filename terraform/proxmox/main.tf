@@ -13,6 +13,14 @@
 # Preferences for a future container: unprivileged, one service per CT,
 # explicit vmid outside the in-use CTIDs, start = false until checks pass.
 # Telmate crashes if rootfs is omitted, so the example includes it.
+# A future create that should have a console root password sets
+# `password = var.lxc_root_password` and keeps `password` in ignore_changes.
+# That sets a password a prompt can accept. It does not enable automatic
+# root login. Getty autologin for CT 175 (Ubuntu 24.04) and CT 250
+# (Debian 13) is the opt-in Ansible role console_autologin, one measured
+# ExecStart per distro. CT 176 stays without that role.
+# Existing ct_*.tf resources do not set password. CT 176 stays that way
+# (deathscythe login). CT 175 is ct_175_ollama.tf and does not set password.
 
 # resource "proxmox_lxc" "example_service" {
 #   target_node  = var.pm_node
@@ -44,4 +52,19 @@
 #     bridge = var.pm_bridge
 #     ip     = "dhcp"
 #   }
+#
+#   # Create-time console root password. Uncomment only on a new guest whose
+#   # approved plan names this create. Export TF_VAR_lxc_root_password first.
+#   # password = var.lxc_root_password
+#
+#   # lifecycle {
+#   #   prevent_destroy = true
+#   #   # password is ForceNew in Telmate 3.0.2-rc10. ignore_changes keeps a
+#   #   # later value from replacing the guest. The provider drops password
+#   #   # on update, and Read does not return it.
+#   #   ignore_changes = [
+#   #     ostemplate, password, ssh_public_keys, start, description,
+#   #     target_node, cmode, network, mountpoint, rootfs[0].storage,
+#   #   ]
+#   # }
 # }

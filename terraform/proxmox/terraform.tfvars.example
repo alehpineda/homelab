@@ -1,6 +1,8 @@
 # Non-secret overrides only. Copy to terraform.tfvars (gitignored) if you
 # need to change a default. Do not put PM_API_TOKEN_ID, PM_API_TOKEN_SECRET,
 # passwords, or private keys in this file. Set those in the environment.
+# Do not add lxc_root_password here. There is no example value. A future
+# create exports TF_VAR_lxc_root_password from a secret store.
 
 pm_node         = "barbatoslupusrex"
 pm_bridge       = "vmbr0"
