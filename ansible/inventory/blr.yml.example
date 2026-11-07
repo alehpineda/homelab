@@ -21,7 +21,7 @@ all:
           ansible_port: 22
           # ansible_port: 4488  # uncomment only for a guest hardened by ansible-playbooks
         # CT 175. playbooks/ollama.yml targets this host. site.yml does not.
-        # Port 22: community-script LXC, not an ansible-playbooks harden.
+        # Port 22: official Ollama 0.40.15 installer, not an ansible-playbooks harden.
         ollama-blr-lxc:
           ansible_host: 10.10.0.63
           ansible_port: 22
@@ -40,4 +40,7 @@ all:
         #   ansible_port: 22
         # pve-exporter-blr-lxc:      # CT 174
         #   ansible_host: 10.10.0.74
+        #   ansible_port: 22
+        # forge-ws-blr-lxc:          # CT 176 — declared, not created. Uncomment only after the guest exists.
+        #   ansible_host: 10.10.0.76
         #   ansible_port: 22

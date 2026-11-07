@@ -18,14 +18,15 @@ here or anywhere else in git.
 | API URL shape | `https://10.10.0.21:8006/api2/json` or `https://100.85.104.18:8006/api2/json` |
 | PVE version | Not recorded in this skeleton. Run `pveversion` on the node before any later apply. |
 | Virtual machines | 0 |
-| LXC guests | 23 containers. CT 175 replaced destroyed CT 163 on 2026-11-05 (same count). CT 155 and CT 156 recorded 2026-11-03 from pct (onboot=1, listed running). Prior check: 18 running, 3 stopped (166, 167, 168). |
+| LXC guests | 24 containers on the node, including CT 176. CT 175 replaced destroyed CT 163 on 2026-11-05. CT 155 and CT 156 recorded 2026-11-03 from pct (onboot=1, listed running). Prior check: 18 running, 3 stopped (166, 167, 168). CT 176 (`forge-ws-blr-lxc`) day-1: XFCE 4.20 + xrdp + Grok Bot 0.78.5 + Google Chrome stable from Google's apt repo, set as the default browser. |
 
 
 ## Existing CTIDs
 
-These IDs already exist on the node. Do not destroy or recreate them from
-Terraform until a separate approved plan imports them and the plan output
-shows no destroy.
+These IDs already exist on the node, including CT 176. Do not destroy or
+recreate a live guest from Terraform until a separate approved plan imports
+it and the plan output shows no destroy. CT 176 create-time fields are
+ignored so the existing guest is not modified.
 
 Renumbered 2026-11-01 (Option Y): static IPs on 10.10.0.0/24, gateway
 10.10.0.1, CTID last two digits = IP last octet. CT 175 keeps
@@ -53,6 +54,7 @@ Renumbered 2026-11-01 (Option Y): static IPs on 10.10.0.0/24, gateway
 | 173 | loki-blr-lxc | 10.10.0.73 | vmbr0 | running |
 | 174 | pve-exporter-blr-lxc | 10.10.0.74 | vmbr0 | running |
 | 175 | ollama-blr-lxc | 10.10.0.63 | vmbr0 | running |
+| 176 | forge-ws-blr-lxc | 10.10.0.76 | vmbr0 | created |
 | 180 | jellyfin-blr-lxc | 10.10.0.80 | vmbr1 | running |
 | 181 | metube | 10.10.0.81 | vmbr0 | running |
 | 250 | caddy-blr-lxc | 10.10.0.250 | vmbr0 | running |
@@ -70,8 +72,13 @@ are still pending.
 
 New containers, if a later plan creates any, need an explicit VMID not in this list.
 There is no CT 163 (destroyed 2026-11-05; Ollama is CT 175) and no CT 170.
-Models for CT 175 live on the host ZFS dataset below, bind-mounted at
-guest `/mnt/ollama-models`. Ansible sets `OLLAMA_MODELS` there; see
+CT 176 is `forge-ws-blr-lxc` at 10.10.0.76. Create-time Terraform fields
+are ignored; do not apply a replacement. Models for CT 175 live on the host
+ZFS dataset `media/ollama-models`, bind-mounted at guest `/mnt/ollama-models`.
+The guest runs Ollama 0.40.15 from the official installer (upgraded from
+community-script 0.35.1 on 2026-11-06). Live tags are `ai;storage-data2`.
+GPU inference uses Vulkan on the Intel Arc Pro B60. Ansible sets
+`OLLAMA_MODELS` on the mount; see
 [runbooks/ollama-models.md](runbooks/ollama-models.md).
 
 ## Storage

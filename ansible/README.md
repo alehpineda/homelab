@@ -79,11 +79,13 @@ What the role does, and does not do:
 - Writes `/etc/systemd/system/ollama.service.d/models.conf` with
   `Environment=OLLAMA_MODELS=/mnt/ollama-models`. It does not edit
   `/etc/systemd/system/ollama.service`.
-- Leaves the community-script environment (`HOME`, `OLLAMA_INTEL_GPU`,
-  `OLLAMA_HOST`, `OLLAMA_NUM_GPU`, `SYCL_CACHE_PERSISTENT`,
-  `ZES_ENABLE_SYSMAN`, Vulkan) in that unit. systemd merges the drop-in
-  afterward.
-- Requires the unit file to already exist. It does not install Ollama.
+- Leaves the official-installer unit in place. systemd merges the drop-in
+  afterward. CT 175 runs Ollama 0.40.15 (upgraded from community-script
+  0.35.1 on 2026-11-06). GPU inference is Vulkan on the Intel Arc Pro B60
+  and is not configured by this role.
+- Requires the unit file to already exist. It does not install or upgrade
+  Ollama. `ollama_version` in `roles/ollama/defaults/main.yml` records
+  0.40.15; the role does not apply that pin.
 - Requires `findmnt --mountpoint /mnt/ollama-models` to succeed, so a
   missing mp0 cannot create a directory on the 24G rootfs. It does not
   create the host ZFS dataset `media/ollama-models` or change pct mp0.

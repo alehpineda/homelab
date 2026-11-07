@@ -12,10 +12,13 @@ not approve `terraform apply`, `pct` writes, or a live Ansible run.
   used about 203G, refquota 400G. Not a Terraform resource. Do not add a
   ZFS resource for it unless a later plan introduces that pattern.
 - `OLLAMA_MODELS` belongs in a systemd drop-in on the guest, not in
-  Terraform. The community-script unit stays in place. Other environment
-  variables (`HOME`, `OLLAMA_INTEL_GPU`, `OLLAMA_HOST`, `OLLAMA_NUM_GPU`,
-  `SYCL_CACHE_PERSISTENT`, `ZES_ENABLE_SYSMAN`, Vulkan) stay in that unit.
-- `features` `nesting=1,keyctl=1` and DRI `dev0`/`dev1` stay on the node.
+  Terraform. The unit is the official installer unit for Ollama 0.40.15
+  (upgraded from community-script 0.35.1 on 2026-11-06). The previous
+  install is kept on the guest at `/root/ollama-backup-0.35.1-20261106`.
+  This role does not edit that unit and does not install Ollama.
+- GPU inference uses Vulkan on the Intel Arc Pro B60 (`dev0`
+  `/dev/dri/renderD128`, `dev1` `/dev/dri/card0`). `features`
+  `nesting=1,keyctl=1` and those DRI devices stay on the node.
   Telmate 3.0.2-rc10 does not round-trip them safely. See
   [terraform-import.md](terraform-import.md).
 
@@ -54,8 +57,8 @@ findmnt --mountpoint /mnt/ollama-models
 ```
 
 Override `ollama_models_owner` or `ollama_models_dir` only with `-e` or
-in the gitignored inventory. The default owner is root because the
-community-script unit has historically used `HOME=/root`.
+in the gitignored inventory. The default owner is root. `ollama_version`
+in the role defaults records `0.40.15` and is not applied by the play.
 
 ## Terraform
 

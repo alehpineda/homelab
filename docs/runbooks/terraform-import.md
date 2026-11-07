@@ -236,7 +236,8 @@ Live facts this declaration records:
   one matches pct)
 - rootfs `data2:vm-175-disk-0,size=24G` via `var.pm_storage` and size
   `24G`. `rootfs[0].storage` is ignored after import. Size is not.
-- tags `ai;community-script;storage-data2`
+- tags `ai;storage-data2` (the `community-script` tag was removed on
+  2026-11-06 when the guest moved to the official Ollama installer)
 - net0 eth0 vmbr0, MAC `BC:24:11:DB:3D:D7`, `10.10.0.63/24`, gateway
   `10.10.0.1`, `ip6=auto`. No firewall flag, so the network block omits
   `firewall`. `network` is ignored after import.
@@ -250,12 +251,43 @@ Live facts this declaration records:
   unset keeps the plan at 0-diff and leaves `ignore_changes` identical
   to the sibling CTs.
 - `dev0` `/dev/dri/renderD128,gid=993` and `dev1` `/dev/dri/card0,gid=44`
-  are not in the Telmate schema. They stay on the node. They are not
-  declared as mountpoints.
+  are the Intel Arc Pro B60 passthrough. They are not in the Telmate
+  schema. They stay on the node and are not declared as mountpoints.
+  Inference on that GPU uses Vulkan.
+- Ollama on the guest is **0.40.15**, installed by the official installer
+  on 2026-11-06 (was community-script 0.35.1). This module does not pin
+  or install the binary. The guest copy of the previous install is
+  `/root/ollama-backup-0.35.1-20261106`.
 
 Host ZFS dataset `media/ollama-models` (mount `/media/ollama-models`, used
 about 203G, refquota 400G on 2026-11-05) is not managed here. Guest
-`OLLAMA_MODELS` is Ansible. See [ollama-models.md](ollama-models.md).
+`/mnt/ollama-models` is that dataset via mp0. `OLLAMA_MODELS` is Ansible.
+See [ollama-models.md](ollama-models.md).
 
 `vzdump` job `forge-backup-ssd` already includes 175 and excludes 163.
 No job change is part of this import.
+
+## CT 176 forge-ws-blr-lxc
+
+Declared 2026-11-05. Create-time inputs are backported and ignored so the
+existing guest is not modified. This section does not authorize apply or
+guest replacement. Day-1: XFCE 4.20 + xrdp + Grok Bot 0.78.5 + Google Chrome
+stable from Google's apt repo, set as the default browser. Import only with
+a separate approved plan:
+
+```bash
+terraform import proxmox_lxc.ct_176 barbatoslupusrex/lxc/176
+terraform plan -detailed-exitcode   # exit 0 expected after MAC alignment
+```
+
+`ostemplate`, `ssh_public_keys`, `start`, and `features` are create-time
+only and listed in `ignore_changes`. Nesting matches the apply tree
+(`features { nesting = true }`); keyctl was not explicitly enabled.
+`timezone` (`America/Chicago`) stays omitted. `hwaddr` is omitted: Proxmox
+assigns a `BC:24:11` address at create, and that MAC is recorded on import.
+`nameserver` is omitted (Flint option 6 / host DNS). Rootfs is
+`var.pm_storage` (`data2`) at `40G`. Intended NIC, documented only
+(`network` is ignored after import): eth0 on vmbr0, `10.10.0.76/24`,
+gateway `10.10.0.1`. Tags: `forge;workstation;desktop`.
+`ct176_ssh_public_keys` defaults to empty and is only needed when
+(re)creating CT176; public keys only.

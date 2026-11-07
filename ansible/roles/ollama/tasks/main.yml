@@ -1,21 +1,22 @@
 ---
 # Ensures OLLAMA_MODELS points at the mp0 bind. Does not install Ollama,
-# edit the community-script unit, or create the host ZFS dataset.
-# Other Environment= lines in the unit (OLLAMA_HOST, OLLAMA_INTEL_GPU, and
-# the rest) stay where the community script put them. The drop-in only
-# adds OLLAMA_MODELS, and systemd applies drop-ins after the unit.
+# edit the official-installer unit, or create the host ZFS dataset.
+# CT 175 runs Ollama 0.40.15 from the official installer.
+# The drop-in only adds OLLAMA_MODELS. GPU inference (Vulkan on the
+# Intel Arc Pro B60) stays outside this role.
 
 - name: Check whether the ollama unit is installed
   ansible.builtin.stat:
     path: "{{ ollama_unit_path }}"
   register: ollama_unit
 
-- name: Require the community-script ollama unit
+- name: Require the official-installer ollama unit
   ansible.builtin.assert:
     that:
       - ollama_unit.stat.exists
     fail_msg: >-
-      {{ ollama_unit_path }} is missing. This role does not install Ollama.
+      {{ ollama_unit_path }} is missing. This role does not install Ollama
+      {{ ollama_version }}. The official installer on CT 175 owns the unit.
 
 - name: Confirm the models path is a mountpoint
   ansible.builtin.command:

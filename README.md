@@ -264,7 +264,7 @@ LXC lifecycle for node `barbatoslupusrex` lives in [terraform/proxmox](terraform
 The module pins Telmate/proxmox and declares existing guests for import.
 Do not `terraform apply` a create or destroy from this skeleton.
 
-Public facts (LAN `10.10.0.21`, NetBird `100.85.104.18`, CTIDs 150, 151, 153, 154, 155, 156, 160–162, 164–169, 171–175, 180, 181, 250, no secrets):
+Public facts (LAN `10.10.0.21`, NetBird `100.85.104.18`, CTIDs 150, 151, 153, 154, 155, 156, 160–162, 164–169, 171–176, 180, 181, 250 on the node, CT 176 create-time fields ignored, no secrets):
 [docs/blr.md](docs/blr.md). Monitoring and Postiz wiring:
 [docs/blr-monitoring.md](docs/blr-monitoring.md). Change order when a later plan is approved:
 [docs/runbooks/lxc-change.md](docs/runbooks/lxc-change.md).

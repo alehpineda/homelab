@@ -1,10 +1,12 @@
-# CTIDs 150, 151, 153, 154, 155, 156, 160–162, 164–169, 171–175, 180, 181, 250
+# CTIDs 150, 151, 153, 154, 155, 156, 160–162, 164–169, 171–176, 180, 181, 250
 # on barbatoslupusrex are declared in ct_<id>_<name>.tf
-# (docs/runbooks/terraform-import.md). Each has prevent_destroy. terraform
-# plan must show 0 to add/change/destroy. 151, 169, and 171–174 were
-# imported 2026-11-03. CT 250 is already imported. 155 and 156 are pending
-# import. CT 175 replaces destroyed CT 163 and is pending state rm of
-# proxmox_lxc.ct_163 plus import. There is no CT 163 and no CT 170.
+# (docs/runbooks/terraform-import.md). Each has prevent_destroy. For guests
+# already imported, terraform plan must show 0 to add/change/destroy.
+# 151, 169, and 171–174 were imported 2026-11-03. CT 250 is already imported.
+# 155 and 156 are pending import. CT 175 replaces destroyed CT 163 and is
+# pending state rm of proxmox_lxc.ct_163 plus import. CT 176 create-time
+# fields are ignored; a plan that changes the existing guest is not approval
+# to apply. There is no CT 163 and no CT 170.
 # Do not terraform apply until a separate plan names the change and is
 # approved. See docs/runbooks/lxc-change.md.
 #

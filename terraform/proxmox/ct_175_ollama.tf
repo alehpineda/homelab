@@ -11,9 +11,12 @@
 # block is already set, so leaving it unset keeps a post-import plan at
 # 0-diff and leaves ignore_changes identical to the other ct_*.tf files.
 #
-# dev0 /dev/dri/renderD128,gid=993 and dev1 /dev/dri/card0,gid=44 are live
-# GPU passthrough. Telmate 3.0.2-rc10 has no devN attribute. They stay on
-# the node. Do not model them as mountpoints.
+# dev0 /dev/dri/renderD128,gid=993 and dev1 /dev/dri/card0,gid=44 are the
+# Intel Arc Pro B60. Inference uses Vulkan. Telmate 3.0.2-rc10 has no devN
+# attribute. They stay on the node. Do not model them as mountpoints.
+#
+# Ollama 0.40.15 is the official installer (2026-11-06), not the
+# community-script 0.35.1 unit. Live tags dropped community-script.
 #
 # mp0 binds host /media/ollama-models (ZFS dataset media/ollama-models,
 # refquota 400G) at /mnt/ollama-models, backup=0. The dataset is not a
@@ -30,7 +33,7 @@ resource "proxmox_lxc" "ct_175" {
   cores        = 8
   memory       = 32768
   swap         = 4096
-  tags         = "ai;community-script;storage-data2"
+  tags         = "ai;storage-data2"
 
   rootfs {
     storage = var.pm_storage
