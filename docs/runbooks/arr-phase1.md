@@ -103,13 +103,11 @@ pct config 182
 qBittorrent uses. `mp2` is host `/media/data/usenet` at `/data/usenet`
 and stays before any usenet child. All three are `backup=0`.
 
-Live `mp3`–`mp20` are not transcribed here. The source is `pct config 182`
-in `~/.config/forge/ct182-pct-config-pre-phase2`, listed in
-`/workspace/forge/plans/2026-11-08-brl-arr-phase2.md`. Neither file was
-available in this environment, so `ct_182_arr.tf` marks those paths
-TODO and does not declare them. Children named metube, books, documents,
-photos, and backups are read-only on the node. `ignore_changes` includes
-`mountpoint`, so Terraform hides drift on these mounts.
+`mp3`–`mp20` are the live binds from `pct config 182`, all `backup=0`.
+`mp5` metube, `mp7` books, `mp8` documents, `mp9` photos, and `mp10`
+backups are `ro=1` on the node. Telmate cannot set that flag.
+`mp15`–`mp20` are usenet children and stay after `mp2`. `ignore_changes`
+includes `mountpoint`, so Terraform hides drift on these mounts.
 
 `onboot` is true. Add the tun and idmap lines before the next node boot,
 or the guest can start without them.

@@ -48,18 +48,12 @@
 #   mp2  /media/data/usenet   -> /data/usenet
 # qBittorrent uses /data/downloads.
 #
-# mp3–mp20 are live on the guest. The list is pct config 182 as recorded
-# in ~/.config/forge/ct182-pct-config-pre-phase2 and
-# /workspace/forge/plans/2026-11-08-brl-arr-phase2.md. Neither file was
-# available here, so those host and guest paths are TODO and are not
-# resources. Do not apply a guessed path.
-# Children named metube, books, documents, photos, and backups are
-# read-only (pct ro=1). Telmate 3.0.2-rc10 mountpoint has no read-only
-# attribute, same as ct_180, so ro=1 stays on the node.
+# mp3–mp20 match live pct config 182. mp5, mp7, mp8, mp9, and mp10 are
+# ro=1 on the node. Telmate 3.0.2-rc10 mountpoint has no read-only
+# attribute, same as ct_180, so that flag stays a comment.
 # lifecycle.ignore_changes includes mountpoint, so a plan hides added,
-# removed, or drifted mounts and will not apply mp3–mp20 onto a guest
-# that already exists. Live pct config stays the source of truth until
-# a reviewed plan narrows that ignore.
+# removed, or drifted mounts and will not apply a mount change onto a
+# guest that already exists.
 resource "proxmox_lxc" "ct_182" {
   target_node  = var.pm_node
   vmid         = 182
@@ -113,27 +107,155 @@ resource "proxmox_lxc" "ct_182" {
     backup = false
   }
 
-  # TODO mp3–mp20. Fill volume and mp from the pct note above.
-  # Keep any usenet child after mp2. Mark metube, books, documents,
-  # photos, and backups ro=1 on the node; this provider cannot.
-  # TODO mp3  volume = "TODO"  mp = "TODO"  backup = false
-  # TODO mp4  volume = "TODO"  mp = "TODO"  backup = false
-  # TODO mp5  volume = "TODO"  mp = "TODO"  backup = false
-  # TODO mp6  volume = "TODO"  mp = "TODO"  backup = false
-  # TODO mp7  volume = "TODO"  mp = "TODO"  backup = false
-  # TODO mp8  volume = "TODO"  mp = "TODO"  backup = false
-  # TODO mp9  volume = "TODO"  mp = "TODO"  backup = false
-  # TODO mp10 volume = "TODO"  mp = "TODO"  backup = false
-  # TODO mp11 volume = "TODO"  mp = "TODO"  backup = false
-  # TODO mp12 volume = "TODO"  mp = "TODO"  backup = false
-  # TODO mp13 volume = "TODO"  mp = "TODO"  backup = false
-  # TODO mp14 volume = "TODO"  mp = "TODO"  backup = false
-  # TODO mp15 volume = "TODO"  mp = "TODO"  backup = false
-  # TODO mp16 volume = "TODO"  mp = "TODO"  backup = false
-  # TODO mp17 volume = "TODO"  mp = "TODO"  backup = false
-  # TODO mp18 volume = "TODO"  mp = "TODO"  backup = false
-  # TODO mp19 volume = "TODO"  mp = "TODO"  backup = false
-  # TODO mp20 volume = "TODO"  mp = "TODO"  backup = false
+  mountpoint {
+    key    = "3"
+    slot   = 3
+    volume = "/media/data/media/movies"
+    mp     = "/data/media/movies"
+    backup = false
+  }
+
+  mountpoint {
+    key    = "4"
+    slot   = 4
+    volume = "/media/data/media/tv"
+    mp     = "/data/media/tv"
+    backup = false
+  }
+
+  # ro=1 in pct config. Telmate rc10 mountpoint has no read-only attribute.
+  mountpoint {
+    key    = "5"
+    slot   = 5
+    volume = "/media/data/media/metube"
+    mp     = "/data/media/metube"
+    backup = false
+  }
+
+  mountpoint {
+    key    = "6"
+    slot   = 6
+    volume = "/media/data/media/music"
+    mp     = "/data/media/music"
+    backup = false
+  }
+
+  # ro=1 in pct config. Telmate rc10 mountpoint has no read-only attribute.
+  mountpoint {
+    key    = "7"
+    slot   = 7
+    volume = "/media/data/media/books"
+    mp     = "/data/media/books"
+    backup = false
+  }
+
+  # ro=1 in pct config. Telmate rc10 mountpoint has no read-only attribute.
+  mountpoint {
+    key    = "8"
+    slot   = 8
+    volume = "/media/data/media/documents"
+    mp     = "/data/media/documents"
+    backup = false
+  }
+
+  # ro=1 in pct config. Telmate rc10 mountpoint has no read-only attribute.
+  mountpoint {
+    key    = "9"
+    slot   = 9
+    volume = "/media/data/media/photos"
+    mp     = "/data/media/photos"
+    backup = false
+  }
+
+  # ro=1 in pct config. Telmate rc10 mountpoint has no read-only attribute.
+  mountpoint {
+    key    = "10"
+    slot   = 10
+    volume = "/media/data/media/backups"
+    mp     = "/data/media/backups"
+    backup = false
+  }
+
+  mountpoint {
+    key    = "11"
+    slot   = 11
+    volume = "/media/data/torrents/books"
+    mp     = "/data/downloads/books"
+    backup = false
+  }
+
+  mountpoint {
+    key    = "12"
+    slot   = 12
+    volume = "/media/data/torrents/movies"
+    mp     = "/data/downloads/movies"
+    backup = false
+  }
+
+  mountpoint {
+    key    = "13"
+    slot   = 13
+    volume = "/media/data/torrents/music"
+    mp     = "/data/downloads/music"
+    backup = false
+  }
+
+  mountpoint {
+    key    = "14"
+    slot   = 14
+    volume = "/media/data/torrents/tv"
+    mp     = "/data/downloads/tv"
+    backup = false
+  }
+
+  # Usenet children stay after mp2, the usenet parent.
+  mountpoint {
+    key    = "15"
+    slot   = 15
+    volume = "/media/data/usenet/complete"
+    mp     = "/data/usenet/complete"
+    backup = false
+  }
+
+  mountpoint {
+    key    = "16"
+    slot   = 16
+    volume = "/media/data/usenet/incomplete"
+    mp     = "/data/usenet/incomplete"
+    backup = false
+  }
+
+  mountpoint {
+    key    = "17"
+    slot   = 17
+    volume = "/media/data/usenet/complete/books"
+    mp     = "/data/usenet/complete/books"
+    backup = false
+  }
+
+  mountpoint {
+    key    = "18"
+    slot   = 18
+    volume = "/media/data/usenet/complete/movies"
+    mp     = "/data/usenet/complete/movies"
+    backup = false
+  }
+
+  mountpoint {
+    key    = "19"
+    slot   = 19
+    volume = "/media/data/usenet/complete/music"
+    mp     = "/data/usenet/complete/music"
+    backup = false
+  }
+
+  mountpoint {
+    key    = "20"
+    slot   = 20
+    volume = "/media/data/usenet/complete/tv"
+    mp     = "/data/usenet/complete/tv"
+    backup = false
+  }
 
   network {
     name   = "eth0"
