@@ -41,3 +41,6 @@ pbs_grokops_sudo_commands:
   - /usr/bin/proxmox-backup-client
   - /usr/bin/systemctl
   - /usr/bin/apt
+
+# Debian trixie-security only; Proxmox/kernels stay manual. No auto reboot.
+pbs_unattended_upgrades: true

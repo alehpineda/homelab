@@ -1,0 +1,15 @@
+// Managed by ansible role pbs. Debian trixie-security only.
+// Proxmox repos and kernels are patched manually (no auto reboot).
+#clear Unattended-Upgrade::Origins-Pattern;
+#clear Unattended-Upgrade::Allowed-Origins;
+Unattended-Upgrade::Origins-Pattern {
+        "origin=Debian,codename=${distro_codename}-security,label=Debian-Security";
+};
+Unattended-Upgrade::Package-Blacklist {
+        "proxmox-kernel-.*";
+        "proxmox-default-kernel";
+        "linux-image-.*";
+        "pve-firmware";
+};
+Unattended-Upgrade::Automatic-Reboot "false";
+Unattended-Upgrade::Remove-Unused-Kernel-Packages "false";

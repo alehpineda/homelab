@@ -1,0 +1,30 @@
+---
+- name: Install unattended-upgrades
+  ansible.builtin.apt:
+    name: [unattended-upgrades, apt-listchanges]
+    state: present
+
+- name: Limit unattended upgrades to Debian security
+  ansible.builtin.copy:
+    src: 52unattended-upgrades-local
+    dest: /etc/apt/apt.conf.d/52unattended-upgrades-local
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Enable daily list refresh and unattended upgrade
+  ansible.builtin.copy:
+    dest: /etc/apt/apt.conf.d/20auto-upgrades
+    owner: root
+    group: root
+    mode: "0644"
+    content: |
+      APT::Periodic::Update-Package-Lists "1";
+      APT::Periodic::Unattended-Upgrade "1";
+
+- name: Enable apt timers
+  ansible.builtin.systemd_service:
+    name: "{{ item }}"
+    enabled: true
+    state: started
+  loop: [apt-daily.timer, apt-daily-upgrade.timer, unattended-upgrades.service]
