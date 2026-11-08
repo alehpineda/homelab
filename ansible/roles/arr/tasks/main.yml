@@ -107,37 +107,31 @@
     or 'Started' in (arr_dockge_up.stdout | default(''))
     or 'Recreated' in (arr_dockge_up.stdout | default(''))
 
-- name: Confirm the media tree is mounted
+- name: Confirm the phase-1 binds are mounted
   ansible.builtin.command:
     argv:
       - findmnt
       - --mountpoint
-      - "{{ arr_data_mount }}"
+      - "{{ item }}"
       - --noheadings
-  register: arr_data_mount_check
-  changed_when: false
-  failed_when: false
-
-- name: Confirm the downloads alias is mounted
-  ansible.builtin.command:
-    argv:
-      - findmnt
-      - --mountpoint
-      - "{{ arr_downloads_mount }}"
-      - --noheadings
-  register: arr_downloads_mount_check
+  loop:
+    - "{{ arr_media_mount }}"
+    - "{{ arr_downloads_mount }}"
+    - "{{ arr_usenet_mount }}"
+  register: arr_mount_checks
   changed_when: false
   failed_when: false
 
 - name: Fail when a phase-1 bind is missing
   ansible.builtin.assert:
     that:
-      - arr_data_mount_check.rc == 0
-      - arr_downloads_mount_check.rc == 0
+      - item.rc == 0
     fail_msg: >-
-      {{ arr_data_mount }} and {{ arr_downloads_mount }} must already be
-      mountpoints. This role does not create the host downloads directory
-      or the pct mounts. See docs/runbooks/arr-phase1.md.
+      {{ item.item }} must already be a mountpoint. This role does not
+      create host directories or pct mounts. See docs/runbooks/arr-phase1.md.
+  loop: "{{ arr_mount_checks.results }}"
+  loop_control:
+    label: "{{ item.item }}"
 
 - name: Stat the tun device
   ansible.builtin.stat:

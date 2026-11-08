@@ -76,12 +76,10 @@ lxc.idmap: u 1001 101001 64535
 lxc.idmap: g 1001 101001 64535
 ```
 
-The only directory phase 1 chowns is the new downloads path. Do not chown
-movies, tv, or music, and do not restart CT 180 or CT 181.
-
-```bash
-install -d -o 1100 -g 1100 -m 0750 /media/data/torrents/bael-downloads
-```
+The three host directories already exist and are `root:root` mode `0755`.
+Mapped uid 1100 cannot write to them. Changing that ownership is a
+separate step and needs your approval. Phase 1's VPN test does not need
+write access. Do not chown them, and do not restart CT 180 or CT 181.
 
 ## Tun and mounts
 
@@ -100,10 +98,10 @@ replace them with the six above. Then:
 pct config 182
 ```
 
-`mp0` is host `/media/data` at `/data`, so the libraries are
-`/data/media/{movies,tv,music}`. `mp1` is host
-`/media/data/torrents/bael-downloads` at `/data/downloads`, which is the
-path qBittorrent already uses. Both mounts are `backup=0`.
+`mp0` is host `/media/data/media` at `/data/media`. `mp1` is host
+`/media/data/torrents` at `/data/downloads`, which is the path
+qBittorrent uses. `mp2` is host `/media/data/usenet` at `/data/usenet`.
+Usenet is mounted and unused in phase 1. All three are `backup=0`.
 
 `onboot` is true. Add the tun and idmap lines before the next node boot,
 or the guest can start without them.
@@ -113,10 +111,10 @@ pct start 182
 ```
 
 Inside the guest, `/dev/net/tun` must be a character device, and `findmnt`
-must show both `/data` and `/data/downloads`. Also run
+must show `/data/media`, `/data/downloads`, and `/data/usenet`. Also run
 `getent passwd 1000`. Phase 1 uses numeric uid 1000 as the mapped media
-id (host 1100). If that uid is an unrelated login, stop and do not chown
-over it.
+id (host 1100). If that uid is an unrelated login, stop. Do not chown
+the host directories.
 
 ## Terraform
 
@@ -134,8 +132,17 @@ terraform show tfplan
 ```
 
 The plan should add `proxmox_lxc.ct_182` and leave every existing guest
-unchanged. A destroy or a replace stops here. Apply only the reviewed
-plan file:
+unchanged. A destroy or a replace stops here. On the node, as root,
+before the guest is created, confirm the three existing source
+directories. If any test fails, stop. Do not create them:
+
+```bash
+test -d /media/data/media
+test -d /media/data/torrents
+test -d /media/data/usenet
+```
+
+Apply only the reviewed plan file:
 
 ```bash
 terraform apply tfplan
@@ -350,16 +357,17 @@ After this gate, and only in a later change:
   FlareSolverr's digest in that change. Jackett and Pinchflat are not
   part of the move.
 - Jellyseerr goes on CT 183 (`10.10.0.83`), not in this VPN namespace.
-- Root folders become `/data/media/{movies,tv,music}`. The downloads
-  alias stays `/data/downloads`.
+- Root folders are `/data/media/{movies,tv,music}`. qBittorrent keeps
+  `/data/downloads` (host `/media/data/torrents`). `/data/usenet` stays
+  unused until a later phase.
 - Caddy on CT 250 and AdGuard rewrites wait for the NetTit handoff. No
   public route for FlareSolverr or the gluetun control port.
 
 ## Backups
 
-`mp0` and `mp1` are `backup=0`, so vzdump does not archive the media tree
-or the downloads tree. Do not exclude CT 182 itself because phase 1 is
-still waiting on `.env`.
+`mp0`, `mp1`, and `mp2` are `backup=0`, so vzdump does not archive the
+media tree, the torrents tree, or the usenet tree. Do not exclude CT 182
+itself because phase 1 is still waiting on `.env`.
 
 `forge-backup-pbs-hdd` has no guest excludes, so the rootfs is included
 once the guest exists. `forge-backup-ssd` is an explicit id list. Add 182

@@ -38,12 +38,14 @@
 #   lxc.cgroup2.devices.allow: c 10:200 rwm
 #   lxc.mount.entry: /dev/net/tun dev/net/tun none bind,create=file
 #
-# mp0 binds host /media/data at /data (libraries at
-# /data/media/{movies,tv,music}). mp1 binds
-# /media/data/torrents/bael-downloads at /data/downloads so qBittorrent
-# keeps that in-container path. Both backup=0. The downloads directory
-# is the only path phase 1 chowns (host uid:gid 1100). Do not chown the
-# libraries or restart CT 180 or CT 181.
+# Three existing host directories, all backup=0. Do not create them.
+# They are root:root 0755 today. Mapped uid 1100 cannot write. Changing
+# ownership is a later step and needs an explicit yes. Phase 1 does not
+# chown them and does not restart CT 180 or CT 181.
+#   mp0  /media/data/media    -> /data/media
+#   mp1  /media/data/torrents -> /data/downloads
+#   mp2  /media/data/usenet   -> /data/usenet
+# qBittorrent uses /data/downloads. Usenet is mounted and unused in phase 1.
 resource "proxmox_lxc" "ct_182" {
   target_node  = var.pm_node
   vmid         = 182
@@ -73,21 +75,27 @@ resource "proxmox_lxc" "ct_182" {
     size    = "16G"
   }
 
-  # Host /media/data, including /media/data/media/{movies,tv,music}.
   mountpoint {
     key    = "0"
     slot   = 0
-    volume = "/media/data"
-    mp     = "/data"
+    volume = "/media/data/media"
+    mp     = "/data/media"
     backup = false
   }
 
-  # Compatibility alias. qBittorrent keeps /data/downloads.
   mountpoint {
     key    = "1"
     slot   = 1
-    volume = "/media/data/torrents/bael-downloads"
+    volume = "/media/data/torrents"
     mp     = "/data/downloads"
+    backup = false
+  }
+
+  mountpoint {
+    key    = "2"
+    slot   = 2
+    volume = "/media/data/usenet"
+    mp     = "/data/usenet"
     backup = false
   }
 

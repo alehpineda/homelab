@@ -12,8 +12,9 @@ arr_dockge_compose: /opt/stacks/dockge/compose.yaml
 arr_dockge_data: /opt/dockge/data
 arr_gluetun_state: /opt/arr/gluetun
 arr_qbit_config: /opt/arr/qbittorrent
-arr_data_mount: /data
+arr_media_mount: /data/media
 arr_downloads_mount: /data/downloads
+arr_usenet_mount: /data/usenet
 arr_tun_device: /dev/net/tun
 arr_env_check_script: /usr/local/lib/arr/check-env-names.py
 arr_required_env_names:

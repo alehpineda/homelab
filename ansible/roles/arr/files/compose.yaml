@@ -49,7 +49,6 @@ services:
       WEBUI_PORT: "8085"
     volumes:
       - /opt/arr/qbittorrent:/config
-      - /data:/data
       - /data/downloads:/data/downloads
     restart: unless-stopped
     security_opt:
