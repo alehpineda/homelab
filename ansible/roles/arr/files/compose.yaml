@@ -71,6 +71,9 @@ services:
       WATCHTOWER_SCHEDULE: "0 0 6 * * *"
       TZ: America/Chicago
       WATCHTOWER_NOTIFICATIONS_HOSTNAME: arr-blr-lxc
+      # Watchtower 1.7.1 speaks Docker API 1.25. Docker 29 rejects that
+      # and the container crash-loops. 1.44 is hardcoded here.
+      DOCKER_API_VERSION: "1.44"
       WATCHTOWER_NOTIFICATION_URL: ${WATCHTOWER_NOTIFICATION_URL:?set WATCHTOWER_NOTIFICATION_URL in /opt/stacks/arr/.env}
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro

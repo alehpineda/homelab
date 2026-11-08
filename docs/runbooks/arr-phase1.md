@@ -204,13 +204,14 @@ that container's environment. Watchtower is given only
 `WATCHTOWER_NOTIFICATION_URL`, not the VPN keys. Do not copy `docker
 inspect` output into git or chat.
 
-`WATCHTOWER_NOTIFICATION_URL` is a shoutrrr SMTP URL. The recipient is
-`deathscythe+pve@mail.grokbot.com`. In the query string write the `+` as
-`%2B` and the `@` as `%40`. Username, password, host, port, and the
+`WATCHTOWER_NOTIFICATION_URL` is a shoutrrr SMTP URL. The recipient,
+set only in that private file, is
+`deathscythe+watchtower@mail.grokbot.com`. In the query string write the
+`+` as `%2B` and the `@` as `%40`. Username, password, host, port, and the
 from-address stay inside that URL. Do not commit them:
 
 ```text
-smtp://USERNAME:PASSWORD@HOST:PORT/?from=FROM&to=deathscythe%2Bpve%40mail.grokbot.com
+smtp://USERNAME:PASSWORD@HOST:PORT/?from=FROM&to=deathscythe%2Bwatchtower%40mail.grokbot.com
 ```
 
 Re-run `ansible-playbook playbooks/arr.yml` after the file exists. The
@@ -272,18 +273,25 @@ does not remove Watchtower's namespace.
 - The schedule is `0 0 6 * * *` with `TZ=America/Chicago` (06:00 CT).
   A quiet day does not send a report. The first start does send one mail,
   which is the SMTP check. Later mail is an available image update.
+- `DOCKER_API_VERSION` is `1.44` in the compose file. Watchtower 1.7.1
+  defaults to Docker API 1.25. Docker 29 rejects that client and the
+  container crash-loops. Do not leave this to `.env`.
 - The Docker socket is mounted read-only. If Watchtower cannot list
   containers, stop. Do not remount the socket read-write in order to let
   it update.
 - No Watchtower port is published.
+- Mail is submitted to Postfix on the PVE host. The recipient in the
+  private `.env` is `deathscythe+watchtower@mail.grokbot.com`. The host
+  change is [pve-postfix-arr.md](pve-postfix-arr.md). It does not edit
+  Gmail credentials.
 
 ```bash
 docker logs watchtower --tail 50
 ```
 
 Do not copy those logs into git if they ever contain a URL or a secret.
-Confirm they show a scan, and that the startup mail arrived at
-`deathscythe+pve@mail.grokbot.com`.
+Confirm they show a scan, not an API 1.25 error, and that the startup
+mail arrived at `deathscythe+watchtower@mail.grokbot.com`.
 
 ## VPN validation
 
