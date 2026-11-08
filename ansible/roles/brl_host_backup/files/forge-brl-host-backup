@@ -1,0 +1,23 @@
+#!/bin/bash
+# Managed by Forge. BRL host config backup to PBS ns host/brl.
+set -euo pipefail
+KEY=/etc/forge/pbs-host.key
+[ -f "$KEY" ] || { echo "missing $KEY (encryption key not created yet)" >&2; exit 3; }
+export PBS_REPOSITORY='host-brl@pbs!brl@10.10.0.25:hdd-backup'
+export PBS_PASSWORD_FILE=/etc/forge/pbs-host-brl.token
+export PBS_FINGERPRINT='cc:32:9b:fc:4b:cf:dc:13:22:8b:5b:c7:49:48:9c:4c:8c:78:5a:45:c1:e2:0e:d5:d3:df:ab:fe:ce:e0:4b:ad'
+# /etc/pve is a FUSE view of config.db; capture both.
+install -d -m 0700 /var/backups/forge-brl
+sqlite3 /var/lib/pve-cluster/config.db ".backup /var/backups/forge-brl/config.db" 2>/dev/null || cp -a /var/lib/pve-cluster/config.db /var/backups/forge-brl/config.db
+tar -C / -cf /var/backups/forge-brl/etc-pve.tar etc/pve
+proxmox-backup-client backup \
+  etc.pxar:/etc root.pxar:/root usrlocal.pxar:/usr/local \
+  pvecluster.pxar:/var/backups/forge-brl crontabs.pxar:/var/spool/cron netbird.pxar:/var/lib/netbird \
+  --ns host/brl --backup-type host --backup-id barbatoslupusrex --keyfile "$KEY" \
+  --exclude /root/.cache
+# Weekly PBS config copy onto backup-ssd (Sundays)
+if [ "$(date +%u)" = 7 ] && [ -f /root/.ssh/pbs_cfg_pull_ed25519 ]; then
+  D=/mnt/pve/backup-ssd/forge-pbs-config; install -d -m 0700 "$D"
+  ssh -i /root/.ssh/pbs_cfg_pull_ed25519 -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new grokaudit@10.10.0.25 > "$D/proxmox-backup-etc-$(date +%F).tgz.enc"
+  ls -1t "$D"/*.enc | tail -n +9 | xargs -r rm -f
+fi

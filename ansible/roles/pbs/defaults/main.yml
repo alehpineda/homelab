@@ -44,3 +44,7 @@ pbs_grokops_sudo_commands:
 
 # Debian trixie-security only; Proxmox/kernels stay manual. No auto reboot.
 pbs_unattended_upgrades: true
+
+# Host-level backups (BRL push, PBS self, gremory pull). See runbook.
+pbs_host_backups: true
+pbs_gremory_host_key: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIK459ocbV1N4OCvchtgjZkIBXK7wiaui0CV9lLMnM43w"  # SHA256:QEk8y5Ub9lKf0dXLUgYhB3wgifZmexZSrsQDWiJ20Y0

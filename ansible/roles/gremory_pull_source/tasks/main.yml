@@ -1,0 +1,51 @@
+---
+# Never touches the NetBird host client (none by design) or the NetBird stack.
+- name: Ensure rsync, sqlite3 and zstd
+  ansible.builtin.apt:
+    name: [rsync, sqlite3, zstd]
+    state: present
+
+- name: Create gremory-pull user
+  ansible.builtin.user:
+    name: gremory-pull
+    system: true
+    home: /var/lib/gremory-pull
+    shell: /bin/bash
+    password_lock: true
+
+- name: Install predump and forced-command gate
+  ansible.builtin.copy:
+    src: "{{ item }}"
+    dest: "/usr/local/sbin/{{ item }}"
+    owner: root
+    group: root
+    mode: "0755"
+  loop: [forge-gremory-predump, forge-gremory-pull-gate]
+
+- name: Scoped sudoers (predump + read-only rsync sender)
+  ansible.builtin.copy:
+    dest: /etc/sudoers.d/forge-gremory-pull
+    owner: root
+    group: root
+    mode: "0440"
+    validate: /usr/sbin/visudo -cf %s
+    content: |
+      gremory-pull ALL=(root) NOPASSWD: /usr/local/sbin/forge-gremory-predump, /usr/bin/rsync --server --sender *
+
+- name: Create .ssh for gremory-pull
+  ansible.builtin.file:
+    path: /var/lib/gremory-pull/.ssh
+    state: directory
+    owner: gremory-pull
+    group: gremory-pull
+    mode: "0700"
+
+- name: Authorize the PBS pull key with a forced command
+  ansible.builtin.copy:
+    dest: /var/lib/gremory-pull/.ssh/authorized_keys
+    owner: gremory-pull
+    group: gremory-pull
+    mode: "0600"
+    content: |
+      restrict,command="/usr/local/sbin/forge-gremory-pull-gate" {{ gremory_pull_source_pubkey }}
+  when: gremory_pull_source_pubkey | length > 0

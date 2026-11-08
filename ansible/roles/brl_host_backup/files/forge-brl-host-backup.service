@@ -1,0 +1,10 @@
+[Unit]
+Description=Forge BRL host backup to PBS
+After=network-online.target pve-cluster.service
+Wants=network-online.target
+ConditionPathExists=/etc/forge/pbs-host.key
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/forge-brl-host-backup
+Nice=10
+IOSchedulingClass=idle

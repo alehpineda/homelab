@@ -1,0 +1,14 @@
+#!/bin/bash
+# Managed by Forge. PBS host config backup (ns host/pbs) + encrypted config tarball for off-box copy.
+set -euo pipefail
+KEY=/etc/forge/pbs-host.key
+[ -f "$KEY" ] || { echo "missing $KEY (encryption key not created yet)" >&2; exit 3; }
+export PBS_REPOSITORY='host-pbs@pbs!pbs@localhost:hdd-backup'
+export PBS_PASSWORD_FILE=/etc/forge/pbs-host-pbs.token
+export PBS_FINGERPRINT=$(proxmox-backup-manager cert info | awk '/Fingerprint/{print $NF}')
+proxmox-backup-client backup etc.pxar:/etc root.pxar:/root usrlocal.pxar:/usr/local \
+  --ns host/pbs --backup-type host --backup-id astarothrinascimento --keyfile "$KEY" --exclude /root/.cache
+# Weekly-copy artifact: encrypted tar of /etc/proxmox-backup, pulled by BRL (forge-pbs-config-pull).
+OUT=/var/backups/forge-pbs-config; install -d -m 0750 -o root -g grokaudit "$OUT"
+tar -C / -czf - etc/proxmox-backup | openssl enc -aes-256-cbc -pbkdf2 -salt -pass file:"$KEY" -out "$OUT/proxmox-backup-etc.tgz.enc.tmp"
+mv "$OUT/proxmox-backup-etc.tgz.enc.tmp" "$OUT/proxmox-backup-etc.tgz.enc"; chgrp grokaudit "$OUT/proxmox-backup-etc.tgz.enc"; chmod 0640 "$OUT/proxmox-backup-etc.tgz.enc"

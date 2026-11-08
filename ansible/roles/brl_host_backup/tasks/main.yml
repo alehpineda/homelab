@@ -1,0 +1,40 @@
+---
+# BRL host config backup to PBS ns host/brl. Token at /etc/forge/pbs-host-brl.token
+# and key at /etc/forge/pbs-host.key are placed by hand (never in git).
+- name: Create /etc/forge
+  ansible.builtin.file:
+    path: /etc/forge
+    state: directory
+    owner: root
+    group: root
+    mode: "0700"
+
+- name: Install BRL host backup script
+  ansible.builtin.copy:
+    src: forge-brl-host-backup
+    dest: /usr/local/sbin/forge-brl-host-backup
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Install BRL host backup units
+  ansible.builtin.copy:
+    src: "{{ item }}"
+    dest: "/etc/systemd/system/{{ item }}"
+    owner: root
+    group: root
+    mode: "0644"
+  loop: [forge-brl-host-backup.service, forge-brl-host-backup.timer]
+  register: brl_host_backup_units
+
+- name: Check for the client encryption key
+  ansible.builtin.stat:
+    path: /etc/forge/pbs-host.key
+  register: brl_host_backup_key
+
+- name: Enable the timer only when the key exists
+  ansible.builtin.systemd_service:
+    name: forge-brl-host-backup.timer
+    enabled: "{{ brl_host_backup_key.stat.exists }}"
+    state: "{{ 'started' if brl_host_backup_key.stat.exists else 'stopped' }}"
+    daemon_reload: "{{ brl_host_backup_units.changed }}"

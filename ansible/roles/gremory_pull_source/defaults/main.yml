@@ -1,0 +1,4 @@
+---
+# Read-only pull source on gremory for PBS. Public key of PBS root pull key
+# (not secret) goes in gitignored host_vars.
+gremory_pull_source_pubkey: ""
