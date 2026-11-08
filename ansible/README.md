@@ -89,6 +89,7 @@ Approved members are only:
 |---|---|---|
 | `ollama-blr-lxc` | `10.10.0.63` | CT 175 |
 | `caddy-blr-lxc` | `10.10.0.250` | CT 250 |
+| `arr-blr-lxc` | `10.10.0.82` | CT 182 |
 
 CT 176 (`forge-ws-blr-lxc`) is not a member. The role rejects any other
 hostname or address. In the gitignored inventory, replace the empty group
@@ -103,6 +104,9 @@ console_autologin:
     caddy-blr-lxc:
       ansible_host: 10.10.0.250
       ansible_port: 22
+    arr-blr-lxc:
+      ansible_host: 10.10.0.82
+      ansible_port: 22
 ```
 
 The role writes two drop-ins and leaves vendor `TTYPath` in place
@@ -116,6 +120,7 @@ Packaged units compared for this encoding, not by editing a guest:
 |---|---|---|
 | Ubuntu 24.04 (`systemd 255.4-1ubuntu8.18`) | util-linux 2.39.3 | `-o '-p -- \\u'` on both gettys. Console form is tty `-`, then `115200,38400,9600`. |
 | Debian 13 (`systemd 257.13-1~deb13u1`) | util-linux 2.41.5 | `-o '-- \\u'` plus `--noreset`. Console form lists `115200,57600,38400,9600` before `-`. |
+| Ubuntu 26.04 (CT 182) | measured agetty at `/usr/sbin/agetty` | `--noreset` and `--issue-file` kept. `-o` is absent. Console form lists `115200,57600,38400,9600` before `-`. |
 
 `--autologin` adds `login -f`. `--login-options` (`-o`) is what the stock
 units pass to `login`, and it is how `-f` gets replaced. Each drop-in
@@ -137,6 +142,15 @@ removed, `--autologin root` added. Baud list, then tty. `${TERM}`:
 ```
 ExecStart=-/sbin/agetty --autologin root --noreset --noclear - ${TERM}
 ExecStart=-/sbin/agetty --autologin root --noreset --noclear --keep-baud 115200,57600,38400,9600 - ${TERM}
+```
+
+Ubuntu 26.04, measured for CT 182 (`arr-blr-lxc`). Not Ubuntu 24.04.
+`/usr/sbin/agetty`, `--noreset` and `--issue-file` kept, `-o` absent.
+Container form is tty, then `${TERM}`. Console form is baud, then tty:
+
+```
+ExecStart=-/usr/sbin/agetty --autologin root --noreset --noclear --issue-file=/etc/issue:/etc/issue.d:/run/issue.d:/usr/lib/issue.d - ${TERM}
+ExecStart=-/usr/sbin/agetty --autologin root --noreset --noclear --issue-file=/etc/issue:/etc/issue.d:/run/issue.d:/usr/lib/issue.d --keep-baud 115200,57600,38400,9600 - ${TERM}
 ```
 
 CT 250's live run restarted `container-getty@tty1`, `container-getty@tty2`,

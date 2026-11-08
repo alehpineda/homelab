@@ -99,7 +99,9 @@ merge commit. No guest restore is required for that git-only change.
 ## Stop conditions
 
 - Plan enables console autologin for a guest other than CT 175
-  (`ollama-blr-lxc`) or CT 250 (`caddy-blr-lxc`). CT 176 stays out.
+  (`ollama-blr-lxc`), CT 182 (`arr-blr-lxc`), or CT 250
+  (`caddy-blr-lxc`). CT 176 stays out. CT 182 is Ubuntu 26.04, not
+  Ubuntu 24.04.
   Terraform does not model getty units. The encoding is
   `ansible/playbooks/console-autologin.yml`, and this runbook's approval
   to edit git is not approval to run that playbook.

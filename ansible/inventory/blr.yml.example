@@ -68,7 +68,8 @@ all:
           ansible_host: 163.192.206.150
           ansible_user: gremory
           # gremory_pull_source_pubkey: set in gitignored host_vars
-    # Console root autologin. Empty until the gitignored copy lists the two
-    # approved guests. CT 176 is not a member. See ansible/README.md.
+    # Console root autologin. Empty until the gitignored copy lists the
+    # approved guests (CT 175, CT 182, CT 250). CT 176 is not a member.
+    # See ansible/README.md.
     console_autologin:
       hosts: {}

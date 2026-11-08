@@ -348,6 +348,16 @@ and do not switch provider to get one.
 
 Leave qBittorrent paused. Do not load bael's queue.
 
+## Console autologin
+
+CT 182 is on the console-autologin allowlist as Ubuntu 26.04
+(`arr-blr-lxc` at `10.10.0.82`). The drop-in is the existing opt-in role.
+It does not set a password, and it does not replace vendor `TTYPath`.
+`site.yml` does not import `playbooks/console-autologin.yml`. The example
+inventory group stays empty, so a copied inventory does not select the
+guest. Opening this change does not run the playbook. See
+[ansible/README.md](../../ansible/README.md).
+
 ## Later phases
 
 After this gate, and only in a later change:

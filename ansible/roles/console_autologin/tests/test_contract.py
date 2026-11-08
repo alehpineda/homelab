@@ -3,6 +3,8 @@
 
 from pathlib import Path
 
+import yaml
+
 ROLE = Path(__file__).resolve().parents[1]
 ANSIBLE = ROLE.parents[1]
 REPO = ANSIBLE.parent
@@ -27,12 +29,24 @@ def main() -> None:
         "-/sbin/agetty --autologin root --noreset --noclear --keep-baud "
         "115200,57600,38400,9600 - ${TERM}"
     )
+    ubuntu26_container = (
+        "-/usr/sbin/agetty --autologin root --noreset --noclear "
+        "--issue-file=/etc/issue:/etc/issue.d:/run/issue.d:/usr/lib/issue.d "
+        "- ${TERM}"
+    )
+    ubuntu26_console = (
+        "-/usr/sbin/agetty --autologin root --noreset --noclear "
+        "--issue-file=/etc/issue:/etc/issue.d:/run/issue.d:/usr/lib/issue.d "
+        "--keep-baud 115200,57600,38400,9600 - ${TERM}"
+    )
     required = [
         "console_autologin_enabled: false",
         "ollama-blr-lxc: 10.10.0.63",
         "caddy-blr-lxc: 10.10.0.250",
+        "arr-blr-lxc: 10.10.0.82",
         "ollama-blr-lxc: ubuntu-24.04",
         "caddy-blr-lxc: debian-13",
+        "arr-blr-lxc: ubuntu-26.04",
         f'container: "{ubuntu_container}"',
         f'console: "{ubuntu_console}"',
         f'container: "{debian_container}"',
@@ -50,11 +64,31 @@ def main() -> None:
         raise SystemExit("Ubuntu 24.04 measurement does not include --noreset")
     if "--noreset" not in debian_container or "--noreset" not in debian_console:
         raise SystemExit("Debian 13 measurement keeps --noreset")
+    if "--noreset" not in ubuntu26_container or "--noreset" not in ubuntu26_console:
+        raise SystemExit("Ubuntu 26.04 measurement keeps --noreset")
+    if "/usr/sbin/agetty" not in ubuntu26_container or "/usr/sbin/agetty" not in ubuntu26_console:
+        raise SystemExit("Ubuntu 26.04 measurement uses /usr/sbin/agetty")
+    issue = "--issue-file=/etc/issue:/etc/issue.d:/run/issue.d:/usr/lib/issue.d"
+    if issue not in ubuntu26_container or issue not in ubuntu26_console:
+        raise SystemExit("Ubuntu 26.04 measurement keeps --issue-file")
     if " - 115200,38400,9600 $TERM" not in ubuntu_console:
         raise SystemExit("Ubuntu console measurement is tty then baud")
     if "115200,57600,38400,9600 - ${TERM}" not in debian_console:
         raise SystemExit("Debian console measurement is baud then tty")
-    for line in (ubuntu_container, ubuntu_console, debian_container, debian_console):
+    if "115200,57600,38400,9600 - ${TERM}" not in ubuntu26_console:
+        raise SystemExit("Ubuntu 26.04 console measurement is baud then tty")
+    if not ubuntu26_container.endswith("- ${TERM}"):
+        raise SystemExit("Ubuntu 26.04 container measurement is tty then TERM")
+    if "arr-blr-lxc: ubuntu-24.04" in defaults:
+        raise SystemExit("CT 182 must not be labeled Ubuntu 24.04")
+    for line in (
+        ubuntu_container,
+        ubuntu_console,
+        debian_container,
+        debian_console,
+        ubuntu26_container,
+        ubuntu26_console,
+    ):
         for forbidden in (" -o ", "-o '", "--login-options", "/dev/tty", "/dev/pts", "/dev/console"):
             if forbidden in line:
                 raise SystemExit(f"measured ExecStart contains {forbidden!r}")
@@ -64,8 +98,11 @@ def main() -> None:
         "ExecStart={{ console_autologin_container_execstart }}",
         "ExecStart={{ console_autologin_console_execstart }}",
         "console_autologin_detected_os",
+        "ubuntu-26.04",
         "ubuntu-24.04",
         "debian-13",
+        "ansible_distribution_major_version | string == '26'",
+        "ansible_distribution_major_version | string == '24'",
         "inventory_hostname in console_autologin_allowed",
         "console_autologin_enabled | bool",
         "daemon_reload: true",
@@ -78,6 +115,19 @@ def main() -> None:
             raise SystemExit(f"tasks missing {item!r}")
     if "TTYPath=" in tasks:
         raise SystemExit("drop-in tasks must not override TTYPath")
+    if "password" in tasks:
+        raise SystemExit("autologin tasks must not set a password")
+
+    parsed = yaml.safe_load(defaults)
+    if parsed["console_autologin_allowed"]["arr-blr-lxc"] != "10.10.0.82":
+        raise SystemExit("allow-list address for CT 182 is wrong")
+    if parsed["console_autologin_host_os"]["arr-blr-lxc"] != "ubuntu-26.04":
+        raise SystemExit("CT 182 must map to ubuntu-26.04")
+    variant = parsed["console_autologin_variants"]["ubuntu-26.04"]
+    if variant["container"] != ubuntu26_container:
+        raise SystemExit(f"ubuntu-26.04 container ExecStart mismatch: {variant['container']!r}")
+    if variant["console"] != ubuntu26_console:
+        raise SystemExit(f"ubuntu-26.04 console ExecStart mismatch: {variant['console']!r}")
 
     if "hosts: console_autologin" not in playbook:
         raise SystemExit("playbook must target only the opt-in group")

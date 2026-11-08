@@ -8,17 +8,22 @@ console_autologin_enabled: false
 console_autologin_allowed:
   ollama-blr-lxc: 10.10.0.63
   caddy-blr-lxc: 10.10.0.250
+  arr-blr-lxc: 10.10.0.82
 
 # Which measured distro each approved guest is.
+# CT 182 is Ubuntu 26.04. Do not record it as Ubuntu 24.04.
 console_autologin_host_os:
   ollama-blr-lxc: ubuntu-24.04
   caddy-blr-lxc: debian-13
+  arr-blr-lxc: ubuntu-26.04
 
 # Leading "-" is systemd's ignore-failure prefix. agetty's "-" is the tty
 # (stdin is the unit TTYPath). Neither variant passes "-o" to login.
 # Ubuntu 24.04, measured on CT 175. Tty, then baud. No --noreset.
 # Debian 13, measured on CT 250. Stock flags kept, "-o" removed,
 # --autologin added. Baud list, then tty. ${TERM} as measured.
+# Ubuntu 26.04, measured for CT 182. /usr/sbin/agetty, --noreset, and
+# --issue-file kept. "-o" is absent. ${TERM} as measured.
 console_autologin_variants:
   ubuntu-24.04:
     container: "-/sbin/agetty --autologin root --noclear - $TERM"
@@ -26,3 +31,12 @@ console_autologin_variants:
   debian-13:
     container: "-/sbin/agetty --autologin root --noreset --noclear - ${TERM}"
     console: "-/sbin/agetty --autologin root --noreset --noclear --keep-baud 115200,57600,38400,9600 - ${TERM}"
+  ubuntu-26.04:
+    container: >-
+      -/usr/sbin/agetty --autologin root --noreset --noclear
+      --issue-file=/etc/issue:/etc/issue.d:/run/issue.d:/usr/lib/issue.d
+      - ${TERM}
+    console: >-
+      -/usr/sbin/agetty --autologin root --noreset --noclear
+      --issue-file=/etc/issue:/etc/issue.d:/run/issue.d:/usr/lib/issue.d
+      --keep-baud 115200,57600,38400,9600 - ${TERM}

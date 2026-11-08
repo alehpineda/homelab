@@ -1,5 +1,5 @@
 ---
-# Opt-in console root autologin for CT 175 and CT 250 only.
+# Opt-in console root autologin for CT 175, CT 182, and CT 250 only.
 # site.yml does not import this file. Running it is a separate approval
 # and is not granted by opening the pull request.
 - name: Console root autologin on opted-in guests
