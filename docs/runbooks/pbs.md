@@ -24,6 +24,9 @@ committed secrets.
 - Accounts `grokaudit` (read-only) and `grokops` with
   `/etc/sudoers.d/grokops-pbs` (proxmox-backup-manager, proxmox-backup-client,
   systemctl, apt). Public keys come from gitignored host_vars.
+- Unattended upgrades: Debian `trixie-security` only (`52unattended-upgrades-local`
+  clears the stock origins), Proxmox repo and kernels excluded, no automatic
+  reboot; `20auto-upgrades` daily. Check: `unattended-upgrade --dry-run -d`.
 - Datastore check (exists, path, mounted). GC `sun 03:00`.
 - Verify job `verify-hdd-monthly` (monthly, ignore-verified, outdated-after 30).
 - Prune job `prune-hdd-default` (daily; keep 7 daily, 4 weekly, 6 monthly).

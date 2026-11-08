@@ -16,3 +16,7 @@
 
 - name: Import PVE backup identity tasks
   ansible.builtin.import_tasks: pve_identity.yml
+
+- name: Import unattended security upgrade tasks
+  ansible.builtin.import_tasks: unattended.yml
+  when: pbs_unattended_upgrades
