@@ -18,6 +18,6 @@ proxmox-backup-client backup \
 # Weekly PBS config copy onto backup-ssd (Sundays)
 if [ "$(date +%u)" = 7 ] && [ -f /root/.ssh/pbs_cfg_pull_ed25519 ]; then
   D=/mnt/pve/backup-ssd/forge-pbs-config; install -d -m 0700 "$D"
-  ssh -i /root/.ssh/pbs_cfg_pull_ed25519 -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new grokaudit@10.10.0.25 > "$D/proxmox-backup-etc-$(date +%F).tgz.enc"
+  ssh -T -i /root/.ssh/pbs_cfg_pull_ed25519 -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new grokaudit@10.10.0.25 > "$D/proxmox-backup-etc-$(date +%F).tgz.enc"
   ls -1t "$D"/*.enc | tail -n +9 | xargs -r rm -f
 fi
