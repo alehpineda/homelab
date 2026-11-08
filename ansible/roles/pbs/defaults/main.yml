@@ -1,0 +1,43 @@
+---
+# PBS on astarothrinascimento (10.10.0.25). See docs/runbooks/pbs.md.
+# No secrets here. SSH public keys come from inventory/host_vars (gitignored).
+pbs_expected_hostname: astarothrinascimento
+pbs_debian_suite: trixie
+
+pbs_disable_enterprise_repo: true
+pbs_no_subscription_repo: true
+pbs_no_nag: true
+
+# Datastore is created once, by hand, from an approved plan (it wipes a disk):
+#   proxmox-backup-manager disk fs create hdd-backup --disk sdb \
+#     --filesystem xfs --add-datastore true
+# The role only checks it exists and is mounted; it never formats disks.
+pbs_datastore_name: hdd-backup
+pbs_datastore_path: /mnt/datastore/hdd-backup
+pbs_gc_schedule: "sun 03:00"
+
+pbs_verify_job:
+  id: verify-hdd-monthly
+  schedule: monthly
+  outdated_after: 30
+pbs_prune_job:
+  id: prune-hdd-default
+  schedule: daily
+  keep_daily: 7
+  keep_weekly: 4
+  keep_monthly: 6
+
+# PVE (BRL) backup identity. The API token value is generated on the host
+# and stored outside git (box secrets / vault). Never commit it.
+pbs_pve_user: pve-brl@pbs
+pbs_pve_token_name: brl
+pbs_pve_roles: [DatastoreBackup, DatastoreAudit]
+
+# Service accounts. Keys are set in gitignored host_vars.
+pbs_grokaudit_pubkeys: []
+pbs_grokops_pubkeys: []
+pbs_grokops_sudo_commands:
+  - /usr/sbin/proxmox-backup-manager
+  - /usr/bin/proxmox-backup-client
+  - /usr/bin/systemctl
+  - /usr/bin/apt

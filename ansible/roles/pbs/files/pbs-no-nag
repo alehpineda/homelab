@@ -1,0 +1,9 @@
+#!/bin/sh
+# Hide the PBS "No valid subscription" dialog. Called from apt DPkg::Post-Invoke.
+# widget-toolkit 5.2.x splits the check over several lines, so match the
+# comparison itself instead of the old one-line "data.status ... {" pattern.
+F=/usr/share/javascript/proxmox-widget-toolkit/proxmoxlib.js
+[ -f "$F" ] || exit 0
+grep -q NoMoreNagging "$F" && exit 0
+echo 'Removing subscription nag from UI...'
+sed -i "/data\.status\.toLowerCase() !== 'active'/{s/\!//;s/active/NoMoreNagging/}" "$F"

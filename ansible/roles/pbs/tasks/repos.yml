@@ -1,0 +1,54 @@
+---
+- name: Disable the enterprise repository
+  ansible.builtin.lineinfile:
+    path: /etc/apt/sources.list.d/pbs-enterprise.sources
+    regexp: '^Enabled:'
+    line: 'Enabled: no'
+  when: pbs_disable_enterprise_repo
+
+- name: Add the pbs-no-subscription repository
+  ansible.builtin.copy:
+    dest: /etc/apt/sources.list.d/proxmox.sources
+    owner: root
+    group: root
+    mode: "0644"
+    content: |
+      Types: deb
+      URIs: http://download.proxmox.com/debian/pbs
+      Suites: {{ pbs_debian_suite }}
+      Components: pbs-no-subscription
+      Signed-By: /usr/share/keyrings/proxmox-archive-keyring.gpg
+  when: pbs_no_subscription_repo
+
+- name: Install sudo
+  ansible.builtin.apt:
+    name: sudo
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: Install no-nag helper
+  ansible.builtin.copy:
+    src: pbs-no-nag
+    dest: /usr/local/sbin/pbs-no-nag
+    owner: root
+    group: root
+    mode: "0755"
+  when: pbs_no_nag
+
+- name: Run no-nag helper after every dpkg run
+  ansible.builtin.copy:
+    dest: /etc/apt/apt.conf.d/no-nag-script
+    owner: root
+    group: root
+    mode: "0644"
+    content: |
+      DPkg::Post-Invoke { "/usr/local/sbin/pbs-no-nag || true"; };
+  when: pbs_no_nag
+
+- name: Apply no-nag patch now
+  ansible.builtin.command: /usr/local/sbin/pbs-no-nag
+  register: pbs_no_nag_run
+  changed_when: "'Removing' in pbs_no_nag_run.stdout"
+  notify: Restart proxmox-backup-proxy
+  when: pbs_no_nag

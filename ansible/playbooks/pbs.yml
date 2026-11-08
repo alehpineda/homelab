@@ -1,0 +1,9 @@
+---
+# Proxmox Backup Server astarothrinascimento (10.10.0.25). Not imported by
+# site.yml. See docs/runbooks/pbs.md. Never commit passwords or tokens.
+- name: Proxmox Backup Server baseline
+  hosts: pbs
+  become: true
+  gather_facts: true
+  roles:
+    - role: pbs

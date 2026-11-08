@@ -1,0 +1,2 @@
+# Managed by ansible role pbs. Least-privilege ops account.
+grokops ALL=(root) NOPASSWD: {{ pbs_grokops_sudo_commands | join(', ') }}

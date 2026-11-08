@@ -1,0 +1,61 @@
+---
+- name: Read datastore config
+  ansible.builtin.command: proxmox-backup-manager datastore show {{ pbs_datastore_name }} --output-format json
+  register: pbs_ds
+  changed_when: false
+  failed_when: false
+
+- name: Require the datastore (created by hand; this role never formats disks)
+  ansible.builtin.assert:
+    that:
+      - pbs_ds.rc == 0
+      - (pbs_ds.stdout | from_json).path == pbs_datastore_path
+    fail_msg: >-
+      Datastore {{ pbs_datastore_name }} missing or at the wrong path. Create it
+      from an approved plan; see docs/runbooks/pbs.md.
+
+- name: Check datastore mount
+  ansible.builtin.command: findmnt -n {{ pbs_datastore_path }}
+  changed_when: false
+
+- name: Set GC schedule
+  ansible.builtin.command: >-
+    proxmox-backup-manager datastore update {{ pbs_datastore_name }}
+    --gc-schedule "{{ pbs_gc_schedule }}"
+  when: (pbs_ds.stdout | from_json)['gc-schedule'] | default('') != pbs_gc_schedule
+  changed_when: true
+
+- name: List verify jobs
+  ansible.builtin.command: proxmox-backup-manager verify-job list --output-format json
+  register: pbs_verify_jobs
+  changed_when: false
+
+- name: Create or update verify job
+  vars:
+    pbs_verify_exists: "{{ pbs_verify_job.id in (pbs_verify_jobs.stdout | from_json | map(attribute='id')) }}"
+  ansible.builtin.command: >-
+    proxmox-backup-manager verify-job {{ 'update' if pbs_verify_exists else 'create' }}
+    {{ pbs_verify_job.id }}
+    {{ '' if pbs_verify_exists else '--store ' ~ pbs_datastore_name }}
+    --schedule {{ pbs_verify_job.schedule }}
+    --ignore-verified true --outdated-after {{ pbs_verify_job.outdated_after }}
+  register: pbs_verify_cmd
+  changed_when: not pbs_verify_exists
+
+- name: List prune jobs
+  ansible.builtin.command: proxmox-backup-manager prune-job list --output-format json
+  register: pbs_prune_jobs
+  changed_when: false
+
+- name: Create or update prune job
+  vars:
+    pbs_prune_exists: "{{ pbs_prune_job.id in (pbs_prune_jobs.stdout | from_json | map(attribute='id')) }}"
+  ansible.builtin.command: >-
+    proxmox-backup-manager prune-job {{ 'update' if pbs_prune_exists else 'create' }}
+    {{ pbs_prune_job.id }}
+    {{ '' if pbs_prune_exists else '--store ' ~ pbs_datastore_name }}
+    --schedule {{ pbs_prune_job.schedule }}
+    --keep-daily {{ pbs_prune_job.keep_daily }}
+    --keep-weekly {{ pbs_prune_job.keep_weekly }}
+    --keep-monthly {{ pbs_prune_job.keep_monthly }}
+  changed_when: not pbs_prune_exists

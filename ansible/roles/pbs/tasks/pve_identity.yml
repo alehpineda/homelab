@@ -1,0 +1,34 @@
+---
+# Creates the user and ACLs. The token is generated once by hand (its secret
+# is shown only at creation) and stored outside git; see the runbook.
+- name: List PBS users
+  ansible.builtin.command: proxmox-backup-manager user list --output-format json
+  register: pbs_users
+  changed_when: false
+
+- name: Create PVE backup user
+  ansible.builtin.command: >-
+    proxmox-backup-manager user create {{ pbs_pve_user }} --comment "BRL PVE vzdump"
+  when: pbs_pve_user not in (pbs_users.stdout | from_json | map(attribute='userid'))
+  changed_when: true
+
+- name: Read ACLs
+  ansible.builtin.command: proxmox-backup-manager acl list --output-format json
+  register: pbs_acls
+  changed_when: false
+
+- name: Grant datastore roles to user and token
+  vars:
+    pbs_acl_auth: "{{ item.0 }}"
+    pbs_acl_role: "{{ item.1 }}"
+    pbs_acl_have: >-
+      {{ pbs_acls.stdout | from_json
+         | selectattr('ugid', 'equalto', item.0)
+         | selectattr('path', 'equalto', '/datastore/' ~ pbs_datastore_name)
+         | selectattr('roleid', 'equalto', item.1) | list | length > 0 }}
+  ansible.builtin.command: >-
+    proxmox-backup-manager acl update /datastore/{{ pbs_datastore_name }}
+    {{ pbs_acl_role }} --auth-id '{{ pbs_acl_auth }}'
+  when: not (pbs_acl_have | bool)
+  changed_when: true
+  loop: "{{ [pbs_pve_user, pbs_pve_user ~ '!' ~ pbs_pve_token_name] | product(pbs_pve_roles) | list }}"
