@@ -100,8 +100,16 @@ pct config 182
 
 `mp0` is host `/media/data/media` at `/data/media`. `mp1` is host
 `/media/data/torrents` at `/data/downloads`, which is the path
-qBittorrent uses. `mp2` is host `/media/data/usenet` at `/data/usenet`.
-Usenet is mounted and unused in phase 1. All three are `backup=0`.
+qBittorrent uses. `mp2` is host `/media/data/usenet` at `/data/usenet`
+and stays before any usenet child. All three are `backup=0`.
+
+Live `mp3`–`mp20` are not transcribed here. The source is `pct config 182`
+in `~/.config/forge/ct182-pct-config-pre-phase2`, listed in
+`/workspace/forge/plans/2026-11-08-brl-arr-phase2.md`. Neither file was
+available in this environment, so `ct_182_arr.tf` marks those paths
+TODO and does not declare them. Children named metube, books, documents,
+photos, and backups are read-only on the node. `ignore_changes` includes
+`mountpoint`, so Terraform hides drift on these mounts.
 
 `onboot` is true. Add the tun and idmap lines before the next node boot,
 or the guest can start without them.

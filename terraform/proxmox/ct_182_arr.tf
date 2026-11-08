@@ -38,14 +38,28 @@
 #   lxc.cgroup2.devices.allow: c 10:200 rwm
 #   lxc.mount.entry: /dev/net/tun dev/net/tun none bind,create=file
 #
-# Three existing host directories, all backup=0. Do not create them.
-# They are root:root 0755 today. Mapped uid 1100 cannot write. Changing
-# ownership is a later step and needs an explicit yes. Phase 1 does not
-# chown them and does not restart CT 180 or CT 181.
+# All mounts backup=false. Do not create host directories.
+# The phase-1 directories are root:root 0755. Mapped uid 1100 cannot
+# write. Changing ownership needs an explicit yes.
+# mp0–mp2 are the phase-1 binds. mp2 is the usenet parent and stays
+# before every usenet child.
 #   mp0  /media/data/media    -> /data/media
 #   mp1  /media/data/torrents -> /data/downloads
 #   mp2  /media/data/usenet   -> /data/usenet
-# qBittorrent uses /data/downloads. Usenet is mounted and unused in phase 1.
+# qBittorrent uses /data/downloads.
+#
+# mp3–mp20 are live on the guest. The list is pct config 182 as recorded
+# in ~/.config/forge/ct182-pct-config-pre-phase2 and
+# /workspace/forge/plans/2026-11-08-brl-arr-phase2.md. Neither file was
+# available here, so those host and guest paths are TODO and are not
+# resources. Do not apply a guessed path.
+# Children named metube, books, documents, photos, and backups are
+# read-only (pct ro=1). Telmate 3.0.2-rc10 mountpoint has no read-only
+# attribute, same as ct_180, so ro=1 stays on the node.
+# lifecycle.ignore_changes includes mountpoint, so a plan hides added,
+# removed, or drifted mounts and will not apply mp3–mp20 onto a guest
+# that already exists. Live pct config stays the source of truth until
+# a reviewed plan narrows that ignore.
 resource "proxmox_lxc" "ct_182" {
   target_node  = var.pm_node
   vmid         = 182
@@ -99,6 +113,28 @@ resource "proxmox_lxc" "ct_182" {
     backup = false
   }
 
+  # TODO mp3–mp20. Fill volume and mp from the pct note above.
+  # Keep any usenet child after mp2. Mark metube, books, documents,
+  # photos, and backups ro=1 on the node; this provider cannot.
+  # TODO mp3  volume = "TODO"  mp = "TODO"  backup = false
+  # TODO mp4  volume = "TODO"  mp = "TODO"  backup = false
+  # TODO mp5  volume = "TODO"  mp = "TODO"  backup = false
+  # TODO mp6  volume = "TODO"  mp = "TODO"  backup = false
+  # TODO mp7  volume = "TODO"  mp = "TODO"  backup = false
+  # TODO mp8  volume = "TODO"  mp = "TODO"  backup = false
+  # TODO mp9  volume = "TODO"  mp = "TODO"  backup = false
+  # TODO mp10 volume = "TODO"  mp = "TODO"  backup = false
+  # TODO mp11 volume = "TODO"  mp = "TODO"  backup = false
+  # TODO mp12 volume = "TODO"  mp = "TODO"  backup = false
+  # TODO mp13 volume = "TODO"  mp = "TODO"  backup = false
+  # TODO mp14 volume = "TODO"  mp = "TODO"  backup = false
+  # TODO mp15 volume = "TODO"  mp = "TODO"  backup = false
+  # TODO mp16 volume = "TODO"  mp = "TODO"  backup = false
+  # TODO mp17 volume = "TODO"  mp = "TODO"  backup = false
+  # TODO mp18 volume = "TODO"  mp = "TODO"  backup = false
+  # TODO mp19 volume = "TODO"  mp = "TODO"  backup = false
+  # TODO mp20 volume = "TODO"  mp = "TODO"  backup = false
+
   network {
     name   = "eth0"
     bridge = "vmbr0"
@@ -114,6 +150,8 @@ resource "proxmox_lxc" "ct_182" {
     # target_node, cmode, network, mountpoint, rootfs[0].storage: Telmate
     # 3.0.2-rc10 import does not read these back, so they would force
     # replacement. See docs/runbooks/terraform-import.md.
+    # ignore_changes on mountpoint hides drift: mp3–mp20 added on the
+    # node, a changed mp, or a missing ro=1 do not appear in the plan.
     ignore_changes = [
       ostemplate, password, ssh_public_keys, start, description, features,
       target_node, cmode, network, mountpoint, rootfs[0].storage,
