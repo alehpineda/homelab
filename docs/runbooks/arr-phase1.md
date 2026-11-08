@@ -5,9 +5,10 @@ and one compose stack: gluetun, qBittorrent, and monitor-only Watchtower.
 Opening the pull request does not merge it and does not apply the guest.
 
 bael stays as it is. Do not stop, copy, or start its torrents for this
-phase. Do not add Prowlarr, Sonarr, Radarr, Lidarr, Bazarr, or
-FlareSolverr. Do not create CT 183. Do not change Caddy, AdGuard, or
-NetBird.
+phase. Phase 2 adds Prowlarr, Sonarr, Radarr, Lidarr, Bazarr, and
+FlareSolverr to the same compose. That procedure is
+[arr-phase2.md](arr-phase2.md). Do not create CT 183. Do not change
+Caddy, AdGuard, or NetBird.
 
 ## Guest
 
@@ -249,12 +250,14 @@ To restart the VPN without upgrading, on the guest:
 
 ```bash
 cd /opt/stacks/arr
-docker compose up -d --force-recreate gluetun qbittorrent
+docker compose up -d --force-recreate \
+  gluetun qbittorrent prowlarr sonarr radarr lidarr bazarr flaresolverr
 ```
 
 That uses the pinned digests. It does not recreate Watchtower. After a
-kill-switch test, recreate qBittorrent with this same command so it
-attaches to the new gluetun namespace, then check the egress IP again.
+kill-switch test, recreate every service that uses gluetun's network
+with this same command, then check the egress IP again. Phase 2 ports
+and volumes are in [arr-phase2.md](arr-phase2.md).
 
 To bump an image: change the digest in
 `ansible/roles/arr/files/compose.yaml`, then re-run
@@ -264,18 +267,19 @@ will mail when a newer image exists. It will not apply that image.
 
 ## Watchtower
 
-Watchtower is the third service in the arr compose. It is not on
-gluetun's network, so mail uses the CT's LAN path and a stopped gluetun
-does not remove Watchtower's namespace.
+Watchtower is not on gluetun's network, so mail uses the CT's LAN path
+and a stopped gluetun does not remove Watchtower's namespace.
 
 - `WATCHTOWER_MONITOR_ONLY` is `true` in the compose file. Container
   labels cannot override it (`WATCHTOWER_LABEL_TAKE_PRECEDENCE` is
   false). It never updates a container.
 - There is no `WATCHTOWER_LABEL_ENABLE` and no `WATCHTOWER_SCOPE`, and
   the service has no container-name arguments. Watchtower therefore
-  monitors every running container on this Docker daemon. Later arr apps
-  added to the stack are covered without a label. Dockge is included.
-  A container that is not running is not scanned.
+  monitors every running container on this Docker daemon. Phase 2
+  services also set `com.centurylinklabs.watchtower.enable=true` and
+  `com.centurylinklabs.watchtower.monitor-only=true`. Those labels do
+  not enable updates. Dockge is included. A container that is not
+  running is not scanned.
 - The schedule is `0 0 6 * * *` with `TZ=America/Chicago` (06:00 CT).
   A quiet day does not send a report. The first start does send one mail,
   which is the SMTP check. Later mail is an available image update.
@@ -354,9 +358,9 @@ docker exec qbittorrent curl -fsS --max-time 5 https://1.1.1.1/cdn-cgi/trace
 LAN access to port 8085 lives in gluetun's namespace, so it drops with
 gluetun. That is not a path around the filter. If qBittorrent exited
 because the namespace went away, write that down. The exit alone is not
-proof the firewall blocked traffic. Start gluetun again and recreate
-qBittorrent with the force-recreate command above. Check the egress IP
-again before any download.
+proof the firewall blocked traffic. Start gluetun again and recreate every gluetun-network service with the
+force-recreate command above. Check the egress IP again before any
+download.
 
 Port forwarding is N/A unless the provider assigns a port. Publishing a
 port on the LAN is not VPN ingress. Do not assume a port-forward feature,
@@ -376,16 +380,17 @@ guest. Opening this change does not run the playbook. See
 
 ## Later phases
 
-After this gate, and only in a later change:
+Phase 2 is [arr-phase2.md](arr-phase2.md): Prowlarr, Sonarr, Radarr,
+Lidarr, Bazarr, and FlareSolverr in this compose, behind gluetun.
+FlareSolverr stays. Do not add Byparr. Jackett and Pinchflat are not
+part of the move.
 
-- On CT 182, still behind gluetun: Prowlarr, Sonarr, Radarr, Lidarr,
-  Bazarr, and FlareSolverr. Keep FlareSolverr. Do not add Byparr. Pin
-  FlareSolverr's digest in that change. Jackett and Pinchflat are not
-  part of the move.
+Still later:
+
 - Jellyseerr goes on CT 183 (`10.10.0.83`), not in this VPN namespace.
-- Root folders are `/data/media/{movies,tv,music}`. qBittorrent keeps
-  `/data/downloads` (host `/media/data/torrents`). `/data/usenet` stays
-  unused until a later phase.
+- qBittorrent keeps `/data/downloads` (host `/media/data/torrents`).
+  Library roots and the per-app download paths are in the phase 2
+  runbook.
 - Caddy on CT 250 and AdGuard rewrites wait for the NetTit handoff. No
   public route for FlareSolverr or the gluetun control port.
 

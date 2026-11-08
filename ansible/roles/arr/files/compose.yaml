@@ -1,11 +1,16 @@
-# CT 182 phase 1: gluetun, qBittorrent, and monitor-only Watchtower.
-# gluetun and qBittorrent digests are the images running on bael.
-# Watchtower is containrrr/watchtower 1.7.1 amd64. pull_policy: missing
-# means a re-run does not move off these digests. A pin change pulls
-# because the new digest is not local. Restart the VPN without upgrading:
-#   docker compose up -d --force-recreate gluetun qbittorrent
-# from /opt/stacks/arr. That command does not recreate Watchtower.
+# CT 182 arr stack. Phase 1 is gluetun, qBittorrent, and monitor-only
+# Watchtower. Phase 2 adds Prowlarr, Sonarr, Radarr, Lidarr, Bazarr, and
+# FlareSolverr on gluetun's network. Digests are the images that were
+# running on bael, except Watchtower (containrrr/watchtower 1.7.1 amd64).
+# pull_policy: missing means a re-run does not move off these digests.
+# A pin change pulls because the new digest is not local.
+# Recreate the VPN namespace without upgrading, from /opt/stacks/arr.
+# Watchtower is not on that network and stays up:
+#   docker compose up -d --force-recreate \
+#     gluetun qbittorrent prowlarr sonarr radarr lidarr bazarr flaresolverr
 # Do not run `docker compose config` against a populated .env.
+# FlareSolverr listens on 8191 inside the gluetun namespace. That port
+# is not published and is not in FIREWALL_INPUT_PORTS.
 
 services:
   gluetun:
@@ -18,12 +23,20 @@ services:
       - /dev/net/tun:/dev/net/tun
     ports:
       - "10.10.0.82:8085:8085/tcp"
+      - "10.10.0.82:9696:9696/tcp"
+      - "10.10.0.82:8989:8989/tcp"
+      - "10.10.0.82:7878:7878/tcp"
+      - "10.10.0.82:8686:8686/tcp"
+      - "10.10.0.82:6767:6767/tcp"
     env_file:
       - /opt/stacks/arr/.env
     environment:
       VPN_SERVICE_PROVIDER: ${VPN_SERVICE_PROVIDER:?set VPN_SERVICE_PROVIDER in /opt/stacks/arr/.env}
       VPN_TYPE: ${VPN_TYPE:?set VPN_TYPE in /opt/stacks/arr/.env}
       WIREGUARD_PRIVATE_KEY: ${WIREGUARD_PRIVATE_KEY:?set WIREGUARD_PRIVATE_KEY in /opt/stacks/arr/.env}
+      # Overrides env_file. 8085 qBittorrent, 9696 Prowlarr, 8989 Sonarr,
+      # 7878 Radarr, 8686 Lidarr, 6767 Bazarr. Not 8191.
+      FIREWALL_INPUT_PORTS: "8085,9696,8989,7878,8686,6767"
     volumes:
       - /opt/arr/gluetun:/gluetun
     sysctls:
@@ -54,13 +67,151 @@ services:
     security_opt:
       - no-new-privileges:true
 
+  prowlarr:
+    image: lscr.io/linuxserver/prowlarr@sha256:431d7efebcef466e56adaa40a7a2fa2b0e85159a037b8bf465eaadbf0cf5bedf
+    pull_policy: missing
+    container_name: prowlarr
+    network_mode: service:gluetun
+    depends_on:
+      gluetun:
+        condition: service_healthy
+    environment:
+      PUID: "1000"
+      PGID: "1000"
+      TZ: America/Chicago
+    volumes:
+      - /opt/arr/prowlarr:/config
+    restart: unless-stopped
+    labels:
+      com.centurylinklabs.watchtower.enable: "true"
+      com.centurylinklabs.watchtower.monitor-only: "true"
+    security_opt:
+      - no-new-privileges:true
+
+  sonarr:
+    image: lscr.io/linuxserver/sonarr@sha256:673dc4609a5672bc8e46069c86ffcea283a86b48d34a6c93d8da8c24a1b87571
+    pull_policy: missing
+    container_name: sonarr
+    network_mode: service:gluetun
+    depends_on:
+      gluetun:
+        condition: service_healthy
+    environment:
+      PUID: "1000"
+      PGID: "1000"
+      TZ: America/Chicago
+    volumes:
+      - /opt/arr/sonarr:/config
+      - /data/media/tv:/data/media/tv
+      - /data/downloads/tv:/data/downloads/tv
+      - /data/usenet/complete/tv:/data/usenet/complete/tv
+    restart: unless-stopped
+    labels:
+      com.centurylinklabs.watchtower.enable: "true"
+      com.centurylinklabs.watchtower.monitor-only: "true"
+    security_opt:
+      - no-new-privileges:true
+
+  radarr:
+    image: lscr.io/linuxserver/radarr@sha256:ade5937813c6ae415b29db729386e53fea3ecf067a019849bafbe2d2a6ec02ba
+    pull_policy: missing
+    container_name: radarr
+    network_mode: service:gluetun
+    depends_on:
+      gluetun:
+        condition: service_healthy
+    environment:
+      PUID: "1000"
+      PGID: "1000"
+      TZ: America/Chicago
+    volumes:
+      - /opt/arr/radarr:/config
+      - /data/media/movies:/data/media/movies
+      - /data/downloads/movies:/data/downloads/movies
+      - /data/usenet/complete/movies:/data/usenet/complete/movies
+    restart: unless-stopped
+    labels:
+      com.centurylinklabs.watchtower.enable: "true"
+      com.centurylinklabs.watchtower.monitor-only: "true"
+    security_opt:
+      - no-new-privileges:true
+
+  lidarr:
+    image: lscr.io/linuxserver/lidarr@sha256:d5707cfe084da21a3864c7ef0edd9c0543b5e26c79c551f84dad5ef8683af8c7
+    pull_policy: missing
+    container_name: lidarr
+    network_mode: service:gluetun
+    depends_on:
+      gluetun:
+        condition: service_healthy
+    environment:
+      PUID: "1000"
+      PGID: "1000"
+      TZ: America/Chicago
+    volumes:
+      - /opt/arr/lidarr:/config
+      - /data/media/music:/data/media/music
+      - /data/downloads/music:/data/downloads/music
+      - /data/usenet/complete/music:/data/usenet/complete/music
+    restart: unless-stopped
+    labels:
+      com.centurylinklabs.watchtower.enable: "true"
+      com.centurylinklabs.watchtower.monitor-only: "true"
+    security_opt:
+      - no-new-privileges:true
+
+  bazarr:
+    image: lscr.io/linuxserver/bazarr@sha256:7ef0e58216900dbce30b123e0eb65f5cb30e36f126de9474acdd2022fb069c54
+    pull_policy: missing
+    container_name: bazarr
+    network_mode: service:gluetun
+    depends_on:
+      gluetun:
+        condition: service_healthy
+    environment:
+      PUID: "1000"
+      PGID: "1000"
+      TZ: America/Chicago
+    volumes:
+      - /opt/arr/bazarr:/config
+      - /data/media/movies:/data/media/movies
+      - /data/media/tv:/data/media/tv
+    restart: unless-stopped
+    labels:
+      com.centurylinklabs.watchtower.enable: "true"
+      com.centurylinklabs.watchtower.monitor-only: "true"
+    security_opt:
+      - no-new-privileges:true
+
+  flaresolverr:
+    # Not a LinuxServer image. The process already runs as uid 1000.
+    # PUID and PGID do not change that, so they are not set here.
+    # No /config bind: the source volume had no durable database.
+    image: flaresolverr/flaresolverr@sha256:c80ae007ce2ccdcd217a12426e4f039ef763ff90738c808d38810c3e59323767
+    pull_policy: missing
+    container_name: flaresolverr
+    network_mode: service:gluetun
+    depends_on:
+      gluetun:
+        condition: service_healthy
+    environment:
+      TZ: America/Chicago
+    restart: unless-stopped
+    labels:
+      com.centurylinklabs.watchtower.enable: "true"
+      com.centurylinklabs.watchtower.monitor-only: "true"
+    security_opt:
+      - no-new-privileges:true
+
   watchtower:
     # 1.7.1 amd64. The 1.7.1/latest index digest is
     # sha256:6dd50763bbd632a83cb154d5451700530d1e44200b268a4e9488fefdfcf2b038.
     # This pin is the amd64 image. No command arguments: with none set,
     # Watchtower monitors every running container on this Docker daemon.
-    # No WATCHTOWER_LABEL_ENABLE and no WATCHTOWER_SCOPE, so a later arr
-    # service is included without a label. MONITOR_ONLY is hardcoded.
+    # No WATCHTOWER_LABEL_ENABLE and no WATCHTOWER_SCOPE, so every running
+    # container is monitored even without a label. Phase 2 services still
+    # set enable and monitor-only labels. LABEL_TAKE_PRECEDENCE is false,
+    # so those labels cannot turn updates on. MONITOR_ONLY is hardcoded.
     # A value in .env cannot turn updates on. The socket is read-only.
     image: containrrr/watchtower@sha256:f9086bfda061100361fc2bacf069585678d760d705cf390918ccdbda8a00980b
     pull_policy: missing
