@@ -46,6 +46,14 @@ all:
           ansible_host: 10.10.0.76
           ansible_port: 22
           ansible_user: deathscythe
+    # Proxmox Backup Server. playbooks/pbs.yml targets this group. site.yml does not.
+    pbs:
+      hosts:
+        astarothrinascimento:
+          ansible_host: 10.10.0.25
+          ansible_port: 22
+          ansible_user: grokops
+          # Set pbs_grokaudit_pubkeys / pbs_grokops_pubkeys in gitignored host_vars.
     # Console root autologin. Empty until the gitignored copy lists the two
     # approved guests. CT 176 is not a member. See ansible/README.md.
     console_autologin:

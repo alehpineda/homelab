@@ -1,0 +1,39 @@
+---
+- name: Create service accounts
+  ansible.builtin.user:
+    name: "{{ item }}"
+    shell: /bin/bash
+    create_home: true
+  loop: [grokaudit, grokops]
+
+- name: Create .ssh directories
+  ansible.builtin.file:
+    path: "/home/{{ item }}/.ssh"
+    state: directory
+    owner: "{{ item }}"
+    group: "{{ item }}"
+    mode: "0700"
+  loop: [grokaudit, grokops]
+
+# Builtin lineinfile keeps the repo free of extra collections. Adds keys only;
+# never removes existing ones.
+- name: Authorize service account keys
+  ansible.builtin.lineinfile:
+    path: "/home/{{ item.0 }}/.ssh/authorized_keys"
+    line: "{{ item.1 }}"
+    create: true
+    owner: "{{ item.0 }}"
+    group: "{{ item.0 }}"
+    mode: "0600"
+  loop: >-
+    {{ (['grokaudit'] | product(pbs_grokaudit_pubkeys) | list)
+       + (['grokops'] | product(pbs_grokops_pubkeys) | list) }}
+
+- name: Least-privilege sudo for grokops
+  ansible.builtin.template:
+    src: grokops-pbs.sudoers.j2
+    dest: /etc/sudoers.d/grokops-pbs
+    owner: root
+    group: root
+    mode: "0440"
+    validate: /usr/sbin/visudo -cf %s
