@@ -23,7 +23,10 @@ CTIDs **150, 151, 153, 154, 155, 156, 160–162, 164–169, 171–176, 180, 181,
 are in use (renumbered 2026-11-01, Option Y; 169 added 2026-11-02; 151,
 155, 156, and 171–174 added 2026-11-03; CT 175 replaced destroyed CT 163
 on 2026-11-05). There is no CT 163 and no CT 170. CT 176 (`forge-ws-blr-lxc`)
-is on the node; its create-time Terraform fields are ignored. See [docs/blr.md](../blr.md).
+is on the node; its create-time Terraform fields are ignored. CT 182
+(`arr-blr-lxc`) is declared for phase 1 and is not on the node until that
+plan is applied. See [docs/blr.md](../blr.md) and
+[arr-phase1.md](arr-phase1.md).
 
 ## 2. Plan
 
@@ -96,7 +99,9 @@ merge commit. No guest restore is required for that git-only change.
 ## Stop conditions
 
 - Plan enables console autologin for a guest other than CT 175
-  (`ollama-blr-lxc`) or CT 250 (`caddy-blr-lxc`). CT 176 stays out.
+  (`ollama-blr-lxc`), CT 182 (`arr-blr-lxc`), or CT 250
+  (`caddy-blr-lxc`). CT 176 stays out. CT 182 is Ubuntu 26.04, not
+  Ubuntu 24.04.
   Terraform does not model getty units. The encoding is
   `ansible/playbooks/console-autologin.yml`, and this runbook's approval
   to edit git is not approval to run that playbook.

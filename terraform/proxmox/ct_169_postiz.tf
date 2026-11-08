@@ -15,7 +15,7 @@ resource "proxmox_lxc" "ct_169" {
   memory       = 8192
   swap         = 512
   # nameserver omitted: the live CT has an empty nameserver and uses host DNS.
-  tags         = "automation;community-script;scheduling;social-media"
+  tags = "automation;community-script;scheduling;social-media"
 
   rootfs {
     storage = var.pm_storage

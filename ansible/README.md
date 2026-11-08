@@ -29,6 +29,8 @@ SSH port **4488**. Fresh LXCs often still listen on **22**. Set
 | `playbooks/grokbot-headless.yml` | Opt-in always-on Grok Bot on CT 176. Not run by `site.yml`. |
 | `roles/grokbot_headless/` | Xvfb `:99` + Grok Bot user units, linger, empty-password keyring. See `docs/runbooks/ct176-headless-grokbot.md`. |
 | `roles/console_autologin/` | Getty drop-ins for that playbook. Default off. |
+| `playbooks/arr.yml` | CT 182 Docker, Dockge, and the phase-1 stack. Not run by `site.yml`. |
+| `roles/arr/` | That playbook. Skips gluetun, qBittorrent, and Watchtower when `.env` is missing. |
 
 ## Inventory
 
@@ -60,6 +62,7 @@ ansible-playbook --syntax-check playbooks/ping.yml
 ansible-playbook --syntax-check playbooks/site.yml
 ansible-playbook --syntax-check playbooks/ollama.yml
 ansible-playbook --syntax-check playbooks/grokbot-headless.yml
+ansible-playbook --syntax-check playbooks/arr.yml
 ```
 
 A live ping connects with SSH. It does not install or configure anything,
@@ -86,6 +89,7 @@ Approved members are only:
 |---|---|---|
 | `ollama-blr-lxc` | `10.10.0.63` | CT 175 |
 | `caddy-blr-lxc` | `10.10.0.250` | CT 250 |
+| `arr-blr-lxc` | `10.10.0.82` | CT 182 |
 
 CT 176 (`forge-ws-blr-lxc`) is not a member. The role rejects any other
 hostname or address. In the gitignored inventory, replace the empty group
@@ -100,6 +104,9 @@ console_autologin:
     caddy-blr-lxc:
       ansible_host: 10.10.0.250
       ansible_port: 22
+    arr-blr-lxc:
+      ansible_host: 10.10.0.82
+      ansible_port: 22
 ```
 
 The role writes two drop-ins and leaves vendor `TTYPath` in place
@@ -113,6 +120,7 @@ Packaged units compared for this encoding, not by editing a guest:
 |---|---|---|
 | Ubuntu 24.04 (`systemd 255.4-1ubuntu8.18`) | util-linux 2.39.3 | `-o '-p -- \\u'` on both gettys. Console form is tty `-`, then `115200,38400,9600`. |
 | Debian 13 (`systemd 257.13-1~deb13u1`) | util-linux 2.41.5 | `-o '-- \\u'` plus `--noreset`. Console form lists `115200,57600,38400,9600` before `-`. |
+| Ubuntu 26.04 (CT 182) | measured agetty at `/usr/sbin/agetty` | `--noreset` and `--issue-file` kept. `-o` is absent. Console form lists `115200,57600,38400,9600` before `-`. |
 
 `--autologin` adds `login -f`. `--login-options` (`-o`) is what the stock
 units pass to `login`, and it is how `-f` gets replaced. Each drop-in
@@ -134,6 +142,15 @@ removed, `--autologin root` added. Baud list, then tty. `${TERM}`:
 ```
 ExecStart=-/sbin/agetty --autologin root --noreset --noclear - ${TERM}
 ExecStart=-/sbin/agetty --autologin root --noreset --noclear --keep-baud 115200,57600,38400,9600 - ${TERM}
+```
+
+Ubuntu 26.04, measured for CT 182 (`arr-blr-lxc`). Not Ubuntu 24.04.
+`/usr/sbin/agetty`, `--noreset` and `--issue-file` kept, `-o` absent.
+Container form is tty, then `${TERM}`. Console form is baud, then tty:
+
+```
+ExecStart=-/usr/sbin/agetty --autologin root --noreset --noclear --issue-file=/etc/issue:/etc/issue.d:/run/issue.d:/usr/lib/issue.d - ${TERM}
+ExecStart=-/usr/sbin/agetty --autologin root --noreset --noclear --issue-file=/etc/issue:/etc/issue.d:/run/issue.d:/usr/lib/issue.d --keep-baud 115200,57600,38400,9600 - ${TERM}
 ```
 
 CT 250's live run restarted `container-getty@tty1`, `container-getty@tty2`,
@@ -216,6 +233,27 @@ Live run, only when approved:
 
 ```bash
 ansible-playbook playbooks/ollama.yml
+```
+
+## Arr phase 1 (CT 182)
+
+`playbooks/arr.yml` applies `roles/arr` to `arr-blr-lxc` only. It is not
+part of `site.yml`. The guest is declared and does not exist until the
+phase-1 plan is applied, so a live ping of the example inventory fails
+until then. Procedure, Watchtower, and the VPN checks:
+[docs/runbooks/arr-phase1.md](../docs/runbooks/arr-phase1.md).
+
+The role installs Docker and Dockge, copies the pinned compose, and does
+not start gluetun, qBittorrent, or Watchtower when `/opt/stacks/arr/.env`
+is missing or empty. It does not print that file and it does not run
+`docker compose config`.
+
+Syntax check (no SSH):
+
+```bash
+cd ansible
+cp inventory/blr.yml.example inventory/blr.yml
+ansible-playbook --syntax-check playbooks/arr.yml
 ```
 
 ## Secrets

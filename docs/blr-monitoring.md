@@ -87,6 +87,15 @@ Prometheus CT only:
 IN ACCEPT -source 10.10.0.72 -p tcp -dport 9100
 ```
 
+The host firewall also accepts SMTP from CT 182 to the host relay.
+`policy_in` stays `DROP`. The rule is matched on its fields, not on its
+position. The procedure is in
+[runbooks/pve-postfix-arr.md](runbooks/pve-postfix-arr.md):
+
+```
+IN ACCEPT -source 10.10.0.82/32 -dest 10.10.0.21/32 -p tcp -dport 25 -comment CT182 Watchtower SMTP to PVE relay
+```
+
 node_exporter is not in Caddy and is not a vzdump guest.
 
 ## Still pending

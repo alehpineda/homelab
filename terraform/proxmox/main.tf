@@ -6,7 +6,9 @@
 # 155 and 156 are pending import. CT 175 replaces destroyed CT 163 and is
 # pending state rm of proxmox_lxc.ct_163 plus import. CT 176 create-time
 # fields are ignored; a plan that changes the existing guest is not approval
-# to apply. There is no CT 163 and no CT 170.
+# to apply. CT 182 (arr-blr-lxc) is declared and is not on the node until
+# the phase-1 plan is applied. See docs/runbooks/arr-phase1.md.
+# There is no CT 163 and no CT 170.
 # Do not terraform apply until a separate plan names the change and is
 # approved. See docs/runbooks/lxc-change.md.
 #
