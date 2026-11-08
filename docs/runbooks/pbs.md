@@ -59,10 +59,13 @@ pbs: pbs-hdd
 Retention lives on PBS (`prune-hdd-default`), so PVE keeps all.
 Re-create with `pvesm add pbs pbs-hdd ... --password <token secret>`.
 
-Backup job `forge-backup-pbs-hdd` (`/etc/pve/jobs.cfg`): all guests, exclude
-151 and 250 (same set left out of `forge-backup-ssd`), schedule `03:30`
+Backup job `forge-backup-pbs-hdd` (`/etc/pve/jobs.cfg`): all guests (no
+excludes; CT 151 and 250 added 2026-11-07), schedule `03:30`
 (after `forge-backup-ssd` at 02:00), mode snapshot, notes `{{guestname}}`,
 mail on failure.
+
+`forge-backup-ssd` (02:00, backup-ssd) lists every guest by ID, including
+151 and 250; add new CTs to it by hand.
 
 First test: CT 153 to `pbs-hdd`, TASK OK (2026-11-07).
 
