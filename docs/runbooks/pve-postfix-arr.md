@@ -88,3 +88,116 @@ The restored file is the pre-change `main.cf`. Gmail credential files
 were not part of the backup and are not restored or deleted. If
 `postfix check` fails after the copy, stop and do not start Postfix
 with a half-written config.
+
+## Host firewall
+
+The node firewall already has this rule. It is not a Terraform resource.
+Telmate is not used for host firewall rules. The same kind of rule for
+node_exporter is recorded in [blr-monitoring.md](../blr-monitoring.md).
+
+```text
+IN ACCEPT -source 10.10.0.82/32 -dest 10.10.0.21/32 -p tcp -dport 25 -comment CT182 Watchtower SMTP to PVE relay
+```
+
+Direction `in`, action `ACCEPT`, protocol `tcp`, destination port `25`,
+source `10.10.0.82/32`, destination `10.10.0.21/32`, comment
+`CT182 Watchtower SMTP to PVE relay`. Identity is those fields. Rule
+position is not part of the match.
+
+`policy_in` stays `DROP`. That is the default for traffic that matches
+no rule. This procedure reads it and does not set it. If it is anything
+else, stop. Do not enable or disable the firewall.
+
+On the node, as root:
+
+```bash
+python3 - << 'PY'
+import json
+import subprocess
+import sys
+
+node = "barbatoslupusrex"
+opts = json.loads(subprocess.check_output(
+    ["pvesh", "get", f"/nodes/{node}/firewall/options", "--output-format", "json"],
+    text=True,
+))
+policy = str(opts.get("policy_in") or "DROP").upper()
+if policy != "DROP":
+    sys.exit(f"policy_in is {policy}; expected DROP. Not changing it.")
+
+wanted = {
+    "type": "in",
+    "action": "ACCEPT",
+    "proto": "tcp",
+    "dport": "25",
+    "source": "10.10.0.82/32",
+    "dest": "10.10.0.21/32",
+    "comment": "CT182 Watchtower SMTP to PVE relay",
+}
+rules = json.loads(subprocess.check_output(
+    ["pvesh", "get", f"/nodes/{node}/firewall/rules", "--output-format", "json"],
+    text=True,
+))
+
+def fields(rule):
+    return {key: str(rule.get(key, "")) for key in wanted}
+
+if any(fields(rule) == wanted for rule in rules):
+    print("matching firewall rule present; not creating another")
+    sys.exit(0)
+
+subprocess.check_call([
+    "pvesh", "create", f"/nodes/{node}/firewall/rules",
+    "--type", "in",
+    "--action", "ACCEPT",
+    "--proto", "tcp",
+    "--dport", "25",
+    "--source", "10.10.0.82/32",
+    "--dest", "10.10.0.21/32",
+    "--comment", wanted["comment"],
+])
+print("firewall rule created")
+PY
+```
+
+A second run finds the existing rule wherever it sits and does not insert
+a second one. To remove it, find that same field match and delete only
+its current `pos`. Do not change `policy_in`.
+
+```bash
+python3 - << 'PY'
+import json
+import subprocess
+import sys
+
+node = "barbatoslupusrex"
+wanted = {
+    "type": "in",
+    "action": "ACCEPT",
+    "proto": "tcp",
+    "dport": "25",
+    "source": "10.10.0.82/32",
+    "dest": "10.10.0.21/32",
+    "comment": "CT182 Watchtower SMTP to PVE relay",
+}
+rules = json.loads(subprocess.check_output(
+    ["pvesh", "get", f"/nodes/{node}/firewall/rules", "--output-format", "json"],
+    text=True,
+))
+
+def fields(rule):
+    return {key: str(rule.get(key, "")) for key in wanted}
+
+matches = [rule for rule in rules if fields(rule) == wanted]
+if not matches:
+    print("no matching firewall rule")
+    sys.exit(0)
+if len(matches) != 1:
+    sys.exit(f"expected one match, found {len(matches)}; not deleting")
+pos = matches[0]["pos"]
+subprocess.check_call([
+    "pvesh", "delete", f"/nodes/{node}/firewall/rules/{pos}",
+])
+print(f"deleted firewall rule at pos {pos}")
+PY
+```

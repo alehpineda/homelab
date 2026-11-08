@@ -282,7 +282,9 @@ does not remove Watchtower's namespace.
 - No Watchtower port is published.
 - Mail is submitted to Postfix on the PVE host. The recipient in the
   private `.env` is `deathscythe+watchtower@mail.grokbot.com`. The host
-  change is [pve-postfix-arr.md](pve-postfix-arr.md). It does not edit
+  Postfix change and the node firewall rule (IN ACCEPT tcp/25 from
+  `10.10.0.82/32` to `10.10.0.21/32`, `policy_in` stays DROP) are in
+  [pve-postfix-arr.md](pve-postfix-arr.md). That procedure does not edit
   Gmail credentials.
 
 ```bash
