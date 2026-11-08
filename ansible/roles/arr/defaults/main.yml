@@ -1,0 +1,26 @@
+---
+# CT 182 phase 1. Paths inside the guest. This role does not create the
+# host media user, the subuid entry, or the pct idmap and tun lines.
+arr_expected_hostname: arr-blr-lxc
+arr_lan_address: 10.10.0.82
+arr_stack_dir: /opt/stacks/arr
+arr_env_file: /opt/stacks/arr/.env
+arr_env_example: /opt/stacks/arr/.env.example
+arr_compose_file: /opt/stacks/arr/compose.yaml
+arr_dockge_dir: /opt/stacks/dockge
+arr_dockge_compose: /opt/stacks/dockge/compose.yaml
+arr_dockge_data: /opt/dockge/data
+arr_gluetun_state: /opt/arr/gluetun
+arr_qbit_config: /opt/arr/qbittorrent
+arr_data_mount: /data
+arr_downloads_mount: /data/downloads
+arr_tun_device: /dev/net/tun
+arr_env_check_script: /usr/local/lib/arr/check-env-names.py
+arr_required_env_names:
+  - VPN_SERVICE_PROVIDER
+  - VPN_TYPE
+  - WIREGUARD_PRIVATE_KEY
+  - WATCHTOWER_NOTIFICATION_URL
+arr_docker_packages:
+  - docker.io
+  - docker-compose-v2

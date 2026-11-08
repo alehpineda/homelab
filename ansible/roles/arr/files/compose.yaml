@@ -1,0 +1,80 @@
+# CT 182 phase 1: gluetun, qBittorrent, and monitor-only Watchtower.
+# gluetun and qBittorrent digests are the images running on bael.
+# Watchtower is containrrr/watchtower 1.7.1 amd64. pull_policy: missing
+# means a re-run does not move off these digests. A pin change pulls
+# because the new digest is not local. Restart the VPN without upgrading:
+#   docker compose up -d --force-recreate gluetun qbittorrent
+# from /opt/stacks/arr. That command does not recreate Watchtower.
+# Do not run `docker compose config` against a populated .env.
+
+services:
+  gluetun:
+    image: qmcgaw/gluetun@sha256:44a82caf5b866193bfdfe8ffffbb11b20ce8138a917466c2c9bff9a52861c1a5
+    pull_policy: missing
+    container_name: gluetun
+    cap_add:
+      - NET_ADMIN
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    ports:
+      - "10.10.0.82:8085:8085/tcp"
+    env_file:
+      - /opt/stacks/arr/.env
+    environment:
+      VPN_SERVICE_PROVIDER: ${VPN_SERVICE_PROVIDER:?set VPN_SERVICE_PROVIDER in /opt/stacks/arr/.env}
+      VPN_TYPE: ${VPN_TYPE:?set VPN_TYPE in /opt/stacks/arr/.env}
+      WIREGUARD_PRIVATE_KEY: ${WIREGUARD_PRIVATE_KEY:?set WIREGUARD_PRIVATE_KEY in /opt/stacks/arr/.env}
+    volumes:
+      - /opt/arr/gluetun:/gluetun
+    sysctls:
+      net.ipv6.conf.all.disable_ipv6: "1"
+      net.ipv6.conf.default.disable_ipv6: "1"
+      net.ipv6.conf.lo.disable_ipv6: "1"
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+
+  qbittorrent:
+    image: lscr.io/linuxserver/qbittorrent@sha256:05c1454f9a32967affc1f34f67f8cc0cc57dd805dca45489fe797095a6286556
+    pull_policy: missing
+    container_name: qbittorrent
+    network_mode: service:gluetun
+    depends_on:
+      gluetun:
+        condition: service_healthy
+    environment:
+      PUID: "1000"
+      PGID: "1000"
+      TZ: ${TZ:-America/Chicago}
+      WEBUI_PORT: "8085"
+    volumes:
+      - /opt/arr/qbittorrent:/config
+      - /data:/data
+      - /data/downloads:/data/downloads
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+
+  watchtower:
+    # 1.7.1 amd64. The 1.7.1/latest index digest is
+    # sha256:6dd50763bbd632a83cb154d5451700530d1e44200b268a4e9488fefdfcf2b038.
+    # This pin is the amd64 image. No command arguments: with none set,
+    # Watchtower monitors every running container on this Docker daemon.
+    # No WATCHTOWER_LABEL_ENABLE and no WATCHTOWER_SCOPE, so a later arr
+    # service is included without a label. MONITOR_ONLY is hardcoded.
+    # A value in .env cannot turn updates on. The socket is read-only.
+    image: containrrr/watchtower@sha256:f9086bfda061100361fc2bacf069585678d760d705cf390918ccdbda8a00980b
+    pull_policy: missing
+    container_name: watchtower
+    environment:
+      WATCHTOWER_MONITOR_ONLY: "true"
+      WATCHTOWER_LABEL_TAKE_PRECEDENCE: "false"
+      WATCHTOWER_SCHEDULE: "0 0 6 * * *"
+      TZ: America/Chicago
+      WATCHTOWER_NOTIFICATIONS_HOSTNAME: arr-blr-lxc
+      WATCHTOWER_NOTIFICATION_URL: ${WATCHTOWER_NOTIFICATION_URL:?set WATCHTOWER_NOTIFICATION_URL in /opt/stacks/arr/.env}
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true

@@ -1,0 +1,17 @@
+# Dockge 1.5.0, amd64 image digest. Management only. It does not use the
+# arr .env. Port 5001 is bound to the CT 182 LAN address.
+
+services:
+  dockge:
+    image: louislam/dockge@sha256:edee39b74f238378ebfe0d9d12b3833f9d1e123aea9dfaf5149ad45c9afe2527
+    pull_policy: missing
+    container_name: dockge
+    restart: unless-stopped
+    ports:
+      - "10.10.0.82:5001:5001/tcp"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /opt/stacks:/opt/stacks
+      - /opt/dockge/data:/app/data
+    environment:
+      DOCKGE_STACKS_DIR: /opt/stacks

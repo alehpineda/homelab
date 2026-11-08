@@ -29,6 +29,8 @@ SSH port **4488**. Fresh LXCs often still listen on **22**. Set
 | `playbooks/grokbot-headless.yml` | Opt-in always-on Grok Bot on CT 176. Not run by `site.yml`. |
 | `roles/grokbot_headless/` | Xvfb `:99` + Grok Bot user units, linger, empty-password keyring. See `docs/runbooks/ct176-headless-grokbot.md`. |
 | `roles/console_autologin/` | Getty drop-ins for that playbook. Default off. |
+| `playbooks/arr.yml` | CT 182 Docker, Dockge, and the phase-1 stack. Not run by `site.yml`. |
+| `roles/arr/` | That playbook. Skips gluetun, qBittorrent, and Watchtower when `.env` is missing. |
 
 ## Inventory
 
@@ -60,6 +62,7 @@ ansible-playbook --syntax-check playbooks/ping.yml
 ansible-playbook --syntax-check playbooks/site.yml
 ansible-playbook --syntax-check playbooks/ollama.yml
 ansible-playbook --syntax-check playbooks/grokbot-headless.yml
+ansible-playbook --syntax-check playbooks/arr.yml
 ```
 
 A live ping connects with SSH. It does not install or configure anything,
@@ -216,6 +219,27 @@ Live run, only when approved:
 
 ```bash
 ansible-playbook playbooks/ollama.yml
+```
+
+## Arr phase 1 (CT 182)
+
+`playbooks/arr.yml` applies `roles/arr` to `arr-blr-lxc` only. It is not
+part of `site.yml`. The guest is declared and does not exist until the
+phase-1 plan is applied, so a live ping of the example inventory fails
+until then. Procedure, Watchtower, and the VPN checks:
+[docs/runbooks/arr-phase1.md](../docs/runbooks/arr-phase1.md).
+
+The role installs Docker and Dockge, copies the pinned compose, and does
+not start gluetun, qBittorrent, or Watchtower when `/opt/stacks/arr/.env`
+is missing or empty. It does not print that file and it does not run
+`docker compose config`.
+
+Syntax check (no SSH):
+
+```bash
+cd ansible
+cp inventory/blr.yml.example inventory/blr.yml
+ansible-playbook --syntax-check playbooks/arr.yml
 ```
 
 ## Secrets

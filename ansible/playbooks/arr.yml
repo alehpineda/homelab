@@ -1,0 +1,12 @@
+---
+# CT 182 phase 1: Docker, Dockge, gluetun, qBittorrent, and
+# monitor-only Watchtower.
+# Not imported by site.yml. Skips the VPN containers when
+# /opt/stacks/arr/.env is missing or empty. See
+# docs/runbooks/arr-phase1.md. Do not run this until that plan says so.
+- name: CT 182 arr phase 1
+  hosts: arr-blr-lxc
+  become: true
+  gather_facts: false
+  roles:
+    - role: arr

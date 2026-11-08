@@ -1,0 +1,231 @@
+---
+# Docker, Dockge, and the phase-1 gluetun, qBittorrent, and Watchtower
+# compose on CT 182.
+# Does not create the host media user, subuid entry, idmap, or tun lines.
+# Does not start gluetun or qBittorrent when /opt/stacks/arr/.env is
+# missing, empty, or not root:root mode 0600. Never runs
+# `docker compose config` (that would interpolate secrets).
+
+- name: Restrict this role to CT 182
+  ansible.builtin.assert:
+    that:
+      - inventory_hostname == arr_expected_hostname
+    fail_msg: This role is only approved for {{ arr_expected_hostname }} (CT 182).
+
+- name: Install Docker engine and the Compose plugin
+  ansible.builtin.apt:
+    name: "{{ arr_docker_packages }}"
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: Enable and start Docker
+  ansible.builtin.systemd_service:
+    name: docker
+    enabled: true
+    state: started
+
+- name: Ensure stack, Dockge, and config directories exist
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: directory
+    owner: "{{ item.owner }}"
+    group: "{{ item.group }}"
+    mode: "{{ item.mode }}"
+  loop:
+    - path: "{{ arr_stack_dir }}"
+      owner: root
+      group: root
+      mode: "0700"
+    - path: "{{ arr_dockge_dir }}"
+      owner: root
+      group: root
+      mode: "0755"
+    - path: "{{ arr_dockge_data }}"
+      owner: root
+      group: root
+      mode: "0700"
+    - path: "{{ arr_gluetun_state }}"
+      owner: root
+      group: root
+      mode: "0700"
+    - path: "{{ arr_qbit_config }}"
+      owner: "1000"
+      group: "1000"
+      mode: "0750"
+    - path: /usr/local/lib/arr
+      owner: root
+      group: root
+      mode: "0755"
+
+- name: Install the phase-1 compose file
+  ansible.builtin.copy:
+    src: compose.yaml
+    dest: "{{ arr_compose_file }}"
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Install the env name template
+  ansible.builtin.copy:
+    src: .env.example
+    dest: "{{ arr_env_example }}"
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Install the Dockge compose file
+  ansible.builtin.copy:
+    src: dockge-compose.yaml
+    dest: "{{ arr_dockge_compose }}"
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Install the env name check
+  ansible.builtin.copy:
+    src: check-env-names.py
+    dest: "{{ arr_env_check_script }}"
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Start Dockge
+  ansible.builtin.command:
+    argv:
+      - docker
+      - compose
+      - --project-directory
+      - "{{ arr_dockge_dir }}"
+      - -f
+      - "{{ arr_dockge_compose }}"
+      - up
+      - -d
+  register: arr_dockge_up
+  changed_when: >-
+    'Created' in (arr_dockge_up.stdout | default(''))
+    or 'Started' in (arr_dockge_up.stdout | default(''))
+    or 'Recreated' in (arr_dockge_up.stdout | default(''))
+
+- name: Confirm the media tree is mounted
+  ansible.builtin.command:
+    argv:
+      - findmnt
+      - --mountpoint
+      - "{{ arr_data_mount }}"
+      - --noheadings
+  register: arr_data_mount_check
+  changed_when: false
+  failed_when: false
+
+- name: Confirm the downloads alias is mounted
+  ansible.builtin.command:
+    argv:
+      - findmnt
+      - --mountpoint
+      - "{{ arr_downloads_mount }}"
+      - --noheadings
+  register: arr_downloads_mount_check
+  changed_when: false
+  failed_when: false
+
+- name: Fail when a phase-1 bind is missing
+  ansible.builtin.assert:
+    that:
+      - arr_data_mount_check.rc == 0
+      - arr_downloads_mount_check.rc == 0
+    fail_msg: >-
+      {{ arr_data_mount }} and {{ arr_downloads_mount }} must already be
+      mountpoints. This role does not create the host downloads directory
+      or the pct mounts. See docs/runbooks/arr-phase1.md.
+
+- name: Stat the tun device
+  ansible.builtin.stat:
+    path: "{{ arr_tun_device }}"
+  register: arr_tun
+
+- name: Fail when tun is not a character device
+  ansible.builtin.assert:
+    that:
+      - arr_tun.stat.exists | bool
+      - arr_tun.stat.ischr | bool
+    fail_msg: >-
+      {{ arr_tun_device }} is missing. Add the cgroup and mount lines from
+      docs/runbooks/arr-phase1.md before starting gluetun.
+
+- name: Stat the arr env file
+  ansible.builtin.stat:
+    path: "{{ arr_env_file }}"
+  register: arr_env_stat
+
+- name: Enforce root ownership and mode 0600 when the env file exists
+  ansible.builtin.file:
+    path: "{{ arr_env_file }}"
+    owner: root
+    group: root
+    mode: "0600"
+  when: arr_env_stat.stat.exists | bool
+
+- name: Re-stat the arr env file
+  ansible.builtin.stat:
+    path: "{{ arr_env_file }}"
+  register: arr_env_stat
+
+- name: Record whether the env file may start the stack
+  ansible.builtin.set_fact:
+    arr_env_ready: >-
+      {{
+        (arr_env_stat.stat.exists | bool)
+        and ((arr_env_stat.stat.size | default(0) | int) > 0)
+        and ((arr_env_stat.stat.uid | default(-1) | int) == 0)
+        and ((arr_env_stat.stat.mode | default('')) == '0600')
+        and (arr_env_stat.stat.isreg | default(false) | bool)
+      }}
+
+- name: Skip gluetun and qBittorrent when the env file is not populated
+  ansible.builtin.debug:
+    msg: >-
+      {{ arr_env_file }} is missing or empty. Docker and Dockge are
+      installed. gluetun, qBittorrent, and Watchtower were not started.
+  when: not (arr_env_ready | bool)
+
+- name: Check required env names without logging values
+  ansible.builtin.command:
+    argv: "{{ [arr_env_check_script, arr_env_file] + arr_required_env_names }}"
+  register: arr_env_names
+  changed_when: false
+  failed_when: false
+  no_log: true
+  when: arr_env_ready | bool
+
+- name: Refuse to start when a required env name is blank
+  ansible.builtin.assert:
+    that:
+      - arr_env_names.rc == 0
+    fail_msg: >-
+      Not starting the arr stack. {{ arr_env_file }} needs a non-empty
+      VPN_SERVICE_PROVIDER, VPN_TYPE, WIREGUARD_PRIVATE_KEY, and
+      WATCHTOWER_NOTIFICATION_URL. Other names stay optional. This task
+      does not print the file.
+  when: arr_env_ready | bool
+
+- name: Start the pinned arr stack
+  ansible.builtin.command:
+    argv:
+      - docker
+      - compose
+      - --env-file
+      - "{{ arr_env_file }}"
+      - --project-directory
+      - "{{ arr_stack_dir }}"
+      - -f
+      - "{{ arr_compose_file }}"
+      - up
+      - -d
+  register: arr_stack_up
+  changed_when: >-
+    'Created' in (arr_stack_up.stdout | default(''))
+    or 'Started' in (arr_stack_up.stdout | default(''))
+    or 'Recreated' in (arr_stack_up.stdout | default(''))
+  no_log: true
+  when: arr_env_ready | bool

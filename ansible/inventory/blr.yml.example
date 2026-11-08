@@ -46,6 +46,12 @@ all:
           ansible_host: 10.10.0.76
           ansible_port: 22
           ansible_user: deathscythe
+        # CT 182. playbooks/arr.yml targets this host. site.yml does not.
+        # Declared, not created until the phase-1 plan is applied.
+        # Port 22: fresh LXC, not an ansible-playbooks harden.
+        arr-blr-lxc:
+          ansible_host: 10.10.0.82
+          ansible_port: 22
     # Proxmox Backup Server. playbooks/pbs.yml targets this group. site.yml does not.
     pbs:
       hosts:
