@@ -1,0 +1,9 @@
+#!/bin/bash
+# Managed by Forge. Forced command for gremory-pull (PBS pull). Read-only.
+case "$SSH_ORIGINAL_COMMAND" in
+  predump) exec sudo -n /usr/local/sbin/forge-gremory-predump ;;
+  "rsync --server --sender "*)
+    case "$SSH_ORIGINAL_COMMAND" in *';'*|*'&'*|*'|'*|*'`'*|*'$('*) echo denied >&2; exit 1;; esac
+    exec sudo -n /usr/bin/rsync ${SSH_ORIGINAL_COMMAND#rsync } ;;
+  *) echo "denied" >&2; exit 1 ;;
+esac

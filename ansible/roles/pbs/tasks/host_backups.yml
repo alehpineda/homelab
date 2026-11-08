@@ -1,0 +1,61 @@
+---
+# Host-level backups (see docs/runbooks/pbs-host-backups.md). Namespaces,
+# users, tokens and ACLs are created via API once; token secrets and the
+# encryption key live only on hosts and in the vault.
+- name: Install rsync for the gremory pull
+  ansible.builtin.apt:
+    name: rsync
+    state: present
+
+- name: Create Forge config and staging dirs
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0700"
+  loop: [/etc/forge, /var/lib/forge-stage/gremory]
+
+- name: Pin gremory host key
+  ansible.builtin.copy:
+    dest: /etc/forge/gremory_known_hosts
+    content: "163.192.206.150 {{ pbs_gremory_host_key }}\n"
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Install host backup scripts
+  ansible.builtin.copy:
+    src: "{{ item }}"
+    dest: "/usr/local/sbin/{{ item }}"
+    owner: root
+    group: root
+    mode: "0755"
+  loop: [forge-gremory-pull, forge-pbs-self-backup]
+
+- name: Install host backup units
+  ansible.builtin.copy:
+    src: "{{ item }}"
+    dest: "/etc/systemd/system/{{ item }}"
+    owner: root
+    group: root
+    mode: "0644"
+  loop:
+    - forge-gremory-pull.service
+    - forge-gremory-pull.timer
+    - forge-pbs-self-backup.service
+    - forge-pbs-self-backup.timer
+  register: pbs_host_units
+
+- name: Check for the client encryption key
+  ansible.builtin.stat:
+    path: /etc/forge/pbs-host.key
+  register: pbs_host_key
+
+- name: Enable host backup timers only when the key exists
+  ansible.builtin.systemd_service:
+    name: "{{ item }}"
+    enabled: "{{ pbs_host_key.stat.exists }}"
+    state: "{{ 'started' if pbs_host_key.stat.exists else 'stopped' }}"
+    daemon_reload: "{{ pbs_host_units.changed }}"
+  loop: [forge-gremory-pull.timer, forge-pbs-self-backup.timer]

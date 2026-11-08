@@ -20,3 +20,7 @@
 - name: Import unattended security upgrade tasks
   ansible.builtin.import_tasks: unattended.yml
   when: pbs_unattended_upgrades
+
+- name: Import host backup tasks
+  ansible.builtin.import_tasks: host_backups.yml
+  when: pbs_host_backups

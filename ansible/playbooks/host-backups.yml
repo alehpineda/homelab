@@ -1,0 +1,16 @@
+---
+# Host-level backups to PBS. Not imported by site.yml. See
+# docs/runbooks/pbs-host-backups.md. PBS side lives in role pbs.
+- name: Gremory read-only pull source
+  hosts: gremory
+  become: true
+  gather_facts: false
+  roles:
+    - role: gremory_pull_source
+
+- name: BRL host backup
+  hosts: pve
+  become: true
+  gather_facts: false
+  roles:
+    - role: brl_host_backup

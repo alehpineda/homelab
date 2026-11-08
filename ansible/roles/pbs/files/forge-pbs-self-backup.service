@@ -1,0 +1,10 @@
+[Unit]
+Description=Forge pbs-self-backup to PBS
+After=network-online.target proxmox-backup-proxy.service
+Wants=network-online.target
+ConditionPathExists=/etc/forge/pbs-host.key
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/forge-pbs-self-backup
+Nice=10
+IOSchedulingClass=idle

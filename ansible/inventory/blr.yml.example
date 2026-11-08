@@ -54,6 +54,14 @@ all:
           ansible_port: 22
           ansible_user: grokops
           # Set pbs_grokaudit_pubkeys / pbs_grokops_pubkeys in gitignored host_vars.
+    # Oracle VPS. playbooks/host-backups.yml (role gremory_pull_source). Public SSH only;
+    # never install NetBird on it.
+    gremory:
+      hosts:
+        vnic-gremory:
+          ansible_host: 163.192.206.150
+          ansible_user: gremory
+          # gremory_pull_source_pubkey: set in gitignored host_vars
     # Console root autologin. Empty until the gitignored copy lists the two
     # approved guests. CT 176 is not a member. See ansible/README.md.
     console_autologin:

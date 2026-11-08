@@ -1,0 +1,33 @@
+#!/bin/bash
+# Managed by Forge. Pull gremory host data, then back up to PBS ns host/gremory.
+# Usage: forge-gremory-pull [--dry-run|--stage-only]
+set -euo pipefail
+MODE=${1:-}
+KEY=/etc/forge/pbs-host.key
+STAGE=/var/lib/forge-stage/gremory
+SSH="ssh -i /root/.ssh/gremory_pull_ed25519 -o IdentitiesOnly=yes -o UserKnownHostsFile=/etc/forge/gremory_known_hosts -o StrictHostKeyChecking=yes -o ConnectTimeout=30"
+R=gremory-pull@163.192.206.150
+install -d -m 0700 "$STAGE"
+RS=(rsync -aHAX --numeric-ids --delete --delete-excluded --relative -e "$SSH" --rsync-path=rsync
+  --exclude=node_modules/ --exclude=.cache/ --exclude=.npm/ --exclude=snap/ --exclude=.local/share/Trash/
+  --exclude=/home/gremory/Obsidian.AppImage --exclude=/home/gremory/firecrawl-src/ --exclude='/home/gremory/backup-purge-*'
+  --exclude=/home/gremory/.hermes/hermes-agent/venv/ --exclude=.venv/ --exclude=__pycache__/
+  --exclude='/var/lib/docker/volumes/gremory_netbird_data/_data/*.db' --exclude='/var/lib/docker/volumes/gremory_crowdsec_db/_data/crowdsec.db*')
+[ "$MODE" = --dry-run ] && RS+=(-n --stats) || $SSH $R predump
+"${RS[@]}" \
+  $R:/var/backups/forge-gremory/ \
+  $R:/home/gremory/ \
+  $R:/etc/ \
+  $R:/root/ \
+  $R:/usr/local/ \
+  $R:/var/lib/docker/volumes/gremory_netbird_data/ \
+  $R:/var/lib/docker/volumes/gremory_netbird_traefik_letsencrypt/ \
+  $R:/var/lib/docker/volumes/gremory_netbird_proxy_certs/ \
+  $R:/var/lib/docker/volumes/gremory_crowdsec_db/ \
+  "$STAGE/"
+[ -n "$MODE" ] && { du -sh "$STAGE"; exit 0; }
+[ -f "$KEY" ] || { echo "missing $KEY (encryption key not created yet)" >&2; exit 3; }
+export PBS_REPOSITORY='host-gremory@pbs!pull@localhost:hdd-backup'
+export PBS_PASSWORD_FILE=/etc/forge/pbs-host-gremory.token
+export PBS_FINGERPRINT=$(proxmox-backup-manager cert info | awk '/Fingerprint/{print $NF}')
+proxmox-backup-client backup gremory.pxar:"$STAGE" --ns host/gremory --backup-type host --backup-id gremory --keyfile "$KEY"

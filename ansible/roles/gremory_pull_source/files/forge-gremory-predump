@@ -1,0 +1,19 @@
+#!/bin/bash
+# Managed by Forge. Consistent dumps for PBS pull. Output: /var/backups/forge-gremory
+set -euo pipefail
+OUT=/var/backups/forge-gremory
+install -d -m 0750 -o root -g root "$OUT" "$OUT/db"
+V=/var/lib/docker/volumes
+# NetBird sqlite (host sqlite3 .backup is online-safe; no service stop)
+for db in store idp events access_logs; do
+  src="$V/gremory_netbird_data/_data/$db.db"
+  [ -f "$src" ] && sqlite3 "$src" ".backup '$OUT/db/netbird-$db.db'"
+done
+# CrowdSec sqlite
+[ -f "$V/gremory_crowdsec_db/_data/crowdsec.db" ] && sqlite3 "$V/gremory_crowdsec_db/_data/crowdsec.db" ".backup '$OUT/db/crowdsec.db'"
+# Postgres
+docker exec honcho-database-1 sh -c 'pg_dumpall -U "$POSTGRES_USER"' | zstd -q -T0 > "$OUT/db/honcho-pgdumpall.sql.zst.tmp" && mv "$OUT/db/honcho-pgdumpall.sql.zst.tmp" "$OUT/db/honcho-pgdumpall.sql.zst"
+docker exec firecrawl-postgres sh -c 'pg_dumpall -U "$POSTGRES_USER"' | zstd -q -T0 > "$OUT/db/firecrawl-pgdumpall.sql.zst.tmp" && mv "$OUT/db/firecrawl-pgdumpall.sql.zst.tmp" "$OUT/db/firecrawl-pgdumpall.sql.zst"
+for f in "$OUT"/db/*.db; do [ "$(sqlite3 "$f" 'pragma integrity_check;')" = ok ] || { echo "integrity FAIL $f" >&2; exit 2; }; done
+date -Is > "$OUT/STAMP"
+echo "predump OK $(du -sh "$OUT" | cut -f1)"

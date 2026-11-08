@@ -1,0 +1,10 @@
+[Unit]
+Description=Forge gremory-pull to PBS
+After=network-online.target proxmox-backup-proxy.service
+Wants=network-online.target
+ConditionPathExists=/etc/forge/pbs-host.key
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/forge-gremory-pull
+Nice=10
+IOSchedulingClass=idle
