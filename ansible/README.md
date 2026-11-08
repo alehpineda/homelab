@@ -235,18 +235,17 @@ Live run, only when approved:
 ansible-playbook playbooks/ollama.yml
 ```
 
-## Arr phase 1 (CT 182)
+## Arr (CT 182)
 
 `playbooks/arr.yml` applies `roles/arr` to `arr-blr-lxc` only. It is not
-part of `site.yml`. The guest is declared and does not exist until the
-phase-1 plan is applied, so a live ping of the example inventory fails
-until then. Procedure, Watchtower, and the VPN checks:
-[docs/runbooks/arr-phase1.md](../docs/runbooks/arr-phase1.md).
+part of `site.yml`. Procedure, Watchtower, and the VPN checks:
+[docs/runbooks/arr-phase1.md](../docs/runbooks/arr-phase1.md). Phase 2
+apps in the same compose:
+[docs/runbooks/arr-phase2.md](../docs/runbooks/arr-phase2.md).
 
 The role installs Docker and Dockge, copies the pinned compose, and does
-not start gluetun, qBittorrent, or Watchtower when `/opt/stacks/arr/.env`
-is missing or empty. It does not print that file and it does not run
-`docker compose config`.
+not start the stack when `/opt/stacks/arr/.env` is missing or empty. It
+does not print that file and it does not run `docker compose config`.
 
 Syntax check (no SSH):
 

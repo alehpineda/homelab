@@ -1,8 +1,9 @@
 ---
-# Docker, Dockge, and the phase-1 gluetun, qBittorrent, and Watchtower
-# compose on CT 182.
+# Docker, Dockge, and the CT 182 arr compose: phase 1 gluetun,
+# qBittorrent, and Watchtower, plus phase 2 Prowlarr, Sonarr, Radarr,
+# Lidarr, Bazarr, and FlareSolverr.
 # Does not create the host media user, subuid entry, idmap, or tun lines.
-# Does not start gluetun or qBittorrent when /opt/stacks/arr/.env is
+# Does not start the stack when /opt/stacks/arr/.env is
 # missing, empty, or not root:root mode 0600. Never runs
 # `docker compose config` (that would interpolate secrets).
 
@@ -53,12 +54,32 @@
       owner: "1000"
       group: "1000"
       mode: "0750"
+    - path: "{{ arr_prowlarr_config }}"
+      owner: "1000"
+      group: "1000"
+      mode: "0750"
+    - path: "{{ arr_sonarr_config }}"
+      owner: "1000"
+      group: "1000"
+      mode: "0750"
+    - path: "{{ arr_radarr_config }}"
+      owner: "1000"
+      group: "1000"
+      mode: "0750"
+    - path: "{{ arr_lidarr_config }}"
+      owner: "1000"
+      group: "1000"
+      mode: "0750"
+    - path: "{{ arr_bazarr_config }}"
+      owner: "1000"
+      group: "1000"
+      mode: "0750"
     - path: /usr/local/lib/arr
       owner: root
       group: root
       mode: "0755"
 
-- name: Install the phase-1 compose file
+- name: Install the arr compose file
   ansible.builtin.copy:
     src: compose.yaml
     dest: "{{ arr_compose_file }}"
@@ -130,6 +151,30 @@
       {{ item.item }} must already be a mountpoint. This role does not
       create host directories or pct mounts. See docs/runbooks/arr-phase1.md.
   loop: "{{ arr_mount_checks.results }}"
+  loop_control:
+    label: "{{ item.item }}"
+
+- name: Confirm the phase-2 child binds are mounted
+  ansible.builtin.command:
+    argv:
+      - findmnt
+      - --mountpoint
+      - "{{ item }}"
+      - --noheadings
+  loop: "{{ arr_phase2_mounts }}"
+  register: arr_phase2_mount_checks
+  changed_when: false
+  failed_when: false
+
+- name: Fail when a phase-2 child bind is missing
+  ansible.builtin.assert:
+    that:
+      - item.rc == 0
+    fail_msg: >-
+      {{ item.item }} must already be a mountpoint. This role does not
+      create it. A missing source would let Docker create a local
+      directory. See docs/runbooks/arr-phase2.md.
+  loop: "{{ arr_phase2_mount_checks.results }}"
   loop_control:
     label: "{{ item.item }}"
 

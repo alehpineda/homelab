@@ -71,8 +71,10 @@ Flint DHCP reservations for 10.10.0.71–10.10.0.74 (MACs on CTs 171–174)
 are still pending.
 
 New containers, if a later plan creates any, need an explicit VMID not in this list.
-CT 182 (`arr-blr-lxc`, `10.10.0.82`) is declared and is not created until the
-phase-1 plan is applied. See [runbooks/arr-phase1.md](runbooks/arr-phase1.md).
+CT 182 (`arr-blr-lxc`, `10.10.0.82`) is declared in
+[runbooks/arr-phase1.md](runbooks/arr-phase1.md). Phase 2 apps share that
+compose; see [runbooks/arr-phase2.md](runbooks/arr-phase2.md). Opening the
+phase 2 change does not deploy it.
 There is no CT 163 (destroyed 2026-11-05; Ollama is CT 175) and no CT 170.
 CT 176 is `forge-ws-blr-lxc` at 10.10.0.76. Create-time Terraform fields
 are ignored; do not apply a replacement. Models for CT 175 live on the host
