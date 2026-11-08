@@ -1,0 +1,14 @@
+---
+# CT 176 (forge-ws-blr-lxc) always-on Grok Bot on a private Xvfb :99.
+# Approved for CT 176 only. The hostname assert stops other guests.
+grokbot_headless_user: deathscythe
+grokbot_headless_uid: 1000
+grokbot_headless_home: "/home/{{ grokbot_headless_user }}"
+grokbot_headless_runtime_dir: "/run/user/{{ grokbot_headless_uid }}"
+grokbot_headless_expected_hostname: forge-ws-blr-lxc
+
+# One-time destructive-ish reset: backs up and replaces the login keyring
+# with a new EMPTY-password collection. Off by default; set true only from
+# an approved plan (e.g. -e grokbot_headless_initialize_blank_keyring=true).
+# No password or token is stored anywhere; the keyring is created empty.
+grokbot_headless_initialize_blank_keyring: false

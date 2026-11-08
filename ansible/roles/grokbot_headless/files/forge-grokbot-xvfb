@@ -1,0 +1,8 @@
+#!/bin/sh
+set -eu
+umask 077
+export XAUTHORITY="$XDG_RUNTIME_DIR/grokbot-headless/Xauthority"
+# Xvfb access stays local and is limited to this Unix account/root.
+: > "$XAUTHORITY"
+/usr/bin/xauth -f "$XAUTHORITY" add :99 MIT-MAGIC-COOKIE-1 "$(/usr/bin/mcookie)"
+exec /usr/bin/Xvfb :99 -screen 0 1440x900x24 -nolisten tcp -noreset -auth "$XAUTHORITY"

@@ -1,0 +1,27 @@
+[Unit]
+Description=CT176 always-on Grok Bot desktop (no RDP login required)
+Requires=grokbot-xvfb.service gnome-keyring-daemon.service
+After=grokbot-xvfb.service gnome-keyring-daemon.service
+StartLimitIntervalSec=120
+StartLimitBurst=5
+
+[Service]
+Type=exec
+WorkingDirectory=%h
+Environment=DISPLAY=:99
+Environment=XAUTHORITY=%t/grokbot-headless/Xauthority
+Environment=XDG_RUNTIME_DIR=%t
+Environment=DBUS_SESSION_BUS_ADDRESS=unix:path=%t/bus
+Environment=XDG_CURRENT_DESKTOP=XFCE
+Environment=DESKTOP_SESSION=xfce
+ExecStartPre=/usr/local/bin/forge-grokbot-keyring-ready
+ExecStart=/usr/bin/grok-bot --password-store=gnome-libsecret
+Restart=always
+RestartSec=10
+TimeoutStopSec=30
+# Do not retain desktop authentication URLs or tokens in the journal.
+StandardOutput=null
+StandardError=null
+
+[Install]
+WantedBy=default.target

@@ -1,0 +1,8 @@
+#!/bin/sh
+set -eu
+# RDP must not create a second app instance/profile writer beside the boot service.
+if /usr/bin/systemctl --user is-active --quiet grokbot-headless.service; then
+    echo "Grok Bot is already running on the boot display :99. See the CT176 runbook for UI maintenance."
+    exit 0
+fi
+exec /usr/bin/grok-bot --password-store=gnome-libsecret "$@"

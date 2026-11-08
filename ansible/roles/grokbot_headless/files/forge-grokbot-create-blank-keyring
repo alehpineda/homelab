@@ -1,0 +1,14 @@
+#!/usr/bin/python3
+"""Create only a new, empty-password Login collection. Never reads saved secrets."""
+import dbus
+bus = dbus.SessionBus()
+obj = bus.get_object('org.freedesktop.secrets', '/org/freedesktop/secrets')
+service = dbus.Interface(obj, 'org.freedesktop.Secret.Service')
+# Each Secret Service session must remain on this same D-Bus connection.
+_, session = service.OpenSession('plain', dbus.String('', variant_level=1))
+internal = dbus.Interface(obj, 'org.gnome.keyring.InternalUnsupportedGuiltRiddenInterface')
+properties = dbus.Dictionary({'org.freedesktop.Secret.Collection.Label': dbus.String('Login')}, signature='sv')
+secret = dbus.Struct((session, dbus.ByteArray(b''), dbus.ByteArray(b''), 'text/plain'), signature='oayays')
+collection = internal.CreateWithMasterPassword(properties, secret)
+service.SetAlias('default', collection)
+print('Created empty-password Login collection; default alias set')

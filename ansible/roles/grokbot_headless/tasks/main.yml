@@ -1,0 +1,120 @@
+---
+# Always-on Grok Bot for CT 176: Xvfb :99 user service, grokbot-headless
+# user service, linger, empty-password default keyring, keyring-ready
+# pre-check. Does not sign in to Grok Bot; that is a one-time manual step.
+- name: Restrict this role to CT 176
+  ansible.builtin.assert:
+    that:
+      - ansible_facts.hostname == grokbot_headless_expected_hostname
+    fail_msg: This role is only approved for {{ grokbot_headless_expected_hostname }} (CT 176).
+
+- name: Install OS keyring for persistent Electron sign-in
+  ansible.builtin.apt:
+    name:
+      - gnome-keyring
+      - libpam-gnome-keyring
+    state: present
+
+- name: Install virtual display and keyring helper dependencies
+  ansible.builtin.apt:
+    name: [xvfb, dbus-x11, xauth, x11-utils, util-linux, python3-dbus]
+    state: present
+    install_recommends: false
+
+- name: Create per-user service and desktop directories
+  ansible.builtin.file:
+    path: "{{ grokbot_headless_home }}/{{ item }}"
+    state: directory
+    owner: "{{ grokbot_headless_user }}"
+    group: "{{ grokbot_headless_user }}"
+    mode: "0755"
+  loop:
+    - .config/systemd/user
+    - .local/share/applications
+    - .config/autostart
+    - .local/state
+
+- name: Install boot session helpers
+  ansible.builtin.copy:
+    src: "{{ item }}"
+    dest: "/usr/local/bin/{{ item }}"
+    owner: root
+    group: root
+    mode: "0755"
+  loop:
+    - forge-grokbot-xvfb
+    - forge-grokbot-display-ready
+    - forge-grokbot-keyring-ready
+    - forge-grokbot-create-blank-keyring
+    - forge-grokbot-launch
+
+- name: Install user units
+  ansible.builtin.copy:
+    src: "{{ item }}"
+    dest: "{{ grokbot_headless_home }}/.config/systemd/user/{{ item }}"
+    owner: "{{ grokbot_headless_user }}"
+    group: "{{ grokbot_headless_user }}"
+    mode: "0644"
+  loop:
+    - grokbot-xvfb.service
+    - grokbot-headless.service
+
+- name: Install service-aware RDP launchers
+  ansible.builtin.copy:
+    src: grok-bot.desktop
+    dest: "{{ grokbot_headless_home }}/{{ item }}"
+    owner: "{{ grokbot_headless_user }}"
+    group: "{{ grokbot_headless_user }}"
+    mode: "0644"
+    backup: true
+  loop:
+    - .config/autostart/grok-bot.desktop
+    - .local/share/applications/grok-bot.desktop
+
+- name: Inspect linger state
+  ansible.builtin.command:
+    argv: [loginctl, show-user, "{{ grokbot_headless_user }}", -p, Linger, --value]
+  register: grokbot_headless_linger
+  changed_when: false
+
+- name: Start the user manager at boot without a PAM login
+  ansible.builtin.command:
+    argv: [loginctl, enable-linger, "{{ grokbot_headless_user }}"]
+  changed_when: true
+  when: grokbot_headless_linger.stdout != 'yes'
+
+- name: Enable the boot app (does not start it before the one-time sign-in)
+  become: true
+  become_user: "{{ grokbot_headless_user }}"
+  environment:
+    XDG_RUNTIME_DIR: "{{ grokbot_headless_runtime_dir }}"
+    DBUS_SESSION_BUS_ADDRESS: "unix:path={{ grokbot_headless_runtime_dir }}/bus"
+  ansible.builtin.systemd_service:
+    name: "{{ item }}"
+    scope: user
+    daemon_reload: true
+    enabled: true
+  loop:
+    - grokbot-xvfb.service
+    - grokbot-headless.service
+
+- name: Install the opt-in one-time blank keyring helper
+  ansible.builtin.template:
+    src: bootstrap-blank-keyring.sh.j2
+    dest: "{{ grokbot_headless_home }}/.local/state/forge-bootstrap-blank-keyring.sh"
+    owner: "{{ grokbot_headless_user }}"
+    group: "{{ grokbot_headless_user }}"
+    mode: "0700"
+  when: grokbot_headless_initialize_blank_keyring | bool
+
+- name: Initialize the empty-password keyring once (stops app, keeps backups)
+  become: true
+  become_user: "{{ grokbot_headless_user }}"
+  environment:
+    XDG_RUNTIME_DIR: "{{ grokbot_headless_runtime_dir }}"
+    DBUS_SESSION_BUS_ADDRESS: "unix:path={{ grokbot_headless_runtime_dir }}/bus"
+  ansible.builtin.command:
+    cmd: sh {{ grokbot_headless_home }}/.local/state/forge-bootstrap-blank-keyring.sh
+    creates: "{{ grokbot_headless_home }}/.local/state/forge/headless-blank-keyring-initialized"
+  no_log: true
+  when: grokbot_headless_initialize_blank_keyring | bool

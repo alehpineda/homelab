@@ -1,0 +1,40 @@
+#!/bin/sh
+# One-time operation approved for CT 176. Run as {{ grokbot_headless_user }} on its user bus.
+set -eu
+umask 077
+export XDG_RUNTIME_DIR={{ grokbot_headless_runtime_dir }}
+export DBUS_SESSION_BUS_ADDRESS=unix:path={{ grokbot_headless_runtime_dir }}/bus
+state="$HOME/.local/state/forge"
+marker="$state/headless-blank-keyring-initialized"
+[ ! -e "$marker" ] || { echo "Blank-keyring initialization already completed; not resetting it"; exit 0; }
+[ "$(id -un)" = {{ grokbot_headless_user }} ]
+[ "$(hostname)" = {{ grokbot_headless_expected_hostname }} ]
+backup="$state/backups/pre-headless-keyring-$(date +%Y%m%d-%H%M%S)-stopped"
+mkdir -p "$backup"
+# Stop all Electron children and the main process before the coherent backup.
+if pgrep -u "$(id -u)" -x grok-bot >/dev/null; then
+    pkill -TERM -u "$(id -u)" -x grok-bot
+    for attempt in $(seq 1 50); do
+        pgrep -u "$(id -u)" -x grok-bot >/dev/null || break
+        sleep 0.1
+    done
+    if pgrep -u "$(id -u)" -x grok-bot >/dev/null; then
+        echo "Grok Bot did not exit cleanly; stopping without changing keyring" >&2
+        exit 1
+    fi
+fi
+systemctl --user stop gnome-keyring-daemon.socket gnome-keyring-daemon.service
+cp -a "$HOME/.config/Grok Bot" "$backup/grokbot-profile"
+if [ -d "$HOME/.local/share/keyrings" ]; then
+    mv "$HOME/.local/share/keyrings" "$backup/keyrings"
+fi
+mkdir -m 700 "$HOME/.local/share/keyrings"
+printf '%s\n' "$backup" > "$state/headless-coherent-backup-path"
+systemctl --user start gnome-keyring-daemon.service
+/usr/local/bin/forge-grokbot-create-blank-keyring
+/usr/local/bin/forge-grokbot-keyring-ready
+# Confirm noninteractive unlock still works after the daemon loses all memory.
+systemctl --user restart gnome-keyring-daemon.service
+/usr/local/bin/forge-grokbot-keyring-ready
+printf 'Initialized approved empty-password login keyring on %s\n' "$(date -Is)" > "$marker"
+printf 'COHERENT_BACKUP=%s\n' "$backup"

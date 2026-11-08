@@ -1,0 +1,8 @@
+#!/bin/sh
+set -eu
+for attempt in $(seq 1 50); do
+    if /usr/bin/xdpyinfo -display :99 >/dev/null 2>&1; then exit 0; fi
+    sleep 0.1
+done
+echo "CT176 headless display :99 did not become ready" >&2
+exit 1

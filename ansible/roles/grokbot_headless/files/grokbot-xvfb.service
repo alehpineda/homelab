@@ -1,0 +1,16 @@
+[Unit]
+Description=CT176 private virtual X display for always-on Grok Bot
+
+[Service]
+Type=exec
+Environment=DISPLAY=:99
+Environment=XAUTHORITY=%t/grokbot-headless/Xauthority
+RuntimeDirectory=grokbot-headless
+RuntimeDirectoryMode=0700
+ExecStart=/usr/local/bin/forge-grokbot-xvfb
+ExecStartPost=/usr/local/bin/forge-grokbot-display-ready
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=default.target
