@@ -91,3 +91,12 @@ proxmox-backup-manager prune-job list
 curl -s -o /dev/null -w '%{http_code}\n' https://pbs.alehpineda.com
 pvesm status | grep pbs-hdd
 ```
+
+## Mail relay
+Postfix relays through `[smtp.gmail.com]:587` (SASL, TLS encrypt), same as BRL.
+Notifications go to root@pam = `deathscythe+pbs@mail.grokbot.com`. The credentials file
+is copied once from BRL as root (never in git):
+```
+scp -p /etc/postfix/sasl_passwd root@10.10.0.25:/etc/postfix/sasl_passwd && ssh root@10.10.0.25 /usr/local/sbin/forge-postfix-sasl-apply
+```
+Test: Configuration > Notifications > mail-to-root > Test.

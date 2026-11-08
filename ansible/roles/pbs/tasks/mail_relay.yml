@@ -1,0 +1,31 @@
+---
+# Postfix relay through Gmail SMTP (same as BRL). /etc/postfix/sasl_passwd
+# is copied by hand from BRL (root 0600) and never stored in git.
+- name: Install SASL modules for the SMTP relay
+  ansible.builtin.apt:
+    name: libsasl2-modules
+    state: present
+
+- name: Configure postfix relay
+  ansible.builtin.command: postconf -e "{{ item.key }} = {{ item.value }}"
+  loop: "{{ pbs_postfix_relay | dict2items }}"
+  register: pbs_postconf
+  changed_when: false
+
+- name: Install sasl apply helper
+  ansible.builtin.copy:
+    src: forge-postfix-sasl-apply
+    dest: /usr/local/sbin/forge-postfix-sasl-apply
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Check for relay credentials
+  ansible.builtin.stat:
+    path: /etc/postfix/sasl_passwd
+  register: pbs_sasl_passwd
+
+- name: Hash and secure relay credentials
+  ansible.builtin.command: /usr/local/sbin/forge-postfix-sasl-apply
+  when: pbs_sasl_passwd.stat.exists
+  changed_when: false

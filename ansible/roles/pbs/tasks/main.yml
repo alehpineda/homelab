@@ -24,3 +24,7 @@
 - name: Import host backup tasks
   ansible.builtin.import_tasks: host_backups.yml
   when: pbs_host_backups
+
+- name: Import mail relay tasks
+  ansible.builtin.import_tasks: mail_relay.yml
+  when: pbs_mail_relay
