@@ -1,0 +1,7 @@
+#!/bin/sh
+set -eu
+# Blank collections may load locked, but standard Unlock needs no prompt/password.
+# Empty stdin to daemon --unlock is NOT an empty password in GNOME Keyring 50.
+/usr/bin/busctl --user --timeout=10 call org.freedesktop.secrets /org/freedesktop/secrets org.freedesktop.Secret.Service Unlock ao 1 /org/freedesktop/secrets/aliases/default >/dev/null
+locked=$(/usr/bin/busctl --user --timeout=10 get-property org.freedesktop.secrets /org/freedesktop/secrets/aliases/default org.freedesktop.Secret.Collection Locked)
+[ "$locked" = "b false" ] || { echo "Default keyring could not unlock without a prompt" >&2; exit 1; }

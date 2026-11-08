@@ -1,0 +1,10 @@
+[Desktop Entry]
+Name=Grok Bot
+Exec=/usr/local/bin/forge-grokbot-launch -- %U
+Terminal=false
+Type=Application
+Icon=grok-bot
+StartupWMClass=grok-bot
+Comment=Grok Bot desktop agent; boot-service aware launcher
+MimeType=x-scheme-handler/grokbot;x-scheme-handler/sand;
+Categories=Development;

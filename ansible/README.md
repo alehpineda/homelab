@@ -26,6 +26,8 @@ SSH port **4488**. Fresh LXCs often still listen on **22**. Set
 | `playbooks/ollama.yml` | Ensures `OLLAMA_MODELS` on `ollama-blr-lxc`. |
 | `playbooks/console-autologin.yml` | Opt-in root console autologin. Not run by `site.yml`. |
 | `roles/ollama/` | Drop-in, mount check, and non-recursive ownership. |
+| `playbooks/grokbot-headless.yml` | Opt-in always-on Grok Bot on CT 176. Not run by `site.yml`. |
+| `roles/grokbot_headless/` | Xvfb `:99` + Grok Bot user units, linger, empty-password keyring. See `docs/runbooks/ct176-headless-grokbot.md`. |
 | `roles/console_autologin/` | Getty drop-ins for that playbook. Default off. |
 
 ## Inventory
@@ -57,6 +59,7 @@ cp inventory/blr.yml.example inventory/blr.yml
 ansible-playbook --syntax-check playbooks/ping.yml
 ansible-playbook --syntax-check playbooks/site.yml
 ansible-playbook --syntax-check playbooks/ollama.yml
+ansible-playbook --syntax-check playbooks/grokbot-headless.yml
 ```
 
 A live ping connects with SSH. It does not install or configure anything,

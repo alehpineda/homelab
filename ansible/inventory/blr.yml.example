@@ -41,9 +41,11 @@ all:
         # pve-exporter-blr-lxc:      # CT 174
         #   ansible_host: 10.10.0.74
         #   ansible_port: 22
-        # forge-ws-blr-lxc:          # CT 176 — declared, not created. Uncomment only after the guest exists.
-        #   ansible_host: 10.10.0.76
-        #   ansible_port: 22
+        # CT 176. playbooks/grokbot-headless.yml targets this host. site.yml does not.
+        forge-ws-blr-lxc:
+          ansible_host: 10.10.0.76
+          ansible_port: 22
+          ansible_user: deathscythe
     # Console root autologin. Empty until the gitignored copy lists the two
     # approved guests. CT 176 is not a member. See ansible/README.md.
     console_autologin:

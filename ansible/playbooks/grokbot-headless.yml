@@ -1,0 +1,10 @@
+---
+# Always-on Grok Bot on CT 176 (forge-ws-blr-lxc). Not imported by site.yml.
+# See docs/runbooks/ct176-headless-grokbot.md. Opt-in; run only from an
+# approved plan. Never commit passwords or tokens.
+- name: CT 176 always-on Grok Bot desktop
+  hosts: forge-ws-blr-lxc
+  become: true
+  gather_facts: true
+  roles:
+    - role: grokbot_headless
