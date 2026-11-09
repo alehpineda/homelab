@@ -19,7 +19,8 @@ resource "proxmox_lxc" "ct_155" {
   tags         = "adblock;community-script"
 
   rootfs {
-    storage = var.pm_storage
+    # Moved data2 -> local-lvm (nvme0) 2026-11-09, BRL storage plan B.
+    storage = "local-lvm"
     size    = "2G"
   }
 

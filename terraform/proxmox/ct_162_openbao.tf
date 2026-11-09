@@ -14,7 +14,8 @@ resource "proxmox_lxc" "ct_162" {
   tags         = "community-script;secrets;security;storage-data2"
 
   rootfs {
-    storage = var.pm_storage
+    # Moved data2 -> local-lvm (nvme0) 2026-11-09, BRL storage plan B.
+    storage = "local-lvm"
     size    = "4G"
   }
 
