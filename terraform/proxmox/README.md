@@ -6,7 +6,7 @@ import. The example guest in `main.tf` is commented out. Running apply
 from this tree is not approved and must not create or destroy a container.
 
 This directory does not approve an apply. Create and destroy of any guest,
-including CTIDs 150, 151, 153, 154, 155, 156, 160–162, 164–169, 171–176, 180, 181, and 250, wait for a separate approved plan. CT 176 create-time fields are declared and ignored so the existing guest is not modified. CT 182 (`arr-blr-lxc`) is declared and is not on the node until the phase-1 plan is applied. See [docs/runbooks/arr-phase1.md](../../docs/runbooks/arr-phase1.md). Follow
+including CTIDs 150, 151, 153, 154, 155, 156, 160–162, 164–169, 171–176, 180–183, and 250, wait for a separate approved plan. CT 176 create-time fields are declared and ignored so the existing guest is not modified. CT 182 (`arr-blr-lxc`) is live. CT 183 (`seerr-blr-lxc`) is declared and is not on the node until the Seerr plan is applied. See [docs/runbooks/arr-phase1.md](../../docs/runbooks/arr-phase1.md). Follow
 [docs/runbooks/lxc-change.md](../../docs/runbooks/lxc-change.md).
 
 Node facts (no secrets): [docs/blr.md](../../docs/blr.md).
@@ -17,8 +17,8 @@ Monitoring and Postiz wiring: [docs/blr-monitoring.md](../../docs/blr-monitoring
 | Node | `barbatoslupusrex` |
 | LAN | `10.10.0.21` |
 | NetBird | `100.85.104.18` |
-| Existing CTIDs | 150, 151, 153, 154, 155, 156, 160–162, 164–169, 171–176, 180, 181, 250 |
-| Declared, not created | 182 `arr-blr-lxc` at 10.10.0.82. Phase 1 only. |
+| Existing CTIDs | 150, 151, 153, 154, 155, 156, 160–162, 164–169, 171–176, 180, 181, 182, 250 |
+| Declared, not created | 183 `seerr-blr-lxc` at 10.10.0.83. Family Seerr (community-script). |
 | CT 176 day-1 | XFCE 4.20 + xrdp + Grok Bot 0.78.5 + Google Chrome stable (default browser) |
 | Provider | `telmate/proxmox` `3.0.2-rc10` |
 
@@ -205,6 +205,8 @@ community-script 0.35.1 on 2026-11-06). Models stay on ZFS
 inference is Vulkan on the Intel Arc Pro B60. Features, DRI devices, the
 models dataset, and the `OLLAMA_MODELS` drop-in are documented in
 `docs/runbooks/terraform-import.md` and `docs/runbooks/ollama-models.md`.
+
+CT 183 (`seerr-blr-lxc`) is declared and is not on the node until the Seerr plan is applied. Day-1 install is the Proxmox community-scripts seerr installer (`ct/seerr.sh`), pinned to Seerr v3.5.1. Not Docker.
 
 ## Rollback
 

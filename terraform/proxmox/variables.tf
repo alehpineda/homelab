@@ -65,3 +65,9 @@ variable "ct182_ssh_public_keys" {
   type        = string
   default     = ""
 }
+
+variable "ct183_ssh_public_keys" {
+  description = "SSH authorized public keys for CT183. Public keys only. Empty until TF_VAR_ct183_ssh_public_keys is set at create."
+  type        = string
+  default     = ""
+}
