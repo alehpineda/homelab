@@ -35,6 +35,14 @@ resource "proxmox_lxc" "ct_250" {
     firewall = false
   }
 
+  network {
+    name     = "eth1"
+    bridge   = "vmbr0"
+    hwaddr   = "02:46:4F:52:02:51"
+    ip       = "10.10.0.251/32"
+    firewall = false
+  }
+
   lifecycle {
     prevent_destroy = true
     ignore_changes = [
