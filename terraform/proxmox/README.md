@@ -18,7 +18,7 @@ Monitoring and Postiz wiring: [docs/blr-monitoring.md](../../docs/blr-monitoring
 | LAN | `10.10.0.21` |
 | NetBird | `100.85.104.18` |
 | Existing CTIDs | 150, 151, 153, 154, 155, 156, 160–162, 164–169, 171–176, 180, 181, 182, 183, 250 |
-| CT 183 | `seerr-blr-lxc` at 10.10.0.83. Live. Seerr v3.5.1 via community-script (`seerr.service`, port 5055). Root locked. Family ingress planned via Caddy .252. |
+| CT 183 | `seerr-blr-lxc` at 10.10.0.83. Live. Seerr v3.5.1 via community-script (`seerr.service`, port 5055). Root locked. Family ingress planned via Caddy .251 (family/guest ingress, planned). |
 | CT 176 day-1 | XFCE 4.20 + xrdp + Grok Bot 0.78.5 + Google Chrome stable (default browser) |
 | Provider | `telmate/proxmox` `3.0.2-rc10` |
 
@@ -206,7 +206,7 @@ inference is Vulkan on the Intel Arc Pro B60. Features, DRI devices, the
 models dataset, and the `OLLAMA_MODELS` drop-in are documented in
 `docs/runbooks/terraform-import.md` and `docs/runbooks/ollama-models.md`.
 
-CT 183 (`seerr-blr-lxc`) is live on BRL at `10.10.0.83` (created 2026-11-09 via targeted apply). Seerr v3.5.1 is installed from the community-scripts seerr installer (`ct/seerr.sh`) as native systemd `seerr.service` on port 5055. Not Docker. Root is locked. Family ingress is planned via Caddy `.252`.
+CT 183 (`seerr-blr-lxc`) is live on BRL at `10.10.0.83` (created 2026-11-09 via targeted apply). Seerr v3.5.1 is installed from the community-scripts seerr installer (`ct/seerr.sh`) as native systemd `seerr.service` on port 5055. Not Docker. Root is locked. Family ingress is planned via Caddy .251 (family/guest ingress, planned).
 
 The Telmate `proxmox_lxc` resource cannot set the container timezone. After create, run `pct set 183 --timezone America/Chicago`. The same applies to other CTs created this way.
 

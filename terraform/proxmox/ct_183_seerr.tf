@@ -2,7 +2,7 @@
 # Live on BRL since 2026-11-09 (targeted apply). This file does not apply it.
 # Seerr v3.5.1 is installed via the community-scripts seerr installer
 # (native systemd seerr.service, port 5055). Root is locked. Family ingress
-# is planned via Caddy .252.
+# is planned via Caddy .251 (family/guest ingress, planned).
 # See /workspace/forge/plans/2026-11-09-seerr-ct183-family.md (Forge).
 # Standing pref: LXC via IaC. Further apply still needs its own approval.
 #
