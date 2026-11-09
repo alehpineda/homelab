@@ -255,6 +255,29 @@ cp inventory/blr.yml.example inventory/blr.yml
 ansible-playbook --syntax-check playbooks/arr.yml
 ```
 
+## grokaudit on LXCs
+
+`playbooks/grokaudit.yml` applies `roles/lxc_grokaudit` to the
+`grokaudit_lxc` group. It is not part of `site.yml`. The owner approved
+it on 2026-11-09 for Surface Scout's read-only inventory and exposure checks.
+
+- User `grokaudit`, uid/gid **2990**, `/bin/bash`, password locked.
+- `authorized_keys` holds only the secops public key (`0700` / `0600`).
+- No `sudo`, `wheel`, `docker`, `adm` or `lxd`. The play fails if one appears.
+- uid 1000 is avoided on purpose. CT 182 maps guest uid 1000 to host
+  uid 1100 (media), and the *arr apps run as that uid.
+- Refused guests: CT 161 Vaultwarden, CT 169 Postiz and CT 183 Seerr
+  (world-readable vault DB, `.env` or API keys), and CT 176 (uses `scout`).
+
+Day-1 for a new LXC: add it to `grokaudit_lxc` in the gitignored inventory,
+then run:
+
+```bash
+ansible-playbook playbooks/grokaudit.yml --limit <hostname>
+```
+
+Rollback on the guest, as root: `userdel -r grokaudit`.
+
 ## Secrets
 
 Never commit inventory files that contain credentials, `.env`, vault

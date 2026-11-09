@@ -1,0 +1,51 @@
+---
+- name: Refuse excluded guests
+  ansible.builtin.assert:
+    that: inventory_hostname not in lxc_grokaudit_excluded
+    fail_msg: "{{ inventory_hostname }} is excluded from grokaudit. See ansible/README.md."
+
+- name: Create grokaudit group
+  ansible.builtin.group:
+    name: "{{ lxc_grokaudit_user }}"
+    gid: "{{ lxc_grokaudit_uid }}"
+
+- name: Create grokaudit user (locked password, bash, no extra groups)
+  ansible.builtin.user:
+    name: "{{ lxc_grokaudit_user }}"
+    uid: "{{ lxc_grokaudit_uid }}"
+    group: "{{ lxc_grokaudit_user }}"
+    groups: []
+    append: false
+    shell: /bin/bash
+    create_home: true
+    password: "!"
+    password_lock: true
+    comment: Surface Scout read-only audit (no sudo)
+
+- name: Create .ssh directory
+  ansible.builtin.file:
+    path: "/home/{{ lxc_grokaudit_user }}/.ssh"
+    state: directory
+    owner: "{{ lxc_grokaudit_user }}"
+    group: "{{ lxc_grokaudit_user }}"
+    mode: "0700"
+
+- name: Authorize the secops public key (exclusive)
+  ansible.builtin.copy:
+    dest: "/home/{{ lxc_grokaudit_user }}/.ssh/authorized_keys"
+    content: "{{ lxc_grokaudit_pubkey }}\n"
+    owner: "{{ lxc_grokaudit_user }}"
+    group: "{{ lxc_grokaudit_user }}"
+    mode: "0600"
+
+- name: Read grokaudit groups  # noqa: command-instead-of-module
+  ansible.builtin.command: id -nG {{ lxc_grokaudit_user }}
+  register: lxc_grokaudit_groups
+  changed_when: false
+
+- name: Confirm grokaudit holds no privileged group
+  ansible.builtin.assert:
+    that: >-
+      lxc_grokaudit_groups.stdout.split()
+      | intersect(lxc_grokaudit_denied_groups) | length == 0
+    fail_msg: "grokaudit is in {{ lxc_grokaudit_groups.stdout }}"

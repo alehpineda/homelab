@@ -73,3 +73,7 @@ all:
     # See ansible/README.md.
     console_autologin:
       hosts: {}
+    # Read-only grokaudit account (playbooks/grokaudit.yml). Empty until the
+    # gitignored copy lists guests. CT 161, 169, 176 and 183 are refused.
+    grokaudit_lxc:
+      hosts: {}
