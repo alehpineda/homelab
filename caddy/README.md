@@ -9,3 +9,5 @@ Live on CT250 as of 2026-11-09 8:47 PM CT is **Caddyfile.final** (sha adb4c10aâ€
 `Caddyfile.bridge` is the last transitional snapshot (family names still answered on `.250`) and was live until this cutover. Rollback on CT250: restore `/etc/caddy/Caddyfile.bak-final-flip-20261110-024719`, validate, `systemctl reload caddy`. Restore the AdGuard rewrite JSON from the pre-change backup to point jellyfin/searxng back at `.250`.
 
 Firewall vars for CT250 (`ipfilter-net0` {.250,.251}, tcp 80/443 + udp 443 from `+management`) already landed in `ansible/group_vars/all/fw_allowlists.yml` via PR #38.
+
+On 2026-11-10 a systemd drop-in `/etc/systemd/system/caddy.service.d/10-forge-boot.conf` was added live so Caddy retries if it starts before `.250`/`.251` exist (`Restart=on-failure`, `RestartSec=3s`, `StartLimitIntervalSec=0`). The main unit already had `Wants`/`After` `network-online.target`, but this guest has no wait-online provider. IaC: `ansible/playbooks/caddy.yml` and `ansible/roles/caddy_boot/`. The role daemon-reloads and does not restart Caddy. `net.ipv4.ip_nonlocal_bind` was considered and not applied.

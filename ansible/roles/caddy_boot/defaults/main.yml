@@ -1,0 +1,7 @@
+---
+# Drop-in only. This role does not install Caddy, edit the Caddyfile,
+# or change /etc/systemd/system/caddy.service.
+caddy_boot_service_name: caddy
+caddy_boot_unit_path: /etc/systemd/system/caddy.service
+caddy_boot_dropin_dir: /etc/systemd/system/caddy.service.d
+caddy_boot_dropin_filename: 10-forge-boot.conf
