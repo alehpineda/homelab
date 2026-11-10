@@ -4,10 +4,12 @@
 # running on bael, except Watchtower (containrrr/watchtower 1.7.1 amd64).
 # pull_policy: missing means a re-run does not move off these digests.
 # A pin change pulls because the new digest is not local.
+# Listenarr (2026-11-10) joins gluetun's network on 4545; it imports
+# audiobooks by COPY into /data/media/audiobooks (CT182 mp21 leaf bind).
 # Recreate the VPN namespace without upgrading, from /opt/stacks/arr.
 # Watchtower is not on that network and stays up:
 #   docker compose up -d --force-recreate \
-#     gluetun qbittorrent prowlarr sonarr radarr lidarr bazarr flaresolverr
+#     gluetun qbittorrent prowlarr sonarr radarr lidarr bazarr flaresolverr listenarr
 # Do not run `docker compose config` against a populated .env.
 # FlareSolverr listens on 8191 inside the gluetun namespace. That port
 # is not published and is not in FIREWALL_INPUT_PORTS.
@@ -28,6 +30,7 @@ services:
       - "10.10.0.82:7878:7878/tcp"
       - "10.10.0.82:8686:8686/tcp"
       - "10.10.0.82:6767:6767/tcp"
+      - "10.10.0.82:4545:4545/tcp"
     env_file:
       - /opt/stacks/arr/.env
     environment:
@@ -35,8 +38,8 @@ services:
       VPN_TYPE: ${VPN_TYPE:?set VPN_TYPE in /opt/stacks/arr/.env}
       WIREGUARD_PRIVATE_KEY: ${WIREGUARD_PRIVATE_KEY:?set WIREGUARD_PRIVATE_KEY in /opt/stacks/arr/.env}
       # Overrides env_file. 8085 qBittorrent, 9696 Prowlarr, 8989 Sonarr,
-      # 7878 Radarr, 8686 Lidarr, 6767 Bazarr. Not 8191.
-      FIREWALL_INPUT_PORTS: "8085,9696,8989,7878,8686,6767"
+      # 7878 Radarr, 8686 Lidarr, 6767 Bazarr, 4545 Listenarr. Not 8191.
+      FIREWALL_INPUT_PORTS: "8085,9696,8989,7878,8686,6767,4545"
     volumes:
       - /opt/arr/gluetun:/gluetun
     sysctls:
@@ -176,6 +179,36 @@ services:
       - /opt/arr/bazarr:/config
       - /data/media/movies:/data/media/movies
       - /data/media/tv:/data/media/tv
+    restart: unless-stopped
+    labels:
+      com.centurylinklabs.watchtower.enable: "true"
+      com.centurylinklabs.watchtower.monitor-only: "true"
+    security_opt:
+      - no-new-privileges:true
+
+  listenarr:
+    # ghcr.io/listenarrs/listenarr canary-1.6.3 linux/amd64 (upstream: beta).
+    # Index digest sha256:265d4fd8f8242079a6620257dda018d022f053fa7f1d512c5dcbc5c880c3e85d
+    # Entrypoint remaps its listenarr user to PUID/PGID and drops via gosu.
+    # Admin .250 only (listenarr.alehpineda.com). Import mode: copy.
+    image: ghcr.io/listenarrs/listenarr@sha256:076c989b4cdee4fad5b0b1b776e0e9877b8d9957cf81d9eef96053a07df2f547
+    pull_policy: missing
+    container_name: listenarr
+    network_mode: service:gluetun
+    depends_on:
+      gluetun:
+        condition: service_healthy
+    environment:
+      PUID: "1000"
+      PGID: "1000"
+      UMASK: "022"
+      TZ: America/Chicago
+      LISTENARR_PUBLIC_URL: https://listenarr.alehpineda.com
+    volumes:
+      - /opt/arr/listenarr:/app/config
+      - /data/media/audiobooks:/data/media/audiobooks
+      - /data/downloads/books:/data/downloads/books
+      - /data/usenet/complete/books:/data/usenet/complete/books
     restart: unless-stopped
     labels:
       com.centurylinklabs.watchtower.enable: "true"

@@ -6,7 +6,7 @@ Pinned library: `uptime-kuma-api2==2.10.0` (Socket.IO client; Kuma 2 has no REST
 
 ## Files
 
-- `monitors.yaml` — 44 v1 monitors, status page, and SMTP notification definition. No secrets.
+- `monitors.yaml` — 54 monitors (44 v1 + 10 from the CT191–199 raise), status page, and SMTP notification definition. No secrets.
 - `seed.py` — validator and seeder.
 - `requirements.txt` — pinned dependencies.
 

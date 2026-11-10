@@ -80,7 +80,7 @@ resource "proxmox_lxc" "ct_182" {
 
   rootfs {
     storage = var.pm_storage
-    size    = "16G"
+    size    = "24G" # grown 16G -> 24G 2026-11-10 for Listenarr (pct resize)
   }
 
   mountpoint {
@@ -257,6 +257,17 @@ resource "proxmox_lxc" "ct_182" {
     backup = false
   }
 
+  # Listenarr (2026-11-10): leaf bind of the audiobooks ZFS dataset. The
+  # parent mp0 bind does not propagate nested datasets. Added on the node
+  # with `pct set 182 --mp21 ...` (bind mounts need root@pam, not the token).
+  mountpoint {
+    key    = "21"
+    slot   = 21
+    volume = "/media/data/media/audiobooks"
+    mp     = "/data/media/audiobooks"
+    backup = false
+  }
+
   network {
     name   = "eth0"
     bridge = "vmbr0"
@@ -272,7 +283,7 @@ resource "proxmox_lxc" "ct_182" {
     # target_node, cmode, network, mountpoint, rootfs[0].storage: Telmate
     # 3.0.2-rc10 import does not read these back, so they would force
     # replacement. See docs/runbooks/terraform-import.md.
-    # ignore_changes on mountpoint hides drift: mp3–mp20 added on the
+    # ignore_changes on mountpoint hides drift: mp3–mp21 added on the
     # node, a changed mp, or a missing ro=1 do not appear in the plan.
     # net0 firewall=1 and the PVE guest firewall (.fw rules/options) are owned by
     # ansible role pve_guest_firewall (group_vars/all/fw_allowlists.yml), live

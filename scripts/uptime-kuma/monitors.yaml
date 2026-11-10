@@ -7,7 +7,8 @@
 # current release with runtime version gating. Login against this instance
 # (2.5.9) is the live verification.
 #
-# 44 enabled monitors (v1, no LXC/router pings). The former CT185-190
+# 54 enabled monitors (44 v1 incl. CT185-190, plus 10 from the 2026-11-10
+# ten-service raise; no LXC/router pings). The former CT185-190
 # placeholders were moved into monitors after the six services went live.
 
 kuma:
@@ -87,6 +88,14 @@ status_page:
         - Dispatcharr
         - NetBox
         - Wazuh
+        - Homepage
+        - Homarr
+        - Homer
+        - PriceBuddy
+        - Change Detection
+        - Semaphore
+        - MyIP
+        - Listenarr
     - name: Family URLs
       monitors:
         - Jellyfin
@@ -95,6 +104,8 @@ status_page:
         - RomM
         - Navidrome
         - Audiobookshelf
+        - BentoPDF
+        - Linkwarden
     - name: VPS / public
       monitors:
         - gremory ping
@@ -450,6 +461,78 @@ monitors:
     interval: 60
     timeout: 15
     resend_interval: 60
+
+  # --- Ten-service raise 2026-11-10 (CT191-199 + Listenarr on CT182) ---
+  - name: Homepage
+    type: http
+    url: https://homepage.alehpineda.com
+    tags: [admin]
+    interval: 180
+    resend_interval: 120
+    description: CT191, Caddy .250.
+  - name: Homarr
+    type: http
+    url: https://homarr.alehpineda.com
+    tags: [admin]
+    interval: 180
+    resend_interval: 120
+    description: CT192, Caddy .250.
+  - name: Homer
+    type: http
+    url: https://homer.alehpineda.com
+    tags: [admin]
+    interval: 180
+    resend_interval: 120
+    description: CT198, Caddy .250.
+  - name: BentoPDF
+    type: http
+    url: https://bentopdf.alehpineda.com
+    tags: [family]
+    interval: 180
+    resend_interval: 120
+    description: CT193, Caddy .251.
+  - name: Linkwarden
+    type: http
+    url: https://linkwarden.alehpineda.com
+    tags: [family]
+    interval: 180
+    resend_interval: 120
+    description: CT196, Caddy .251.
+  - name: PriceBuddy
+    type: http
+    url: https://pricebuddy.alehpineda.com
+    tags: [admin]
+    interval: 180
+    resend_interval: 120
+    description: CT194, Caddy .250.
+  - name: Change Detection
+    type: http
+    url: https://changedetection.alehpineda.com
+    tags: [admin]
+    interval: 180
+    resend_interval: 120
+    description: CT195, Caddy .250.
+  - name: Semaphore
+    type: http
+    url: https://semaphore.alehpineda.com
+    tags: [admin]
+    interval: 180
+    resend_interval: 120
+    description: CT197, Caddy .250.
+  - name: MyIP
+    type: http
+    url: https://myip.alehpineda.com
+    tags: [admin]
+    interval: 180
+    resend_interval: 120
+    description: CT199, Caddy .250.
+  - name: Listenarr
+    type: http
+    url: https://listenarr.alehpineda.com
+    tags: [admin]
+    interval: 180
+    resend_interval: 120
+    description: CT182 compose, Caddy .250.
 
 # No remaining after-build placeholders. CT185-190 monitors live above.
 placeholders: []
