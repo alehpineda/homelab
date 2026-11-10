@@ -12,6 +12,8 @@ resource "proxmox_lxc" "ct_181" {
   memory       = 2048
   swap         = 512
   tags         = "community-script;media;storage-data2;youtube"
+  # Static LXCs do not get Flint DHCP option 6. Live 2026-11-10: pct set --nameserver "10.10.0.53 10.10.0.55".
+  nameserver   = "10.10.0.53 10.10.0.55"
 
   rootfs {
     storage = var.pm_storage

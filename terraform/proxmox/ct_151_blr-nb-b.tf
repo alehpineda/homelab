@@ -15,7 +15,8 @@ resource "proxmox_lxc" "ct_151" {
   cores        = 1
   memory       = 512
   swap         = 512
-  nameserver   = "10.10.0.1"
+  # Live resolv.conf is NetBird; this is the PVE fallback after a future restart.
+  nameserver   = "10.10.0.53 10.10.0.55"
   tags         = "network;storage-data2;vpn"
 
   rootfs {

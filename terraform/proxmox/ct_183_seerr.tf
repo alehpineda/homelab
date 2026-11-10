@@ -18,7 +18,6 @@
 #
 # Template is the Debian 13 vztmpl already on BRL local (same as the
 # CT177 ingress test). Confirm it is still on local before apply.
-# nameserver omitted: DNS via Flint option 6, like ct_176 / ct_182.
 # timezone America/Chicago is a pct setting and is not in the Telmate
 # proxmox_lxc schema. After create: pct set 183 --timezone America/Chicago
 # (the same applies to other CTs created this way). No IPv6 on this NIC.
@@ -39,6 +38,8 @@ resource "proxmox_lxc" "ct_183" {
   memory       = 4096
   swap         = 512
   tags         = "community-script;family;media;seerr;storage-data2"
+  # Static LXCs do not get Flint DHCP option 6. Live 2026-11-10: pct set --nameserver "10.10.0.53 10.10.0.55".
+  nameserver   = "10.10.0.53 10.10.0.55"
   # Create-time only. Ignored after create. Public keys only.
   ostemplate      = "local:vztmpl/debian-13-standard_13.6-1_amd64.tar.zst"
   ssh_public_keys = var.ct183_ssh_public_keys
