@@ -1,0 +1,39 @@
+---
+# Ensures the CT 250 Caddy boot-race drop-in. Does not install Caddy,
+# edit the main unit, or manage /etc/caddy/Caddyfile.
+
+- name: Check whether the caddy unit is installed
+  ansible.builtin.stat:
+    path: "{{ caddy_boot_unit_path }}"
+  register: caddy_boot_unit
+
+- name: Require the existing caddy unit
+  ansible.builtin.assert:
+    that:
+      - caddy_boot_unit.stat.exists
+    fail_msg: >-
+      {{ caddy_boot_unit_path }} is missing. This role does not install
+      Caddy. The unit on CT 250 already lives at that path.
+
+- name: Ensure the systemd drop-in directory exists
+  ansible.builtin.file:
+    path: "{{ caddy_boot_dropin_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Ensure the Caddy boot drop-in
+  ansible.builtin.copy:
+    src: "{{ caddy_boot_dropin_filename }}"
+    dest: "{{ caddy_boot_dropin_dir }}/{{ caddy_boot_dropin_filename }}"
+    owner: root
+    group: root
+    mode: "0644"
+  register: caddy_boot_dropin
+
+- name: Reload systemd when the drop-in changes
+  ansible.builtin.systemd:
+    name: "{{ caddy_boot_service_name }}"
+    daemon_reload: true
+  when: caddy_boot_dropin.changed

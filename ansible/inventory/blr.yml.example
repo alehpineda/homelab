@@ -52,6 +52,11 @@ all:
         arr-blr-lxc:
           ansible_host: 10.10.0.82
           ansible_port: 22
+        # CT 250. playbooks/caddy.yml targets this host. site.yml does not.
+        # Port 22: Debian 13 Caddy guest, not an ansible-playbooks harden.
+        caddy-blr-lxc:
+          ansible_host: 10.10.0.250
+          ansible_port: 22
     # Proxmox Backup Server. playbooks/pbs.yml targets this group. site.yml does not.
     pbs:
       hosts:

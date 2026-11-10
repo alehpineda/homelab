@@ -1,8 +1,8 @@
 # Ansible skeleton for BRL
 
 Stub inventory and playbooks for guests on `barbatoslupusrex`. `site.yml`
-only imports `playbooks/ping.yml`. `playbooks/ollama.yml` is separate: it
-ensures `OLLAMA_MODELS` on CT 175 and does not run unless you invoke it.
+only imports `playbooks/ping.yml`. `playbooks/ollama.yml` and `playbooks/caddy.yml` are separate and do not
+run unless you invoke them.
 
 Do not run these playbooks as a change against live guests until a separate
 plan says so. A ping is still an SSH connection; use it only against hosts
@@ -22,8 +22,10 @@ SSH port **4488**. Fresh LXCs often still listen on **22**. Set
 | `inventory/blr.yml` | Local copy. Gitignored. |
 | `group_vars/all.yml.example` | Non-secret defaults. |
 | `playbooks/ping.yml` | `ansible.builtin.ping` only. |
-| `playbooks/site.yml` | Imports the ping playbook. Does not import `ollama.yml` or console autologin. |
+| `playbooks/site.yml` | Imports the ping playbook. Does not import `ollama.yml`, `caddy.yml`, or console autologin. |
 | `playbooks/ollama.yml` | Ensures `OLLAMA_MODELS` on `ollama-blr-lxc`. |
+| `playbooks/caddy.yml` | Ensures the CT 250 Caddy boot drop-in. Does not restart Caddy. |
+| `roles/caddy_boot/` | That playbook. File plus `daemon-reload` only. |
 | `playbooks/console-autologin.yml` | Opt-in root console autologin. Not run by `site.yml`. |
 | `roles/ollama/` | Drop-in, mount check, and non-recursive ownership. |
 | `playbooks/grokbot-headless.yml` | Opt-in always-on Grok Bot on CT 176. Not run by `site.yml`. |
@@ -63,6 +65,7 @@ ansible-playbook --syntax-check playbooks/site.yml
 ansible-playbook --syntax-check playbooks/ollama.yml
 ansible-playbook --syntax-check playbooks/grokbot-headless.yml
 ansible-playbook --syntax-check playbooks/arr.yml
+ansible-playbook --syntax-check playbooks/caddy.yml
 ```
 
 A live ping connects with SSH. It does not install or configure anything,
@@ -233,6 +236,47 @@ Live run, only when approved:
 
 ```bash
 ansible-playbook playbooks/ollama.yml
+```
+
+
+## Caddy boot drop-in (CT 250)
+
+`playbooks/caddy.yml` applies `roles/caddy_boot` to `caddy-blr-lxc` only.
+It is not part of `site.yml`. Run it only after a separate plan names
+CT 250. The same drop-in was applied live on 2026-11-10; a later playbook
+run should be a no-op besides confirming the file.
+
+What the role does, and does not do:
+
+- Writes `/etc/systemd/system/caddy.service.d/10-forge-boot.conf` with
+  `Wants=`/`After=network-online.target`, `StartLimitIntervalSec=0`,
+  `Restart=on-failure`, and `RestartSec=3s`. It does not edit
+  `/etc/systemd/system/caddy.service` or the Caddyfile.
+- Requires the unit file to already exist. It does not install or
+  upgrade Caddy.
+- Reloads systemd when the drop-in content changes. It does **not**
+  restart `caddy`; the running process is left alone. The new restart
+  policy applies to the next start or crash.
+- This guest uses ifupdown2. `networking.service` is wanted by
+  `network-online.target` but does not order `Before=` it, and there is
+  no `ifupdown-wait-online` or enabled `systemd-networkd-wait-online`.
+  The drop-in still declares `Wants`/`After` `network-online.target`,
+  and `Restart=on-failure` is what covers the bind-before-IP race.
+  The role does not enable a wait-online unit or set
+  `net.ipv4.ip_nonlocal_bind`.
+
+Syntax check (no SSH):
+
+```bash
+cd ansible
+cp inventory/blr.yml.example inventory/blr.yml
+ansible-playbook --syntax-check playbooks/caddy.yml
+```
+
+Live run, only when approved:
+
+```bash
+ansible-playbook playbooks/caddy.yml
 ```
 
 ## Arr (CT 182)

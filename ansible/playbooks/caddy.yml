@@ -1,0 +1,13 @@
+---
+# Ensures the Caddy boot-race systemd drop-in on CT 250.
+# Does not install Caddy, edit the Caddyfile, or restart caddy.
+# Not imported by site.yml. See ansible/README.md.
+# Do not run this against the live guest until a separate plan says so.
+# Live 2026-11-10 already wrote the same drop-in and daemon-reloaded
+# without a service restart; a later apply should be a no-op besides
+# confirming the file.
+- name: Ensure Caddy boot drop-in
+  hosts: caddy-blr-lxc
+  gather_facts: false
+  roles:
+    - role: caddy_boot
