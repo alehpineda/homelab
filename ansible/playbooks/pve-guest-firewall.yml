@@ -2,7 +2,8 @@
 # PVE guest firewall (outer layer) for BRL CTs. See docs/runbooks/pve-guest-firewall.md.
 #   cd ansible && ansible-playbook playbooks/pve-guest-firewall.yml \
 #     -e '{"pve_fw_rollout":[164]}' -e pve_fw_token_id=... -e pve_fw_token_secret=... --check --diff
-# The NIC step delegates to inventory host `pve` (grokops, sudo pct).
+# NIC firewall=1 via API by default (token has SDN.Use). Set pve_fw_nic_via_api=false
+# to fall back to inventory host `pve` (grokops, sudo pct).
 - name: PVE guest firewall
   hosts: localhost
   gather_facts: false

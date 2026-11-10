@@ -1,6 +1,61 @@
 ---
 - ansible.builtin.include_tasks: api_vars.yml
 
+- name: "CT {{ pve_fw_vmid }}: desired rule list"
+  ansible.builtin.set_fact:
+    _ct_rules: "{{ pve_fw_ct_rules[pve_fw_vmid] | default([]) }}"
+    _ct_ipsets: "{{ (pve_fw_ct_ipsets | default({}))[pve_fw_vmid] | default({}) }}"
+
+- name: "CT {{ pve_fw_vmid }}: ensure guest ipsets exist (e.g. ipfilter-net0)"
+  when: _ct_ipsets | length > 0
+  block:
+    - name: "CT {{ pve_fw_vmid }}: list guest ipsets"
+      ansible.builtin.uri:
+        url: "{{ pve_api_url }}/nodes/{{ pve_node }}/lxc/{{ pve_fw_vmid }}/firewall/ipset"
+        headers: "{{ _pve_hdr }}"
+        validate_certs: "{{ pve_api_validate_certs }}"
+      register: _g_ipsets
+      check_mode: false
+      no_log: true
+
+    - name: "CT {{ pve_fw_vmid }}: create missing guest ipsets"
+      ansible.builtin.uri:
+        url: "{{ pve_api_url }}/nodes/{{ pve_node }}/lxc/{{ pve_fw_vmid }}/firewall/ipset"
+        method: POST
+        headers: "{{ _pve_hdr }}"
+        body_format: form-urlencoded
+        body:
+          name: "{{ item.key }}"
+          comment: "{{ item.value.comment | default('') }}"
+        validate_certs: "{{ pve_api_validate_certs }}"
+      loop: "{{ _ct_ipsets | dict2items }}"
+      when: item.key not in (_g_ipsets.json.data | map(attribute='name') | list)
+      changed_when: true
+      no_log: true
+
+    - name: "CT {{ pve_fw_vmid }}: read guest ipset members"
+      ansible.builtin.uri:
+        url: "{{ pve_api_url }}/nodes/{{ pve_node }}/lxc/{{ pve_fw_vmid }}/firewall/ipset/{{ item.key }}"
+        headers: "{{ _pve_hdr }}"
+        validate_certs: "{{ pve_api_validate_certs }}"
+      loop: "{{ _ct_ipsets | dict2items }}"
+      register: _g_members
+      check_mode: false
+      no_log: true
+
+    - name: "CT {{ pve_fw_vmid }}: add missing guest ipset members"
+      ansible.builtin.uri:
+        url: "{{ pve_api_url }}/nodes/{{ pve_node }}/lxc/{{ pve_fw_vmid }}/firewall/ipset/{{ item.0.item.key }}"
+        method: POST
+        headers: "{{ _pve_hdr }}"
+        body_format: form-urlencoded
+        body: {cidr: "{{ item.1 }}"}
+        validate_certs: "{{ pve_api_validate_certs }}"
+      loop: "{{ _g_members.results | subelements('item.value.cidrs') }}"
+      when: item.1 not in (item.0.json.data | map(attribute='cidr') | list)
+      changed_when: true
+      no_log: true
+
 - name: "CT {{ pve_fw_vmid }}: read current rules"
   ansible.builtin.uri:
     url: "{{ pve_api_url }}/nodes/{{ pve_node }}/lxc/{{ pve_fw_vmid }}/firewall/rules"
@@ -13,7 +68,7 @@
 - name: "CT {{ pve_fw_vmid }}: desired vs live (normalised)"
   ansible.builtin.set_fact:
     _want: >-
-      {{ ['group:ct_base'] + (pve_fw_ct_rules[pve_fw_vmid] | map('pve_fw_rule_key') | list) }}
+      {{ ['group:ct_base'] + (_ct_rules | map('pve_fw_rule_key') | list) }}
     _have: >-
       {{ _rules.json.data | sort(attribute='pos') | map('pve_fw_live_key') | list }}
 
@@ -30,7 +85,7 @@
     body_format: form-urlencoded
     body: "{{ {'type': 'in', 'action': 'ACCEPT', 'enable': 1, 'comment': 'forge pve_guest_firewall'} | combine(item) }}"
     validate_certs: "{{ pve_api_validate_certs }}"
-  loop: "{{ pve_fw_ct_rules[pve_fw_vmid] | reverse | list }}"
+  loop: "{{ _ct_rules | reverse | list }}"
   when: _have | length == 0
   changed_when: true
   no_log: true
@@ -66,7 +121,23 @@
   check_mode: false
   no_log: true
 
-- name: "CT {{ pve_fw_vmid }}: net firewall=1 (pct set on the host; same MAC/IP)"
+- name: "CT {{ pve_fw_vmid }}: net firewall=1 via API (needs SDN.Use on bridge)"
+  ansible.builtin.uri:
+    url: "{{ pve_api_url }}/nodes/{{ pve_node }}/lxc/{{ pve_fw_vmid }}/config"
+    method: PUT
+    headers: "{{ _pve_hdr }}"
+    body_format: form-urlencoded
+    body: "{{ {item.key: (item.value.split(',') | reject('match', '^firewall=') | list + ['firewall=1']) | join(',')} }}"
+    validate_certs: "{{ pve_api_validate_certs }}"
+  loop: "{{ _cfg.json.data | dict2items | selectattr('key', 'match', '^net[0-9]+$') | list }}"
+  when:
+    - pve_fw_set_nic_flag | bool
+    - pve_fw_nic_via_api | bool
+    - "'firewall=1' not in item.value"
+  changed_when: true
+  no_log: true
+
+- name: "CT {{ pve_fw_vmid }}: net firewall=1 via pct (fallback; same MAC/IP)"
   ansible.builtin.command:
     argv:
       - sudo
@@ -79,5 +150,6 @@
   loop: "{{ _cfg.json.data | dict2items | selectattr('key', 'match', '^net[0-9]+$') | list }}"
   when:
     - pve_fw_set_nic_flag | bool
+    - not (pve_fw_nic_via_api | bool)
     - "'firewall=1' not in item.value"
   changed_when: true
