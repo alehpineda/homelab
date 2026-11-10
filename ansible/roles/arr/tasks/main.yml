@@ -74,6 +74,10 @@
       owner: "1000"
       group: "1000"
       mode: "0750"
+    - path: "{{ arr_listenarr_config }}"
+      owner: "1000"
+      group: "1000"
+      mode: "0750"
     - path: /usr/local/lib/arr
       owner: root
       group: root

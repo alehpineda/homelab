@@ -18,6 +18,7 @@ arr_sonarr_config: /opt/arr/sonarr
 arr_radarr_config: /opt/arr/radarr
 arr_lidarr_config: /opt/arr/lidarr
 arr_bazarr_config: /opt/arr/bazarr
+arr_listenarr_config: /opt/arr/listenarr
 arr_media_mount: /data/media
 arr_downloads_mount: /data/downloads
 arr_usenet_mount: /data/usenet
@@ -27,9 +28,11 @@ arr_phase2_mounts:
   - /data/media/movies
   - /data/media/tv
   - /data/media/music
+  - /data/media/audiobooks
   - /data/downloads/movies
   - /data/downloads/tv
   - /data/downloads/music
+  - /data/downloads/books
   - /data/usenet/complete/movies
   - /data/usenet/complete/tv
   - /data/usenet/complete/music

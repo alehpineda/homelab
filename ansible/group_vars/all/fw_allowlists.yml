@@ -74,7 +74,7 @@ pve_fw_ct_rules:
   181:  # metube
     - {proto: tcp, dport: "8081", source: +caddy}
   182:  # arr (docker DNAT inside the CT; bridge sees pre-DNAT dport)
-    - {proto: tcp, dport: "5001,6767,7878,8085,8686,8989,9696", source: +caddy}
+    - {proto: tcp, dport: "4545,5001,6767,7878,8085,8686,8989,9696", source: +caddy}
     - {proto: tcp, dport: "7878,8989", source: seerr}
   183:  # seerr
     - {proto: tcp, dport: "5055", source: 10.10.0.0/24}
@@ -93,6 +93,24 @@ pve_fw_ct_rules:
     - {proto: tcp, dport: "80", source: +caddy}
   190:  # wazuh dashboard (agents 1514/1515 not opened yet)
     - {proto: tcp, dport: "443", source: +caddy}
+  191:  # homepage (dashboard trial)
+    - {proto: tcp, dport: "3000", source: +caddy}
+  192:  # homarr (dashboard trial)
+    - {proto: tcp, dport: "7575", source: +caddy}
+  193:  # bentopdf (plain http :8080, no redirect)
+    - {proto: tcp, dport: "8080", source: +caddy}
+  194:  # pricebuddy (scraper 127.0.0.1:3000 stays local)
+    - {proto: tcp, dport: "80", source: +caddy}
+  195:  # changedetection (browserless :3000 stays closed)
+    - {proto: tcp, dport: "5000", source: +caddy}
+  196:  # linkwarden
+    - {proto: tcp, dport: "3000", source: +caddy}
+  197:  # semaphore
+    - {proto: tcp, dport: "3000", source: +caddy}
+  198:  # homer (dashboard trial)
+    - {proto: tcp, dport: "8010", source: +caddy}
+  199:  # myip
+    - {proto: tcp, dport: "18966", source: +caddy}
 
   # --- wave 2 (DRAFT, no apply) ---
   153:  # adguard A — LAN+mesh DNS; UI via Caddy :80; DoT/DoH/DoQ; sync hits :443

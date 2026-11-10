@@ -51,16 +51,34 @@ handle @family_ingress {
 			}
 		}
 	}
+	@fam_bentopdf host bentopdf.alehpineda.com
+	handle @fam_bentopdf {
+		reverse_proxy http://10.10.0.93:8080 {
+			transport http {
+				local_address 10.10.0.251
+				network_proxy none
+			}
+		}
+	}
+	@fam_linkwarden host linkwarden.alehpineda.com
+	handle @fam_linkwarden {
+		reverse_proxy http://10.10.0.96:3000 {
+			transport http {
+				local_address 10.10.0.251
+				network_proxy none
+			}
+		}
+	}
 	handle {
 		abort
 	}
  }
 }
-@family_sni_denied expression `{http.request.tls.server_name} in ['jellyfin.alehpineda.com', 'seerr.alehpineda.com', 'searxng.alehpineda.com', 'romm.alehpineda.com', 'navidrome.alehpineda.com', 'audiobookshelf.alehpineda.com']`
+@family_sni_denied expression `{http.request.tls.server_name} in ['jellyfin.alehpineda.com', 'seerr.alehpineda.com', 'searxng.alehpineda.com', 'romm.alehpineda.com', 'navidrome.alehpineda.com', 'audiobookshelf.alehpineda.com', 'bentopdf.alehpineda.com', 'linkwarden.alehpineda.com']`
 handle @family_sni_denied {
  abort
 }
-@family_denied host jellyfin.alehpineda.com seerr.alehpineda.com searxng.alehpineda.com romm.alehpineda.com navidrome.alehpineda.com audiobookshelf.alehpineda.com
+@family_denied host jellyfin.alehpineda.com seerr.alehpineda.com searxng.alehpineda.com romm.alehpineda.com navidrome.alehpineda.com audiobookshelf.alehpineda.com bentopdf.alehpineda.com linkwarden.alehpineda.com
 handle @family_denied {
  abort
 }
@@ -253,6 +271,78 @@ handle @dockge {
 			}
 		}
 	}
+	@homepage host homepage.alehpineda.com
+	handle @homepage {
+		reverse_proxy http://10.10.0.91:3000 {
+			transport http {
+				local_address 10.10.0.250
+				network_proxy none
+			}
+		}
+	}
+	@homarr host homarr.alehpineda.com
+	handle @homarr {
+		reverse_proxy http://10.10.0.92:7575 {
+			transport http {
+				local_address 10.10.0.250
+				network_proxy none
+			}
+		}
+	}
+	@pricebuddy host pricebuddy.alehpineda.com
+	handle @pricebuddy {
+		reverse_proxy http://10.10.0.94:80 {
+			transport http {
+				local_address 10.10.0.250
+				network_proxy none
+			}
+		}
+	}
+	@changedetection host changedetection.alehpineda.com
+	handle @changedetection {
+		reverse_proxy http://10.10.0.95:5000 {
+			transport http {
+				local_address 10.10.0.250
+				network_proxy none
+			}
+		}
+	}
+	@semaphore host semaphore.alehpineda.com
+	handle @semaphore {
+		reverse_proxy http://10.10.0.97:3000 {
+			transport http {
+				local_address 10.10.0.250
+				network_proxy none
+			}
+		}
+	}
+	@homer host homer.alehpineda.com
+	handle @homer {
+		reverse_proxy http://10.10.0.98:8010 {
+			transport http {
+				local_address 10.10.0.250
+				network_proxy none
+			}
+		}
+	}
+	@myip host myip.alehpineda.com
+	handle @myip {
+		reverse_proxy http://10.10.0.99:18966 {
+			transport http {
+				local_address 10.10.0.250
+				network_proxy none
+			}
+		}
+	}
+	@listenarr host listenarr.alehpineda.com
+	handle @listenarr {
+		reverse_proxy http://10.10.0.82:4545 {
+			transport http {
+				local_address 10.10.0.250
+				network_proxy none
+			}
+		}
+	}
 	handle {
 		abort
 	}
@@ -263,7 +353,7 @@ http://*.alehpineda.com {
  route {
  @on251 expression `{http.request.local.host} == "10.10.0.251"`
  handle @on251 {
- @family_ok host jellyfin.alehpineda.com seerr.alehpineda.com searxng.alehpineda.com romm.alehpineda.com navidrome.alehpineda.com audiobookshelf.alehpineda.com
+ @family_ok host jellyfin.alehpineda.com seerr.alehpineda.com searxng.alehpineda.com romm.alehpineda.com navidrome.alehpineda.com audiobookshelf.alehpineda.com bentopdf.alehpineda.com linkwarden.alehpineda.com
  handle @family_ok {
  redir https://{host}{uri} 308
  }
@@ -271,7 +361,7 @@ http://*.alehpineda.com {
  abort
  }
  }
- @family_denied host jellyfin.alehpineda.com seerr.alehpineda.com searxng.alehpineda.com romm.alehpineda.com navidrome.alehpineda.com audiobookshelf.alehpineda.com
+ @family_denied host jellyfin.alehpineda.com seerr.alehpineda.com searxng.alehpineda.com romm.alehpineda.com navidrome.alehpineda.com audiobookshelf.alehpineda.com bentopdf.alehpineda.com linkwarden.alehpineda.com
  handle @family_denied {
  abort
  }
