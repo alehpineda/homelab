@@ -204,16 +204,15 @@ services:
       - no-new-privileges:true
 
   watchtower:
-    # 1.7.1 amd64. The 1.7.1/latest index digest is
-    # sha256:6dd50763bbd632a83cb154d5451700530d1e44200b268a4e9488fefdfcf2b038.
-    # This pin is the amd64 image. No command arguments: with none set,
-    # Watchtower monitors every running container on this Docker daemon.
-    # No WATCHTOWER_LABEL_ENABLE and no WATCHTOWER_SCOPE, so every running
-    # container is monitored even without a label. Phase 2 services still
+    # nickfedor/watchtower 1.24.0 amd64 (maintained fork of archived containrrr).
+    # Platform digest sha256:7f7ed5b9239c9dc6f97fc54666bedca85688e8e5cc4e2b3b2aaa41953af1f011
+    # Multi-arch index for tag 1.24.0: sha256:e96976bcbeaf0a9adeddc9016a539c27a2245ef6bb7d3ca97ed106783350d387
+    # No command arguments: monitors every running container on this daemon.
+    # No WATCHTOWER_LABEL_ENABLE and no WATCHTOWER_SCOPE. Phase 2 services still
     # set enable and monitor-only labels. LABEL_TAKE_PRECEDENCE is false,
     # so those labels cannot turn updates on. MONITOR_ONLY is hardcoded.
     # A value in .env cannot turn updates on. The socket is read-only.
-    image: containrrr/watchtower@sha256:f9086bfda061100361fc2bacf069585678d760d705cf390918ccdbda8a00980b
+    image: nickfedor/watchtower@sha256:7f7ed5b9239c9dc6f97fc54666bedca85688e8e5cc4e2b3b2aaa41953af1f011
     pull_policy: missing
     container_name: watchtower
     environment:
@@ -222,8 +221,8 @@ services:
       WATCHTOWER_SCHEDULE: "0 0 6 * * *"
       TZ: America/Chicago
       WATCHTOWER_NOTIFICATIONS_HOSTNAME: arr-blr-lxc
-      # Watchtower 1.7.1 speaks Docker API 1.25. Docker 29 rejects that
-      # and the container crash-loops. 1.44 is hardcoded here.
+      # Fork autonegotiates Docker API; keep 1.44 pinned for Docker 29 parity
+      # with the prior containrrr pin (avoids old-client defaults).
       DOCKER_API_VERSION: "1.44"
       WATCHTOWER_NOTIFICATION_URL: ${WATCHTOWER_NOTIFICATION_URL:?set WATCHTOWER_NOTIFICATION_URL in /opt/stacks/arr/.env}
     volumes:
