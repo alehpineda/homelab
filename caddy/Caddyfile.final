@@ -189,6 +189,15 @@ handle @dockge {
 	handle @grafana {
 		reverse_proxy http://10.10.0.71:3000
 	}
+	@uptime host uptime.alehpineda.com
+	handle @uptime {
+		reverse_proxy http://10.10.0.84:3001 {
+			transport http {
+				local_address 10.10.0.250
+				network_proxy none
+			}
+		}
+	}
 	handle {
 		abort
 	}
