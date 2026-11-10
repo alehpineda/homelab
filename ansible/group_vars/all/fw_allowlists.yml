@@ -92,10 +92,12 @@ pve_fw_ct_rules:
     - {proto: tcp, dport: "5335", source: adguard_a}
     - {proto: udp, dport: "5335", source: adguard_b}
     - {proto: tcp, dport: "5335", source: adguard_b}
-  155:  # adguard B — LAN+mesh DNS; sync pulls http://.55:80; no TLS; on vmbr1
+  155:  # adguard B — LAN+mesh DNS; HTTPS UI for Caddy failover; sync A->B over HTTPS; on vmbr1
     - {proto: udp, dport: "53", source: +management, comment: "DNS UDP LAN+mesh"}
     - {proto: tcp, dport: "53", source: +management, comment: "DNS TCP LAN+mesh"}
-    - {proto: tcp, dport: "80", source: adguardsync, comment: "AdGuardSync A->B"}
+    - {proto: tcp, dport: "80", source: adguardsync, comment: "HTTP leftover / force_https redirect"}
+    - {proto: tcp, dport: "443", source: +caddy, comment: "admin UI failover via Caddy"}
+    - {proto: tcp, dport: "443", source: adguardsync, comment: "AdGuardSync A->B over HTTPS"}
   156:  # adguardsync — outbound only (cron A->B); no app listen
     []
   160:  # searxng (NetBird peer)
