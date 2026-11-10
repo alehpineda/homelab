@@ -24,69 +24,6 @@ handle @family_ingress {
 	handle @fam_searxng {
 		reverse_proxy http://10.10.0.60:8888
 	}
-@b_prowlarr host prowlarr.alehpineda.com
-handle @b_prowlarr {
- reverse_proxy http://10.10.0.82:9696 {
- transport http {
- local_address 10.10.0.251
- network_proxy none
- }
- }
-}
-@b_sonarr host sonarr.alehpineda.com
-handle @b_sonarr {
- reverse_proxy http://10.10.0.82:8989 {
- transport http {
- local_address 10.10.0.251
- network_proxy none
- }
- }
-}
-@b_radarr host radarr.alehpineda.com
-handle @b_radarr {
- reverse_proxy http://10.10.0.82:7878 {
- transport http {
- local_address 10.10.0.251
- network_proxy none
- }
- }
-}
-@b_lidarr host lidarr.alehpineda.com
-handle @b_lidarr {
- reverse_proxy http://10.10.0.82:8686 {
- transport http {
- local_address 10.10.0.251
- network_proxy none
- }
- }
-}
-@b_bazarr host bazarr.alehpineda.com
-handle @b_bazarr {
- reverse_proxy http://10.10.0.82:6767 {
- transport http {
- local_address 10.10.0.251
- network_proxy none
- }
- }
-}
-@b_qbittorrent host qbittorrent.alehpineda.com
-handle @b_qbittorrent {
- reverse_proxy http://10.10.0.82:8085 {
- transport http {
- local_address 10.10.0.251
- network_proxy none
- }
- }
-}
-@b_dockge host dockge.alehpineda.com
-handle @b_dockge {
- reverse_proxy http://10.10.0.82:5001 {
- transport http {
- local_address 10.10.0.251
- network_proxy none
- }
- }
-}
 	handle {
 		abort
 	}
@@ -262,7 +199,7 @@ http://*.alehpineda.com {
  route {
  @on251 expression `{http.request.local.host} == "10.10.0.251"`
  handle @on251 {
- @family_ok host jellyfin.alehpineda.com seerr.alehpineda.com searxng.alehpineda.com prowlarr.alehpineda.com sonarr.alehpineda.com radarr.alehpineda.com lidarr.alehpineda.com bazarr.alehpineda.com qbittorrent.alehpineda.com dockge.alehpineda.com
+ @family_ok host jellyfin.alehpineda.com seerr.alehpineda.com searxng.alehpineda.com
  handle @family_ok {
  redir https://{host}{uri} 308
  }
