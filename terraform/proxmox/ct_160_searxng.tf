@@ -12,6 +12,12 @@ resource "proxmox_lxc" "ct_160" {
   memory       = 2048
   swap         = 512
   tags         = "community-script;search;storage-data2"
+  # Static LXCs do not get Flint DHCP option 6. Leaving nameserver unset
+  # made the guest use 10.10.0.1 only; Flint DNS timed out to engine
+  # hosts on 2026-11-10 and SearXNG returned no results. Live: pct set
+  # 160 --nameserver "10.10.0.53 10.10.0.55" (needs a CT reboot to
+  # rewrite resolv.conf).
+  nameserver   = "10.10.0.53 10.10.0.55"
 
   rootfs {
     storage = var.pm_storage
