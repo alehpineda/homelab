@@ -78,6 +78,8 @@ pve_fw_ct_rules:
     - {proto: tcp, dport: "7878,8989", source: seerr}
   183:  # seerr
     - {proto: tcp, dport: "5055", source: 10.10.0.0/24}
+  184:  # uptime kuma
+    - {proto: tcp, dport: "3001", source: +caddy}
 
   # --- wave 2 (DRAFT, no apply) ---
   153:  # adguard A — LAN+mesh DNS; UI via Caddy :80; DoT/DoH/DoQ; sync hits :443

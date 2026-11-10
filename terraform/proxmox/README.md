@@ -6,7 +6,7 @@ import. The example guest in `main.tf` is commented out. Running apply
 from this tree is not approved and must not create or destroy a container.
 
 This directory does not approve an apply. Create and destroy of any guest,
-including CTIDs 150, 151, 153, 154, 155, 156, 160–162, 164–169, 171–176, 180–183, and 250, wait for a separate approved plan. CT 176 create-time fields are declared and ignored so the existing guest is not modified. CT 182 (`arr-blr-lxc`) is live. CT 183 (`seerr-blr-lxc`) is live. See [docs/runbooks/arr-phase1.md](../../docs/runbooks/arr-phase1.md). Follow
+including CTIDs 150, 151, 153, 154, 155, 156, 160–162, 164–169, 171–176, 180–184, and 250, wait for a separate approved plan. CT 176 create-time fields are declared and ignored so the existing guest is not modified. CT 182 (`arr-blr-lxc`) is live. CT 183 (`seerr-blr-lxc`) is live. CT 184 (`uptimekuma-blr-lxc`) is declared. See [docs/runbooks/arr-phase1.md](../../docs/runbooks/arr-phase1.md). Follow
 [docs/runbooks/lxc-change.md](../../docs/runbooks/lxc-change.md).
 
 Node facts (no secrets): [docs/blr.md](../../docs/blr.md).
@@ -17,8 +17,9 @@ Monitoring and Postiz wiring: [docs/blr-monitoring.md](../../docs/blr-monitoring
 | Node | `barbatoslupusrex` |
 | LAN | `10.10.0.21` |
 | NetBird | `100.85.104.18` |
-| Existing CTIDs | 150, 151, 153, 154, 155, 156, 160–162, 164–169, 171–176, 180, 181, 182, 183, 250 |
+| Existing CTIDs | 150, 151, 153, 154, 155, 156, 160–162, 164–169, 171–176, 180, 181, 182, 183, 184, 250 |
 | CT 183 | `seerr-blr-lxc` at 10.10.0.83. Live. Seerr v3.5.1 via community-script (`seerr.service`, port 5055). Root locked. Family ingress planned via Caddy .251 (family/guest ingress, planned). |
+| CT 184 | `uptimekuma-blr-lxc` at 10.10.0.84. Declared. Uptime Kuma 2.5.9 via community-script (`uptime-kuma.service`, port 3001). 2 cores / 2048 MiB / 8G. Root locked. Admin vhost `uptime.alehpineda.com` on Caddy .250. |
 | CT 176 day-1 | XFCE 4.20 + xrdp + Grok Bot 0.78.5 + Google Chrome stable (default browser) |
 | Provider | `telmate/proxmox` `3.0.2-rc10` |
 
@@ -208,11 +209,13 @@ models dataset, and the `OLLAMA_MODELS` drop-in are documented in
 
 CT 183 (`seerr-blr-lxc`) is live on BRL at `10.10.0.83` (created 2026-11-09 via targeted apply). Seerr v3.5.1 is installed from the community-scripts seerr installer (`ct/seerr.sh`) as native systemd `seerr.service` on port 5055. Not Docker. Root is locked. Family ingress is planned via Caddy .251 (family/guest ingress, planned).
 
+CT 184 (`uptimekuma-blr-lxc`) is declared at `10.10.0.84` (2 cores / 2048 MiB / 8G root on data2). Day-1 install is the community-scripts uptimekuma installer inside the IaC guest (Node 22, Uptime Kuma 2.5.9, systemd `uptime-kuma` on port 3001). Not Docker. Do not run `ct/uptimekuma.sh` on the PVE host. Root is locked. Admin vhost is `uptime.alehpineda.com` on Caddy `.250`. After create, run `pct set 184 --timezone America/Chicago` then `pct start 184`.
+
 The Telmate `proxmox_lxc` resource cannot set the container timezone. After create, run `pct set 183 --timezone America/Chicago`. The same applies to other CTs created this way.
 
 ## PVE guest firewall (not owned by Terraform)
 
-Since 2026-11-09, CTs 164, 172, 173, 174, 175, 180, 181, 182 and 183 run with
+Since 2026-11-09, CTs 164, 172, 173, 174, 175, 180, 181, 182, 183, and 184 run with
 `net0 firewall=1` and a per-CT PVE firewall (`policy_in: DROP`, `ipfilter: 1`,
 `GROUP ct_base` plus per-CT allows). The Telmate provider keeps `network` in
 `ignore_changes`, so Terraform does not read or flap the NIC flag. The Ansible
