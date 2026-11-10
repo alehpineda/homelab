@@ -1,0 +1,18 @@
+---
+pve_api_url: https://10.10.0.21:8006/api2/json
+pve_node: barbatoslupusrex
+# Token forge@pve!fw (role ForgeFirewall: Sys.Audit, Sys.Modify, VM.Audit,
+# VM.Config.Network). Pass at runtime, never commit:
+#   -e pve_fw_token_id=... -e pve_fw_token_secret=...  (or lookup from OpenBao)
+pve_fw_token_id: ""
+pve_fw_token_secret: ""
+pve_api_validate_certs: false
+# VMIDs whose guest firewall is enabled. Live 2026-11-09:
+# [164, 175, 172, 173, 174, 180, 181, 182, 183]. Empty = no-op.
+pve_fw_rollout: []
+# Set net0..N firewall=1. The token lacks SDN.Use on
+# /sdn/zones/localnetwork/<bridge>, so this runs `pct set` on the PVE host
+# (grokops sudo pct) instead of the API. Re-plugs the host veth through a
+# fwbr bridge: ~1 s blip, same MAC/IP, no CT restart.
+pve_fw_set_nic_flag: true
+pve_fw_nic_host: pve

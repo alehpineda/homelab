@@ -210,6 +210,15 @@ CT 183 (`seerr-blr-lxc`) is live on BRL at `10.10.0.83` (created 2026-11-09 via 
 
 The Telmate `proxmox_lxc` resource cannot set the container timezone. After create, run `pct set 183 --timezone America/Chicago`. The same applies to other CTs created this way.
 
+## PVE guest firewall (not owned by Terraform)
+
+Since 2026-11-09, CTs 164, 172, 173, 174, 175, 180, 181, 182 and 183 run with
+`net0 firewall=1` and a per-CT PVE firewall (`policy_in: DROP`, `ipfilter: 1`,
+`GROUP ct_base` plus per-CT allows). The Telmate provider keeps `network` in
+`ignore_changes`, so Terraform does not read or flap the NIC flag. The Ansible
+role `pve_guest_firewall` owns it; see
+[docs/runbooks/pve-guest-firewall.md](../../docs/runbooks/pve-guest-firewall.md).
+
 ## Rollback
 
 For this skeleton, rollback is git: close the pull request or revert it.

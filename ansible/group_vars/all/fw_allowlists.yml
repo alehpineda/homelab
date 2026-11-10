@@ -1,0 +1,66 @@
+---
+# Single source of truth for BRL guest inbound allowlists.
+# Applied 2026-11-09 18:52-19:01 CT as PVE guest firewall (outer layer) on
+# the CTs listed in pve_fw_rollout. The in-guest nft tables hand-written the
+# same day (inner layer) carry the same ports and sources.
+# Plan: Forge plans/2026-11-09-pve-guest-firewall.md (owner yes t634u).
+
+pve_fw_cluster_ipsets:
+  caddy:
+    comment: Caddy eth0/eth1
+    cidrs: [10.10.0.250, 10.10.0.251]
+  nb_routers:
+    comment: NetBird routing peers (masquerade)
+    cidrs: [10.10.0.50, 10.10.0.51]
+  # `management` already exists (10.10.0.0/24, 100.85.0.0/16) and is used by
+  # node rules for 22/8006/3128. Not managed here; change it only with NetTit.
+
+pve_fw_cluster_aliases:
+  grafana: 10.10.0.71
+  prometheus: 10.10.0.72
+  firecrawl: 10.10.0.64
+  n8n: 10.10.0.70
+  seerr: 10.10.0.83
+
+# Security group attached to every rolled-out CT.
+pve_fw_group_ct_base:
+  - {action: ACCEPT, macro: SSH, source: +management, comment: SSH from management}
+  - {action: ACCEPT, proto: icmp, comment: icmp}
+
+pve_fw_ct_options:
+  enable: 1
+  policy_in: DROP
+  policy_out: ACCEPT
+  ipfilter: 1
+  log_level_in: nolog
+
+# Extra IN ACCEPT rules per VMID (after GROUP ct_base). source omitted = any.
+pve_fw_ct_rules:
+  164:  # firecrawl (NetBird peer)
+    - {proto: tcp, dport: "3002", source: +caddy}
+    - {proto: tcp, dport: "3002", source: n8n}
+    - {proto: udp, dport: "51820"}
+  175:  # ollama
+    - {proto: tcp, dport: "11434", source: +caddy}
+    - {proto: tcp, dport: "11434", source: firecrawl}
+    - {proto: tcp, dport: "11434", source: +nb_routers}
+    - {proto: tcp, dport: "11434", source: n8n}
+  172:  # prometheus
+    - {proto: tcp, dport: "9090", source: grafana}
+  173:  # loki
+    - {proto: tcp, dport: "3100", source: grafana}
+    - {proto: tcp, dport: "9095", source: grafana}
+  174:  # pve-exporter
+    - {proto: tcp, dport: "9221", source: prometheus}
+  180:  # jellyfin (NetBird peer; LAN stays open until a guest VLAN exists)
+    - {proto: tcp, dport: "8096", source: 10.10.0.0/24}
+    - {proto: udp, dport: "7359", source: 10.10.0.0/24}
+    - {proto: udp, dport: "1900", source: 10.10.0.0/24}
+    - {proto: udp, dport: "51820"}
+  181:  # metube
+    - {proto: tcp, dport: "8081", source: +caddy}
+  182:  # arr (docker DNAT inside the CT; bridge sees pre-DNAT dport)
+    - {proto: tcp, dport: "5001,6767,7878,8085,8686,8989,9696", source: +caddy}
+    - {proto: tcp, dport: "7878,8989", source: seerr}
+  183:  # seerr
+    - {proto: tcp, dport: "5055", source: 10.10.0.0/24}

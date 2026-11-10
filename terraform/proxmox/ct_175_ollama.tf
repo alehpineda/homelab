@@ -65,6 +65,9 @@ resource "proxmox_lxc" "ct_175" {
     # target_node, cmode, network, mountpoint, rootfs[0].storage: Telmate
     # 3.0.2-rc10 import does not read these back, so they would force
     # replacement. They match pct config; see docs/runbooks/terraform-import.md.
+    # net0 firewall=1 and the PVE guest firewall (.fw rules/options) are owned by
+    # ansible role pve_guest_firewall (group_vars/all/fw_allowlists.yml), live
+    # 2026-11-09. `network` stays in ignore_changes so Terraform never flaps the flag.
     ignore_changes = [
       ostemplate, password, ssh_public_keys, start, description,
       target_node, cmode, network, mountpoint, rootfs[0].storage,

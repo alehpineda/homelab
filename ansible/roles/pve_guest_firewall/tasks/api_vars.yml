@@ -1,0 +1,6 @@
+---
+- name: API auth header
+  ansible.builtin.set_fact:
+    _pve_hdr:
+      Authorization: "PVEAPIToken={{ pve_fw_token_id }}={{ pve_fw_token_secret }}"
+  no_log: true

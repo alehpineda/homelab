@@ -1,0 +1,20 @@
+---
+# PVE guest firewall (outer layer) via the PVE API. Runs on localhost.
+# Order per CT: rules + options first (no effect while the NIC flag is off),
+# then net firewall=1. Rollback: PUT .../firewall/options enable=0.
+
+- name: Require the API token at runtime
+  ansible.builtin.assert:
+    that: [pve_fw_token_id | length > 0, pve_fw_token_secret | length > 0]
+    fail_msg: Pass pve_fw_token_id / pve_fw_token_secret at runtime (never commit them).
+  no_log: true
+
+- name: Cluster objects (ipsets, aliases, group ct_base)
+  ansible.builtin.include_tasks: cluster.yml
+  when: pve_fw_rollout | length > 0
+
+- name: Per-CT firewall
+  ansible.builtin.include_tasks: guest.yml
+  loop: "{{ pve_fw_rollout }}"
+  loop_control:
+    loop_var: pve_fw_vmid
