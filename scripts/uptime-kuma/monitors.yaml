@@ -19,22 +19,22 @@ library:
   package: uptime-kuma-api2
   version: "2.10.0"
 
-# Applied only when SMTP_HOST, SMTP_PORT, SMTP_FROM, and SMTP_TO are set,
-# plus SMTP_USER / SMTP_PASSWORD when the relay requires auth.
-# seed.py skips this block entirely when those env vars are absent.
+# Non-secret SMTP fields live here. SMTP_PASSWORD comes from the environment
+# only (never in this file). Env vars still override host/port/from/to/user
+# if set. apply_existing stays false; the seeder attaches by name via
+# notificationIDList instead of Kuma's one-shot "Apply on all".
 notification:
-  name: Forge Kuma email
+  name: Forge email (Gmail)
   type: smtp
   is_default: true
-  apply_existing: true
+  apply_existing: false
   smtp_secure: false   # STARTTLS on 587; set true only for implicit TLS (465)
-  smtp_host_env: SMTP_HOST
-  smtp_port_env: SMTP_PORT
-  smtp_user_env: SMTP_USER
+  smtp_host: smtp.gmail.com
+  smtp_port: 587
+  smtp_from: ale.hpineda@gmail.com
+  smtp_to: deathscythe+kuma@mail.grokbot.com
+  smtp_user: ale.hpineda@gmail.com
   smtp_password_env: SMTP_PASSWORD
-  smtp_from_env: SMTP_FROM
-  smtp_to_env: SMTP_TO
-  default_to: deathscythe+kuma@mail.grokbot.com
 
 tags:
   - {name: hosts,  color: "#c0392b"}
@@ -107,7 +107,9 @@ status_page:
         - Caddy admin VIP
         - Caddy family VIP
 
-# Shared defaults. resend_interval is minutes (Kuma UI). timeout is seconds.
+# Shared defaults. resend_interval is missed checks (Kuma resendInterval),
+# not minutes: 60 critical (~60 min at a 60s interval), 120 for 180s apps
+# (~6 h), 72 for 300s public (~6 h). timeout is seconds.
 defaults:
   maxretries: 3
   maxredirects: 10
@@ -117,7 +119,8 @@ defaults:
   timeout: 15
   dns_timeout: 5
   resend_critical: 60
-  resend_standard: 360
+  resend_app: 120
+  resend_public: 72
 
 monitors:
   # --- 1) PVE / PBS / LAN hosts (5) ---
@@ -155,7 +158,7 @@ monitors:
     tags: [hosts]
     interval: 300
     timeout: 15
-    resend_interval: 360
+    resend_interval: 72
     description: Until bael is decommissioned.
 
   # --- 2) Admin URLs on Caddy .250 (20) ---
@@ -170,93 +173,93 @@ monitors:
     url: https://grafana.alehpineda.com
     tags: [admin]
     interval: 180
-    resend_interval: 360
+    resend_interval: 120
     expiry_notification: true
   - name: n8n UI
     type: http
     url: https://n8n.alehpineda.com
     tags: [admin]
     interval: 180
-    resend_interval: 360
+    resend_interval: 120
   - name: Postiz
     type: http
     url: https://postiz.alehpineda.com
     tags: [admin]
     interval: 180
-    resend_interval: 360
+    resend_interval: 120
   - name: Firecrawl
     type: http
     url: https://firecrawl.alehpineda.com
     tags: [admin]
     interval: 180
-    resend_interval: 360
+    resend_interval: 120
   - name: Ollama
     type: keyword
     url: https://ollama.alehpineda.com/api/version
     keyword: version
     tags: [admin]
     interval: 180
-    resend_interval: 360
+    resend_interval: 120
   - name: OpenBao
     type: http
     url: https://openbao.alehpineda.com
     tags: [admin]
     interval: 180
-    resend_interval: 360
+    resend_interval: 120
   - name: Vaultwarden
     type: http
     url: https://vault.alehpineda.com
     tags: [admin]
     interval: 180
-    resend_interval: 360
+    resend_interval: 120
   - name: MeTube
     type: http
     url: https://metube.alehpineda.com
     tags: [admin]
     interval: 180
-    resend_interval: 360
+    resend_interval: 120
   - name: Dockge
     type: http
     url: https://dockge.alehpineda.com
     tags: [admin]
     interval: 180
-    resend_interval: 360
+    resend_interval: 120
   - name: Prowlarr
     type: http
     url: https://prowlarr.alehpineda.com
     tags: [admin]
     interval: 180
-    resend_interval: 360
+    resend_interval: 120
   - name: Sonarr
     type: http
     url: https://sonarr.alehpineda.com
     tags: [admin]
     interval: 180
-    resend_interval: 360
+    resend_interval: 120
   - name: Radarr
     type: http
     url: https://radarr.alehpineda.com
     tags: [admin]
     interval: 180
-    resend_interval: 360
+    resend_interval: 120
   - name: Lidarr
     type: http
     url: https://lidarr.alehpineda.com
     tags: [admin]
     interval: 180
-    resend_interval: 360
+    resend_interval: 120
   - name: Bazarr
     type: http
     url: https://bazarr.alehpineda.com
     tags: [admin]
     interval: 180
-    resend_interval: 360
+    resend_interval: 120
   - name: qBittorrent
     type: http
     url: https://qbittorrent.alehpineda.com
     tags: [admin]
     interval: 180
-    resend_interval: 360
+    resend_interval: 120
   - name: PBS UI
     type: http
     url: https://pbs.alehpineda.com
@@ -274,13 +277,13 @@ monitors:
     url: https://comet.alehpineda.com
     tags: [admin]
     interval: 180
-    resend_interval: 360
+    resend_interval: 120
   - name: Uptime Kuma (Caddy canary)
     type: http
     url: https://uptime.alehpineda.com
     tags: [admin]
     interval: 180
-    resend_interval: 360
+    resend_interval: 120
     description: Kuma through Caddy. If Kuma itself is down this cannot alert; if the handle breaks, SMTP still can.
 
   # --- 3) Family URLs on Caddy .251 (3) ---
@@ -289,20 +292,20 @@ monitors:
     url: https://jellyfin.alehpineda.com
     tags: [family]
     interval: 180
-    resend_interval: 360
+    resend_interval: 120
     expiry_notification: true
   - name: Seerr
     type: http
     url: https://seerr.alehpineda.com
     tags: [family]
     interval: 180
-    resend_interval: 360
+    resend_interval: 120
   - name: SearXNG
     type: http
     url: https://searxng.alehpineda.com
     tags: [family]
     interval: 180
-    resend_interval: 360
+    resend_interval: 120
 
   # --- 4) VPS / public (4) ---
   - name: gremory ping
@@ -328,13 +331,13 @@ monitors:
     url: https://mtgdrops.com
     tags: [public]
     interval: 300
-    resend_interval: 360
+    resend_interval: 72
   - name: inspectorhacker.com
     type: http
     url: https://inspectorhacker.com
     tags: [public]
     interval: 300
-    resend_interval: 360
+    resend_interval: 72
 
   # --- 5) DNS, AdGuard A/B (4) ---
   - name: AdGuard A recurse
@@ -408,28 +411,28 @@ placeholders:
     url: https://romm.alehpineda.com
     tags: [family]
     interval: 180
-    resend_interval: 360
+    resend_interval: 120
     after_build: CT185
   - name: Navidrome
     type: http
     url: https://navidrome.alehpineda.com
     tags: [family]
     interval: 180
-    resend_interval: 360
+    resend_interval: 120
     after_build: CT186
   - name: Audiobookshelf
     type: http
     url: https://audiobookshelf.alehpineda.com
     tags: [family]
     interval: 180
-    resend_interval: 360
+    resend_interval: 120
     after_build: CT187
   - name: Dispatcharr
     type: http
     url: https://dispatcharr.alehpineda.com
     tags: [admin]
     interval: 180
-    resend_interval: 360
+    resend_interval: 120
     after_build: CT188
     description: Admin UI only. Do not monitor /output or /hdhr on a public name.
   - name: NetBox
@@ -437,12 +440,12 @@ placeholders:
     url: https://netbox.alehpineda.com
     tags: [admin]
     interval: 180
-    resend_interval: 360
+    resend_interval: 120
     after_build: CT189
   - name: Wazuh
     type: http
     url: https://wazuh.alehpineda.com
     tags: [admin]
     interval: 180
-    resend_interval: 360
+    resend_interval: 120
     after_build: CT190

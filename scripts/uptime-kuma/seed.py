@@ -73,7 +73,7 @@ def normalize_monitor(raw: dict[str, Any], defaults: dict[str, Any], label: str)
         "interval": interval,
         "maxretries": maxretries,
         "retryInterval": retry,
-        "resendInterval": int(raw.get("resend_interval") or defaults.get("resend_standard", 360)),
+        "resendInterval": int(raw.get("resend_interval") or defaults.get("resend_app") or defaults.get("resend_standard", 120)),
         "timeout": timeout,
         "ignoreTls": bool(raw.get("ignore_tls", defaults.get("ignore_tls", False))),
         "maxredirects": int(raw.get("maxredirects", defaults.get("maxredirects", 10))),
@@ -259,33 +259,79 @@ def _looks_like_totp_block(exc: BaseException | None, payload: Any = None) -> bo
     )
 
 
+def _env_or_yaml(env_name: str, yaml_val: Any) -> str:
+    env = os.environ.get(env_name, "").strip()
+    if env:
+        return env
+    if yaml_val is None:
+        return ""
+    return str(yaml_val).strip()
+
+
 def smtp_settings(cfg: dict[str, Any]) -> dict[str, Any] | None:
+    """Build SMTP settings from YAML, with env overrides.
+
+    Non-secret fields (host, port, from, to, user) may live in monitors.yaml.
+    The password is read only from the environment named by smtp_password_env
+    (default SMTP_PASSWORD). It is never read from the YAML.
+    """
     block = cfg.get("notification") or {}
     if not block:
         return None
-    host = os.environ.get(block.get("smtp_host_env") or "SMTP_HOST", "").strip()
-    port = os.environ.get(block.get("smtp_port_env") or "SMTP_PORT", "").strip()
-    mail_from = os.environ.get(block.get("smtp_from_env") or "SMTP_FROM", "").strip()
-    mail_to = os.environ.get(block.get("smtp_to_env") or "SMTP_TO", "").strip() or (
-        block.get("default_to") or ""
-    )
+    host = _env_or_yaml(block.get("smtp_host_env") or "SMTP_HOST", block.get("smtp_host"))
+    port = _env_or_yaml(block.get("smtp_port_env") or "SMTP_PORT", block.get("smtp_port"))
+    mail_from = _env_or_yaml(block.get("smtp_from_env") or "SMTP_FROM", block.get("smtp_from"))
+    mail_to = _env_or_yaml(block.get("smtp_to_env") or "SMTP_TO", block.get("smtp_to") or block.get("default_to"))
     if not (host and port and mail_from and mail_to):
         return None
-    user = os.environ.get(block.get("smtp_user_env") or "SMTP_USER", "").strip()
+    user = _env_or_yaml(block.get("smtp_user_env") or "SMTP_USER", block.get("smtp_user"))
     password = os.environ.get(block.get("smtp_password_env") or "SMTP_PASSWORD", "")
     return {
-        "name": block.get("name") or "Forge Kuma email",
+        "name": block.get("name") or "Forge email (Gmail)",
         "type": "smtp",
         "isDefault": bool(block.get("is_default", True)),
-        "applyExisting": bool(block.get("apply_existing", True)),
+        "applyExisting": bool(block.get("apply_existing", False)),
         "smtpHost": host,
         "smtpPort": int(port),
         "smtpSecure": bool(block.get("smtp_secure", False)),
+        "smtpIgnoreTLSError": bool(block.get("smtp_ignore_tls_error", False)),
         "smtpFrom": mail_from,
         "smtpTo": mail_to,
         "smtpUsername": user or None,
         "smtpPassword": password or None,
     }
+
+
+def _notification_payload(smtp: dict[str, Any], *, is_default: bool, apply_existing: bool) -> dict[str, Any]:
+    from uptime_kuma_api import NotificationType as NT
+
+    payload = {
+        "name": smtp["name"],
+        "type": NT.SMTP,
+        "isDefault": is_default,
+        "applyExisting": apply_existing,
+        "smtpHost": smtp["smtpHost"],
+        "smtpPort": smtp["smtpPort"],
+        "smtpSecure": smtp["smtpSecure"],
+        "smtpIgnoreTLSError": smtp.get("smtpIgnoreTLSError", False),
+        "smtpFrom": smtp["smtpFrom"],
+        "smtpTo": smtp["smtpTo"],
+    }
+    if smtp.get("smtpUsername"):
+        payload["smtpUsername"] = smtp["smtpUsername"]
+    if smtp.get("smtpPassword"):
+        payload["smtpPassword"] = smtp["smtpPassword"]
+    return payload
+
+
+def describe_smtp(smtp: dict[str, Any]) -> str:
+    """One-line non-secret description of the SMTP notification."""
+    user = smtp.get("smtpUsername") or "(no username)"
+    return (
+        f"{smtp['name']}: {smtp['smtpHost']}:{smtp['smtpPort']} "
+        f"STARTTLS={'off' if smtp['smtpSecure'] else 'on'} "
+        f"from={smtp['smtpFrom']} to={smtp['smtpTo']} user={user}"
+    )
 
 
 def print_status_counts(monitors: list[dict[str, Any]], expected_names: set[str]) -> dict[str, int]:
@@ -353,7 +399,7 @@ def _pin_hostname(hostname: str, ip: str) -> None:
     socket.getaddrinfo = patched  # type: ignore[method-assign]
 
 
-def seed(cfg: dict[str, Any], monitors: list[dict[str, Any]], include_placeholders: bool) -> None:
+def seed(cfg: dict[str, Any], monitors: list[dict[str, Any]], include_placeholders: bool, *, notification_only: bool = False, test_notification: bool = False, notification_default_off: bool = False) -> None:
     from uptime_kuma_api import NotificationType, UptimeKumaApi
     from uptime_kuma_api.exceptions import UptimeKumaException
 
@@ -366,7 +412,8 @@ def seed(cfg: dict[str, Any], monitors: list[dict[str, Any]], include_placeholde
 
     smtp = smtp_settings(cfg)
     if smtp is None:
-        print("SMTP env incomplete or absent: skipping Forge Kuma email notification")
+        notify_name = (cfg.get("notification") or {}).get("name") or "notification"
+        print(f"SMTP incomplete or absent: skipping {notify_name}")
 
     connect_ip = os.environ.get("KUMA_CONNECT_IP", "").strip()
     if connect_ip:
@@ -390,50 +437,57 @@ def seed(cfg: dict[str, Any], monitors: list[dict[str, Any]], include_placeholde
             print(f"verified against Uptime Kuma {version} with uptime-kuma-api2=={PINNED_LIB}")
 
         # Tags
-        existing_tags = {t["name"]: t for t in api.get_tags()}
-        tag_ids: dict[str, int] = {}
-        for tag in cfg.get("tags") or []:
-            current = existing_tags.get(tag["name"])
-            if current is None:
-                created = api.add_tag(name=tag["name"], color=tag["color"])
-                tag_ids[tag["name"]] = created["id"]
-                print(f"tag created: {tag['name']}")
-            else:
-                tag_ids[tag["name"]] = current["id"]
-                if current.get("color") != tag["color"]:
-                    api.edit_tag(current["id"], name=tag["name"], color=tag["color"])
-                    print(f"tag updated: {tag['name']}")
+        if not notification_only:
+            existing_tags = {t["name"]: t for t in api.get_tags()}
+            tag_ids: dict[str, int] = {}
+            for tag in cfg.get("tags") or []:
+                current = existing_tags.get(tag["name"])
+                if current is None:
+                    created = api.add_tag(name=tag["name"], color=tag["color"])
+                    tag_ids[tag["name"]] = created["id"]
+                    print(f"tag created: {tag['name']}")
+                else:
+                    tag_ids[tag["name"]] = current["id"]
+                    if current.get("color") != tag["color"]:
+                        api.edit_tag(current["id"], name=tag["name"], color=tag["color"])
+                        print(f"tag updated: {tag['name']}")
 
         # Notification
         notification_ids: list[int] | None = None
         if smtp is not None:
-            from uptime_kuma_api import NotificationType as NT
-
+            if not smtp.get("smtpPassword"):
+                raise SystemExit("SMTP_PASSWORD is required to apply or test the notification")
+            is_default = False if notification_default_off else bool(smtp["isDefault"])
+            apply_existing = False if notification_default_off else bool(smtp["applyExisting"])
             existing_n = {n["name"]: n for n in api.get_notifications()}
-            payload = {
-                "name": smtp["name"],
-                "type": NT.SMTP,
-                "isDefault": smtp["isDefault"],
-                "applyExisting": smtp["applyExisting"],
-                "smtpHost": smtp["smtpHost"],
-                "smtpPort": smtp["smtpPort"],
-                "smtpSecure": smtp["smtpSecure"],
-                "smtpFrom": smtp["smtpFrom"],
-                "smtpTo": smtp["smtpTo"],
-            }
-            if smtp["smtpUsername"]:
-                payload["smtpUsername"] = smtp["smtpUsername"]
-            if smtp["smtpPassword"]:
-                payload["smtpPassword"] = smtp["smtpPassword"]
+            payload = _notification_payload(smtp, is_default=is_default, apply_existing=apply_existing)
             current = existing_n.get(smtp["name"])
             if current is None:
                 created = api.add_notification(**payload)
                 notification_ids = [created["id"]]
-                print(f"notification created: {smtp['name']}")
+                print(f"notification created: {smtp['name']} (default={is_default} apply_existing={apply_existing})")
             else:
                 api.edit_notification(current["id"], **payload)
                 notification_ids = [current["id"]]
-                print(f"notification updated: {smtp['name']}")
+                print(f"notification updated: {smtp['name']} (default={is_default} apply_existing={apply_existing})")
+            if notification_default_off:
+                # Do not attach to monitors on the pre-test pass.
+                notification_ids = None
+            if test_notification:
+                result = api.test_notification(**payload)
+                ok = result.get("ok") if isinstance(result, dict) else None
+                msg = (result.get("msg") if isinstance(result, dict) else "") or ""
+                # Kuma 2.5.9 often returns only {msg: "Sent Successfully."} with no ok flag.
+                success = (ok is True) or (ok is None and "successfully" in msg.lower())
+                print(f"notification test: success={success} msg={msg}")
+                if not success:
+                    raise SystemExit("Kuma notification test did not report success; not attaching to monitors")
+        elif test_notification:
+            raise SystemExit("Cannot test notification: SMTP settings are incomplete")
+
+        if notification_only:
+            print("notification-only run: monitors, tags, and status page left untouched")
+            return
 
         existing = {m["name"]: m for m in api.get_monitors()}
         created_ids: dict[str, int] = {}
@@ -541,6 +595,21 @@ def main() -> int:
         action="store_true",
         help="Also create the CT185-190 placeholders (default: skip)",
     )
+    parser.add_argument(
+        "--notification-only",
+        action="store_true",
+        help="Create or update the SMTP notification only; leave monitors untouched",
+    )
+    parser.add_argument(
+        "--notification-default-off",
+        action="store_true",
+        help="Force isDefault and applyExisting off, and do not attach to monitors",
+    )
+    parser.add_argument(
+        "--test-notification",
+        action="store_true",
+        help="After upserting the notification, fire Kuma's Test (does not print secrets)",
+    )
     args = parser.parse_args()
 
     try:
@@ -564,6 +633,12 @@ def main() -> int:
     if args.dry_run:
         groups = (cfg.get("status_page") or {}).get("groups") or []
         print(f"status page: {(cfg.get('status_page') or {}).get('slug')} ({len(groups)} groups)")
+        smtp = smtp_settings(cfg)
+        if smtp:
+            print("notification:", describe_smtp(smtp))
+            print("  is_default=", smtp["isDefault"], "apply_existing=", smtp["applyExisting"])
+        else:
+            print("notification: not fully defined (password is env-only and not required for dry-run)")
         print("dry-run complete; no login attempted")
         return 0
 
@@ -591,7 +666,14 @@ def main() -> int:
             print_status_counts(api.get_monitors(), {m["name"] for m in monitors})
         return 0
 
-    seed(cfg, monitors, include_placeholders=args.include_placeholders)
+    seed(
+        cfg,
+        monitors,
+        include_placeholders=args.include_placeholders,
+        notification_only=args.notification_only,
+        test_notification=args.test_notification,
+        notification_default_off=args.notification_default_off,
+    )
     return 0
 
 
