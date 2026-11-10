@@ -6,7 +6,7 @@ Pinned library: `uptime-kuma-api2==2.10.0` (Socket.IO client; Kuma 2 has no REST
 
 ## Files
 
-- `monitors.yaml` — 38 v1 monitors, status page, SMTP notification definition, and 6 after-build placeholders (CT185–190). No secrets.
+- `monitors.yaml` — 44 v1 monitors, status page, and SMTP notification definition. No secrets.
 - `seed.py` — validator and seeder.
 - `requirements.txt` — pinned dependencies.
 
@@ -47,7 +47,7 @@ export SMTP_PASSWORD     # Gmail app password; do not echo
 ~/.local/share/forge/kuma-seeder-venv/bin/python seed.py --status-only
 ```
 
-Do not pass `--include-placeholders` until CT185–190 exist.
+`--include-placeholders` is a no-op while `placeholders` is empty (CT185–190 are already in `monitors`).
 
 Before the first seed, copy `/opt/uptime-kuma/data` on CT184 to a timestamped `/root/forge-kuma-data-*` directory.
 
