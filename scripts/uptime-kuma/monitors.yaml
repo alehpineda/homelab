@@ -7,9 +7,9 @@
 # current release with runtime version gating. Login against this instance
 # (2.5.9) is the live verification.
 #
-# 48 enabled monitors (38 v1 + 10 from the 2026-11-10 ten-service raise; no LXC/router pings). Six after-build placeholders
-# live under "placeholders" and are never created unless seed.py is passed
-# --include-placeholders (do not use that flag until CT185-190 exist).
+# 54 enabled monitors (44 v1 incl. CT185-190, plus 10 from the 2026-11-10
+# ten-service raise; no LXC/router pings). The former CT185-190
+# placeholders were moved into monitors after the six services went live.
 
 kuma:
   url: https://uptime.alehpineda.com
@@ -85,6 +85,9 @@ status_page:
         - PVE UI
         - Comet UI
         - Uptime Kuma (Caddy canary)
+        - Dispatcharr
+        - NetBox
+        - Wazuh
         - Homepage
         - Homarr
         - Homer
@@ -98,6 +101,9 @@ status_page:
         - Jellyfin
         - Seerr
         - SearXNG
+        - RomM
+        - Navidrome
+        - Audiobookshelf
         - BentoPDF
         - Linkwarden
     - name: VPS / public
@@ -171,7 +177,7 @@ monitors:
     resend_interval: 72
     description: Until bael is decommissioned.
 
-  # --- 2) Admin URLs on Caddy .250 (20) ---
+  # --- 2) Admin URLs on Caddy .250 (23) ---
   - name: AdGuard UI
     type: http
     url: https://adguard.alehpineda.com
@@ -295,8 +301,31 @@ monitors:
     interval: 180
     resend_interval: 120
     description: Kuma through Caddy. If Kuma itself is down this cannot alert; if the handle breaks, SMTP still can.
+  - name: Dispatcharr
+    type: http
+    url: https://dispatcharr.alehpineda.com
+    tags: [admin]
+    interval: 180
+    resend_interval: 120
+    description: Admin UI only. Do not monitor /output or /hdhr on a public name.
+  - name: NetBox
+    type: http
+    url: https://netbox.alehpineda.com
+    tags: [admin]
+    interval: 180
+    resend_interval: 120
+    accepted_statuscodes: ["200-299", "300-399"]
+    description: Unauthenticated / redirects to /login/ (302).
+  - name: Wazuh
+    type: http
+    url: https://wazuh.alehpineda.com
+    tags: [admin]
+    interval: 180
+    resend_interval: 120
+    accepted_statuscodes: ["200-299", "300-399"]
+    description: Dashboard may redirect (302) before the login page.
 
-  # --- 3) Family URLs on Caddy .251 (3) ---
+  # --- 3) Family URLs on Caddy .251 (6) ---
   - name: Jellyfin
     type: http
     url: https://jellyfin.alehpineda.com
@@ -313,6 +342,26 @@ monitors:
   - name: SearXNG
     type: http
     url: https://searxng.alehpineda.com
+    tags: [family]
+    interval: 180
+    resend_interval: 120
+  - name: RomM
+    type: http
+    url: https://romm.alehpineda.com
+    tags: [family]
+    interval: 180
+    resend_interval: 120
+  - name: Navidrome
+    type: http
+    url: https://navidrome.alehpineda.com
+    tags: [family]
+    interval: 180
+    resend_interval: 120
+    accepted_statuscodes: ["200-299", "300-399"]
+    description: Navidrome redirects / to /app/ (302).
+  - name: Audiobookshelf
+    type: http
+    url: https://audiobookshelf.alehpineda.com
     tags: [family]
     interval: 180
     resend_interval: 120
@@ -485,49 +534,5 @@ monitors:
     resend_interval: 120
     description: CT182 compose, Caddy .250.
 
-# After-build placeholders for CT185-190. seed.py validates these but does
-# not create them. Enable and move into monitors after each CT is live.
-placeholders:
-  - name: RomM
-    type: http
-    url: https://romm.alehpineda.com
-    tags: [family]
-    interval: 180
-    resend_interval: 120
-    after_build: CT185
-  - name: Navidrome
-    type: http
-    url: https://navidrome.alehpineda.com
-    tags: [family]
-    interval: 180
-    resend_interval: 120
-    after_build: CT186
-  - name: Audiobookshelf
-    type: http
-    url: https://audiobookshelf.alehpineda.com
-    tags: [family]
-    interval: 180
-    resend_interval: 120
-    after_build: CT187
-  - name: Dispatcharr
-    type: http
-    url: https://dispatcharr.alehpineda.com
-    tags: [admin]
-    interval: 180
-    resend_interval: 120
-    after_build: CT188
-    description: Admin UI only. Do not monitor /output or /hdhr on a public name.
-  - name: NetBox
-    type: http
-    url: https://netbox.alehpineda.com
-    tags: [admin]
-    interval: 180
-    resend_interval: 120
-    after_build: CT189
-  - name: Wazuh
-    type: http
-    url: https://wazuh.alehpineda.com
-    tags: [admin]
-    interval: 180
-    resend_interval: 120
-    after_build: CT190
+# No remaining after-build placeholders. CT185-190 monitors live above.
+placeholders: []
