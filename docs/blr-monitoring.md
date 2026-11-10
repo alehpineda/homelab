@@ -98,6 +98,16 @@ IN ACCEPT -source 10.10.0.82/32 -dest 10.10.0.21/32 -p tcp -dport 25 -comment CT
 
 node_exporter is not in Caddy and is not a vzdump guest.
 
+## Uptime Kuma (CT184)
+
+Guest declaration: `terraform/proxmox/ct_184_uptimekuma.tf`.
+UI: `https://uptime.alehpineda.com` (Caddy `.250`, admin-only).
+Monitor inventory and the idempotent seeder live in
+[`scripts/uptime-kuma/`](../scripts/uptime-kuma/README.md).
+The seeder creates or updates by name and never deletes. SMTP is applied
+only when the SMTP environment variables are set. Grafana/Prometheus remain
+the metrics path; Kuma is up/down and cert-expiry.
+
 ## Still pending
 
 Flint DHCP reservations for `10.10.0.71`–`10.10.0.74` (MACs on CTs
