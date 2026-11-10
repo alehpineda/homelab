@@ -3,8 +3,11 @@
 # See docs/runbooks/arr-phase1.md. Do not merge from this declaration.
 #
 # Template is the same vztmpl CT 176 used at create. Confirm it is still
-# on local before apply. nameserver is omitted: DNS via Flint option 6,
-# like ct_176. timezone America/Chicago is a pct setting and is not in
+# on local before apply. Static LXCs do not get Flint DHCP option 6;
+# nameserver must be set. Flint .1 timed out to ghcr.io / engine hosts
+# on 2026-11-10. Live: pct set 182 --nameserver "10.10.0.53 10.10.0.55"
+# (needs a CT reboot to rewrite resolv.conf).
+# timezone America/Chicago is a pct setting and is not in
 # the Telmate schema. No IPv6 on this NIC.
 #
 # features nesting and keyctl are real proxmox_lxc arguments in Telmate
@@ -67,6 +70,7 @@ resource "proxmox_lxc" "ct_182" {
   memory       = 6144
   swap         = 512
   tags         = "arr;media;storage-data2;vpn"
+  nameserver   = "10.10.0.53 10.10.0.55"
   # Create-time only. Ignored after create. Public keys only.
   ostemplate      = "local:vztmpl/ubuntu-26.04-standard_26.04-1_amd64.tar.zst"
   ssh_public_keys = var.ct182_ssh_public_keys
