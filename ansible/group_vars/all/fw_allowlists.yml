@@ -80,6 +80,19 @@ pve_fw_ct_rules:
     - {proto: tcp, dport: "5055", source: 10.10.0.0/24}
   184:  # uptime kuma
     - {proto: tcp, dport: "3001", source: +caddy}
+  185:  # romm
+    - {proto: tcp, dport: "80", source: +caddy}
+  186:  # navidrome
+    - {proto: tcp, dport: "4533", source: +caddy}
+  187:  # audiobookshelf
+    - {proto: tcp, dport: "13378", source: +caddy}
+  188:  # dispatcharr (UI via Caddy; streams/EPG/HDHR from Jellyfin CT180)
+    - {proto: tcp, dport: "9191", source: +caddy}
+    - {proto: tcp, dport: "9191", source: 10.10.0.80}
+  189:  # netbox
+    - {proto: tcp, dport: "80", source: +caddy}
+  190:  # wazuh dashboard (agents 1514/1515 not opened yet)
+    - {proto: tcp, dport: "443", source: +caddy}
 
   # --- wave 2 (DRAFT, no apply) ---
   153:  # adguard A — LAN+mesh DNS; UI via Caddy :80; DoT/DoH/DoQ; sync hits :443

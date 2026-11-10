@@ -77,3 +77,39 @@ variable "ct184_ssh_public_keys" {
   type        = string
   default     = ""
 }
+
+variable "ct185_ssh_public_keys" {
+  description = "SSH authorized public keys for CT185. Public keys only. Empty until TF_VAR_ct185_ssh_public_keys is set at create."
+  type        = string
+  default     = ""
+}
+
+variable "ct186_ssh_public_keys" {
+  description = "SSH authorized public keys for CT186. Public keys only. Empty until TF_VAR_ct186_ssh_public_keys is set at create."
+  type        = string
+  default     = ""
+}
+
+variable "ct187_ssh_public_keys" {
+  description = "SSH authorized public keys for CT187. Public keys only. Empty until TF_VAR_ct187_ssh_public_keys is set at create."
+  type        = string
+  default     = ""
+}
+
+variable "ct188_ssh_public_keys" {
+  description = "SSH authorized public keys for CT188. Public keys only. Empty until TF_VAR_ct188_ssh_public_keys is set at create."
+  type        = string
+  default     = ""
+}
+
+variable "ct189_ssh_public_keys" {
+  description = "SSH authorized public keys for CT189. Public keys only. Empty until TF_VAR_ct189_ssh_public_keys is set at create."
+  type        = string
+  default     = ""
+}
+
+variable "ct190_ssh_public_keys" {
+  description = "SSH authorized public keys for CT190. Public keys only. Empty until TF_VAR_ct190_ssh_public_keys is set at create."
+  type        = string
+  default     = ""
+}

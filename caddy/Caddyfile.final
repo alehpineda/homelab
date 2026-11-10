@@ -24,16 +24,43 @@ handle @family_ingress {
 	handle @fam_searxng {
 		reverse_proxy http://10.10.0.60:8888
 	}
+	@fam_romm host romm.alehpineda.com
+	handle @fam_romm {
+		reverse_proxy http://10.10.0.85:80 {
+			transport http {
+				local_address 10.10.0.251
+				network_proxy none
+			}
+		}
+	}
+	@fam_navidrome host navidrome.alehpineda.com
+	handle @fam_navidrome {
+		reverse_proxy http://10.10.0.86:4533 {
+			transport http {
+				local_address 10.10.0.251
+				network_proxy none
+			}
+		}
+	}
+	@fam_abs host audiobookshelf.alehpineda.com
+	handle @fam_abs {
+		reverse_proxy http://10.10.0.87:13378 {
+			transport http {
+				local_address 10.10.0.251
+				network_proxy none
+			}
+		}
+	}
 	handle {
 		abort
 	}
  }
 }
-@family_sni_denied expression `{http.request.tls.server_name} in ['jellyfin.alehpineda.com', 'seerr.alehpineda.com', 'searxng.alehpineda.com']`
+@family_sni_denied expression `{http.request.tls.server_name} in ['jellyfin.alehpineda.com', 'seerr.alehpineda.com', 'searxng.alehpineda.com', 'romm.alehpineda.com', 'navidrome.alehpineda.com', 'audiobookshelf.alehpineda.com']`
 handle @family_sni_denied {
  abort
 }
-@family_denied host jellyfin.alehpineda.com seerr.alehpineda.com searxng.alehpineda.com
+@family_denied host jellyfin.alehpineda.com seerr.alehpineda.com searxng.alehpineda.com romm.alehpineda.com navidrome.alehpineda.com audiobookshelf.alehpineda.com
 handle @family_denied {
  abort
 }
@@ -198,6 +225,34 @@ handle @dockge {
 			}
 		}
 	}
+	@dispatcharr host dispatcharr.alehpineda.com
+	handle @dispatcharr {
+		reverse_proxy http://10.10.0.88:9191 {
+			transport http {
+				local_address 10.10.0.250
+				network_proxy none
+			}
+		}
+	}
+	@netbox host netbox.alehpineda.com
+	handle @netbox {
+		reverse_proxy http://10.10.0.89:80 {
+			transport http {
+				local_address 10.10.0.250
+				network_proxy none
+			}
+		}
+	}
+	@wazuh host wazuh.alehpineda.com
+	handle @wazuh {
+		reverse_proxy https://10.10.0.90:443 {
+			transport http {
+				tls_insecure_skip_verify
+				local_address 10.10.0.250
+				network_proxy none
+			}
+		}
+	}
 	handle {
 		abort
 	}
@@ -208,7 +263,7 @@ http://*.alehpineda.com {
  route {
  @on251 expression `{http.request.local.host} == "10.10.0.251"`
  handle @on251 {
- @family_ok host jellyfin.alehpineda.com seerr.alehpineda.com searxng.alehpineda.com
+ @family_ok host jellyfin.alehpineda.com seerr.alehpineda.com searxng.alehpineda.com romm.alehpineda.com navidrome.alehpineda.com audiobookshelf.alehpineda.com
  handle @family_ok {
  redir https://{host}{uri} 308
  }
@@ -216,7 +271,7 @@ http://*.alehpineda.com {
  abort
  }
  }
- @family_denied host jellyfin.alehpineda.com seerr.alehpineda.com searxng.alehpineda.com
+ @family_denied host jellyfin.alehpineda.com seerr.alehpineda.com searxng.alehpineda.com romm.alehpineda.com navidrome.alehpineda.com audiobookshelf.alehpineda.com
  handle @family_denied {
  abort
  }
