@@ -1,0 +1,218 @@
+{
+	email deathscythe+caddy@mail.grokbot.com
+ auto_https disable_redirects
+}
+https://*.alehpineda.com {
+ bind 10.10.0.250 10.10.0.251
+	tls {
+		dns cloudflare {env.CF_API_TOKEN}
+		resolvers 1.1.1.1
+	}
+route {
+@family_ingress expression `{http.request.local.host} == "10.10.0.251"`
+handle @family_ingress {
+ route {
+	@fam_jellyfin host jellyfin.alehpineda.com
+	handle @fam_jellyfin {
+		reverse_proxy http://10.10.0.80:8096
+	}
+	@fam_seerr host seerr.alehpineda.com
+	handle @fam_seerr {
+		reverse_proxy http://10.10.0.83:5055
+	}
+	@fam_searxng host searxng.alehpineda.com
+	handle @fam_searxng {
+		reverse_proxy http://10.10.0.60:8888
+	}
+	handle {
+		abort
+	}
+ }
+}
+@family_sni_denied expression `{http.request.tls.server_name} in ['jellyfin.alehpineda.com', 'seerr.alehpineda.com', 'searxng.alehpineda.com']`
+handle @family_sni_denied {
+ abort
+}
+@family_denied host jellyfin.alehpineda.com seerr.alehpineda.com searxng.alehpineda.com
+handle @family_denied {
+ abort
+}
+@prowlarr host prowlarr.alehpineda.com
+handle @prowlarr {
+ reverse_proxy http://10.10.0.82:9696 {
+ transport http {
+ local_address 10.10.0.251
+ network_proxy none
+ }
+ }
+}
+@sonarr host sonarr.alehpineda.com
+handle @sonarr {
+ reverse_proxy http://10.10.0.82:8989 {
+ transport http {
+ local_address 10.10.0.251
+ network_proxy none
+ }
+ }
+}
+@radarr host radarr.alehpineda.com
+handle @radarr {
+ reverse_proxy http://10.10.0.82:7878 {
+ transport http {
+ local_address 10.10.0.251
+ network_proxy none
+ }
+ }
+}
+@lidarr host lidarr.alehpineda.com
+handle @lidarr {
+ reverse_proxy http://10.10.0.82:8686 {
+ transport http {
+ local_address 10.10.0.251
+ network_proxy none
+ }
+ }
+}
+@bazarr host bazarr.alehpineda.com
+handle @bazarr {
+ reverse_proxy http://10.10.0.82:6767 {
+ transport http {
+ local_address 10.10.0.251
+ network_proxy none
+ }
+ }
+}
+@qbittorrent host qbittorrent.alehpineda.com
+handle @qbittorrent {
+ reverse_proxy http://10.10.0.82:8085 {
+ transport http {
+ local_address 10.10.0.251
+ network_proxy none
+ }
+ }
+}
+@dockge host dockge.alehpineda.com
+handle @dockge {
+ reverse_proxy http://10.10.0.82:5001 {
+ transport http {
+ local_address 10.10.0.251
+ network_proxy none
+ }
+ }
+}
+	@pbs host pbs.alehpineda.com
+	handle @pbs {
+		reverse_proxy https://10.10.0.25:8007 {
+			transport http {
+				tls_insecure_skip_verify
+			}
+		}
+	}
+	@proxmox host proxmox.alehpineda.com
+	handle @proxmox {
+		reverse_proxy https://10.10.0.21:8006 {
+			transport http {
+				tls_insecure_skip_verify
+			}
+		}
+	}
+	@vault host vault.alehpineda.com
+	handle @vault {
+		reverse_proxy https://10.10.0.61:8000 {
+			transport http {
+				tls_insecure_skip_verify
+			}
+		}
+	}
+
+	@comet host comet.alehpineda.com
+	handle @comet {
+		reverse_proxy https://10.10.0.20 {
+			transport http {
+				tls_insecure_skip_verify
+			}
+		}
+	}
+
+	@metube host metube.alehpineda.com
+	handle @metube {
+		reverse_proxy http://10.10.0.81:8081
+	}
+	@adguard host adguard.alehpineda.com
+	handle @adguard {
+		# A primary HTTPS, B HTTPS failover (Caddy requires same scheme). B currently has no TLS/:443 path; stays unhealthy until that exists.
+		# owner 2026-11-09 19:43 CT failover; 20:09 CT loop fix
+		reverse_proxy https://10.10.0.53:443 https://10.10.0.55:443 {
+			lb_policy first
+			lb_try_duration 5s
+			health_uri /login.html
+			health_interval 5s
+			health_timeout 2s
+			health_status 200
+			fail_duration 10s
+			max_fails 1
+			unhealthy_status 5xx
+			transport http {
+				tls_insecure_skip_verify
+			}
+		}
+	}
+	@openbao host openbao.alehpineda.com
+	handle @openbao {
+		reverse_proxy https://10.10.0.62:8200 {
+			transport http {
+				tls_insecure_skip_verify
+			}
+		}
+	}
+	# ollama: unauthenticated API; LAN-only (split-DNS name, no public record)
+	@ollama host ollama.alehpineda.com
+	handle @ollama {
+		reverse_proxy http://10.10.0.63:11434 {
+			header_up Host localhost:11434
+		}
+	}
+	# firecrawl: unauthenticated API; LAN-only
+	@firecrawl host firecrawl.alehpineda.com
+	handle @firecrawl {
+		reverse_proxy http://10.10.0.64:3002
+	}
+	@n8n host n8n.alehpineda.com
+	handle @n8n {
+		reverse_proxy http://10.10.0.70:5678
+	}
+	@postiz host postiz.alehpineda.com
+	handle @postiz {
+		reverse_proxy http://10.10.0.69:80
+	}
+	@grafana host grafana.alehpineda.com
+	handle @grafana {
+		reverse_proxy http://10.10.0.71:3000
+	}
+	handle {
+		abort
+	}
+}
+}
+http://*.alehpineda.com {
+ bind 10.10.0.250 10.10.0.251
+ route {
+ @on251 expression `{http.request.local.host} == "10.10.0.251"`
+ handle @on251 {
+ @family_ok host jellyfin.alehpineda.com seerr.alehpineda.com searxng.alehpineda.com
+ handle @family_ok {
+ redir https://{host}{uri} 308
+ }
+ handle {
+ abort
+ }
+ }
+ @family_denied host jellyfin.alehpineda.com seerr.alehpineda.com searxng.alehpineda.com
+ handle @family_denied {
+ abort
+ }
+ handle {
+ redir https://{host}{uri} 308
+ }
+ }
+}
