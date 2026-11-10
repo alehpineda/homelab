@@ -18,6 +18,7 @@ Pinned library: `uptime-kuma-api2==2.10.0` (Socket.IO client; Kuma 2 has no REST
 | `KUMA_USERNAME` | seed | Admin username |
 | `KUMA_PASSWORD` | seed | Admin password. Pass via the environment or stdin, never on the command line |
 | `KUMA_TOTP` | seed if 2FA is on | Optional TOTP code. The seeder stops if 2FA blocks login |
+| `KUMA_CONNECT_IP` | seed if split-DNS is missing | Pin the URL hostname to this IP (SNI/Host unchanged). Use `10.10.0.250` from a peer that still gets the public CNAME |
 | `SMTP_HOST`, `SMTP_PORT`, `SMTP_FROM`, `SMTP_TO` | notification | Optional. SMTP_USER / SMTP_PASSWORD when the relay needs auth. If any required SMTP var is missing, the notification is skipped |
 
 ## Usage (from CT176)
@@ -33,6 +34,7 @@ cd /path/to/homelab/scripts/uptime-kuma
 # Seed (password already in the environment, not in argv):
 export KUMA_USERNAME=admin
 export KUMA_PASSWORD   # set by the caller; do not echo
+export KUMA_CONNECT_IP=10.10.0.250   # if default DNS returns the public CNAME
 ~/.local/share/forge/kuma-seeder-venv/bin/python seed.py
 
 # Status only:

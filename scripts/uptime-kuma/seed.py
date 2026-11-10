@@ -336,6 +336,23 @@ def login(api, username: str, password: str, totp: str) -> None:
         raise SystemExit(f"Kuma login rejected: {result.get('msg') or result}")
 
 
+
+def _pin_hostname(hostname: str, ip: str) -> None:
+    """Resolve hostname to ip for this process only (SNI/Host stay on the name)."""
+    import socket
+
+    wanted = hostname.lower().rstrip(".")
+    original = socket.getaddrinfo
+
+    def patched(host, port, family=0, type=0, proto=0, flags=0):
+        target = host
+        if isinstance(host, str) and host.lower().rstrip(".") == wanted:
+            target = ip
+        return original(target, port, family, type, proto, flags)
+
+    socket.getaddrinfo = patched  # type: ignore[method-assign]
+
+
 def seed(cfg: dict[str, Any], monitors: list[dict[str, Any]], include_placeholders: bool) -> None:
     from uptime_kuma_api import NotificationType, UptimeKumaApi
     from uptime_kuma_api.exceptions import UptimeKumaException
@@ -351,7 +368,17 @@ def seed(cfg: dict[str, Any], monitors: list[dict[str, Any]], include_placeholde
     if smtp is None:
         print("SMTP env incomplete or absent: skipping Forge Kuma email notification")
 
-    print(f"connecting to {url}")
+    connect_ip = os.environ.get("KUMA_CONNECT_IP", "").strip()
+    if connect_ip:
+        from urllib.parse import urlparse
+
+        host = urlparse(url).hostname
+        if not host:
+            raise SystemExit("KUMA_URL has no hostname to pin with KUMA_CONNECT_IP")
+        _pin_hostname(host, connect_ip)
+        print(f"connecting to {url} (pinned {host} -> {connect_ip})")
+    else:
+        print(f"connecting to {url}")
     with UptimeKumaApi(url, timeout=60, ssl_verify=True) as api:
         login(api, username, password, totp)
         version = api.version()
@@ -549,6 +576,15 @@ def main() -> int:
         totp = os.environ.get("KUMA_TOTP") or ""
         if not url or not username or not password:
             raise SystemExit("KUMA_URL, KUMA_USERNAME, and KUMA_PASSWORD are required")
+        connect_ip = os.environ.get("KUMA_CONNECT_IP", "").strip()
+        if connect_ip:
+            from urllib.parse import urlparse
+
+            host = urlparse(url).hostname
+            if not host:
+                raise SystemExit("KUMA_URL has no hostname to pin with KUMA_CONNECT_IP")
+            _pin_hostname(host, connect_ip)
+            print(f"connecting to {url} (pinned {host} -> {connect_ip})")
         with UptimeKumaApi(url, timeout=60, ssl_verify=True) as api:
             login(api, username, password, totp)
             print(f"server version: {api.version()}")
