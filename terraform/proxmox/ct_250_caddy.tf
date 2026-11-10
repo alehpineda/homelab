@@ -13,7 +13,7 @@ resource "proxmox_lxc" "ct_250" {
   cores        = 1
   memory       = 512
   swap         = 512
-  nameserver   = "10.10.0.53"
+  nameserver   = "10.10.0.53 10.10.0.55"
   tags         = "caddy;proxy"
 
   features {

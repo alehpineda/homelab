@@ -12,6 +12,8 @@ resource "proxmox_lxc" "ct_161" {
   memory       = 6144
   swap         = 512
   tags         = "community-script;password-manager;storage-data2"
+  # Static LXCs do not get Flint DHCP option 6. Live 2026-11-10: pct set --nameserver "10.10.0.53 10.10.0.55".
+  nameserver   = "10.10.0.53 10.10.0.55"
 
   rootfs {
     # Moved data2 -> local-lvm (nvme0) 2026-11-09, BRL storage plan B.
