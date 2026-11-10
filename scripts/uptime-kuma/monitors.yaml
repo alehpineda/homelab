@@ -306,12 +306,14 @@ monitors:
 
   # --- 4) VPS / public (4) ---
   - name: gremory ping
-    type: ping
+    type: port
     hostname: 163.192.206.150
+    port: 443
     tags: [public]
     interval: 60
     timeout: 15
     resend_interval: 60
+    description: TCP 443 on the Oracle VPS (ICMP is filtered). Name kept so the seeder updates in place.
   - name: NetBird mgmt
     type: http
     url: https://netbird.alehpineda.com
