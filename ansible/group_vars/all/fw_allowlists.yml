@@ -1,7 +1,8 @@
 ---
 # Single source of truth for BRL guest inbound allowlists.
 # Wave 1 LIVE 2026-11-09 18:52-19:01 CT on 164,175,172,173,174,180,181,182,183
-#   (PR #37). Wave 2 DRAFT only (no apply): 153-156,160-162,165,169-171,176,250.
+#   (PR #37). Wave 2 LIVE 2026-11-09 19:41-20:00 CT on 153-156,160-162,165,
+#   169-171,176,154,155,250.
 # Plan: Forge plans/2026-11-09-pve-guest-firewall.md.
 
 pve_fw_cluster_ipsets:
@@ -24,6 +25,7 @@ pve_fw_cluster_aliases:
   adguard_b: 10.10.0.55
   adguardsync: 10.10.0.56
   unbound: 10.10.0.54
+  flint: 10.10.0.1
 
 # Security group attached to every rolled-out CT.
 pve_fw_group_ct_base:
@@ -112,7 +114,7 @@ pve_fw_ct_rules:
   199:  # myip
     - {proto: tcp, dport: "18966", source: +caddy}
 
-  # --- wave 2 (DRAFT, no apply) ---
+  # --- wave 2 (LIVE 2026-11-09) ---
   153:  # adguard A — LAN+mesh DNS; UI via Caddy :80; DoT/DoH/DoQ; sync hits :443
     - {proto: udp, dport: "53", source: +management, comment: "DNS UDP LAN+mesh"}
     - {proto: tcp, dport: "53", source: +management, comment: "DNS TCP LAN+mesh"}
@@ -120,11 +122,13 @@ pve_fw_ct_rules:
     - {proto: tcp, dport: "443", source: +management, comment: "DoH + HTTPS (incl. sync from .56)"}
     - {proto: tcp, dport: "853", source: +management, comment: "DoT"}
     - {proto: udp, dport: "853", source: +management, comment: "DoQ"}
-  154:  # unbound — only AdGuard A/B as recursive clients on 5335
+  154:  # unbound — AdGuard A/B + Flint AGH (10.10.0.1/32) on 5335
     - {proto: udp, dport: "5335", source: adguard_a}
     - {proto: tcp, dport: "5335", source: adguard_a}
     - {proto: udp, dport: "5335", source: adguard_b}
     - {proto: tcp, dport: "5335", source: adguard_b}
+    - {proto: udp, dport: "5335", source: flint, comment: "Flint AGH upstream 10.10.0.1/32"}
+    - {proto: tcp, dport: "5335", source: flint, comment: "Flint AGH upstream 10.10.0.1/32"}
   155:  # adguard B — LAN+mesh DNS; HTTPS UI for Caddy failover; sync A->B over HTTPS; on vmbr1
     - {proto: udp, dport: "53", source: +management, comment: "DNS UDP LAN+mesh"}
     - {proto: tcp, dport: "53", source: +management, comment: "DNS TCP LAN+mesh"}
