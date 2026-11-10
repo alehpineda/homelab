@@ -381,7 +381,7 @@ def seed(cfg: dict[str, Any], monitors: list[dict[str, Any]], include_placeholde
         print(f"connecting to {url}")
     with UptimeKumaApi(url, timeout=60, ssl_verify=True) as api:
         login(api, username, password, totp)
-        version = api.version()
+        version = api.version
         expected = str((cfg.get("kuma") or {}).get("expected_version") or "")
         print(f"server version: {version}")
         if expected and not str(version).startswith(expected):
@@ -587,7 +587,7 @@ def main() -> int:
             print(f"connecting to {url} (pinned {host} -> {connect_ip})")
         with UptimeKumaApi(url, timeout=60, ssl_verify=True) as api:
             login(api, username, password, totp)
-            print(f"server version: {api.version()}")
+            print(f"server version: {api.version}")
             print_status_counts(api.get_monitors(), {m["name"] for m in monitors})
         return 0
 
