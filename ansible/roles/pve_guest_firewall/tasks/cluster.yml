@@ -1,0 +1,103 @@
+---
+- ansible.builtin.include_tasks: api_vars.yml
+
+- name: Read cluster ipsets
+  ansible.builtin.uri:
+    url: "{{ pve_api_url }}/cluster/firewall/ipset"
+    headers: "{{ _pve_hdr }}"
+    validate_certs: "{{ pve_api_validate_certs }}"
+  register: _ipsets
+  check_mode: false
+  no_log: true
+
+- name: Create missing ipsets
+  ansible.builtin.uri:
+    url: "{{ pve_api_url }}/cluster/firewall/ipset"
+    method: POST
+    headers: "{{ _pve_hdr }}"
+    body_format: form-urlencoded
+    body: {name: "{{ item.key }}", comment: "{{ item.value.comment }}"}
+    validate_certs: "{{ pve_api_validate_certs }}"
+  loop: "{{ pve_fw_cluster_ipsets | dict2items }}"
+  when: item.key not in (_ipsets.json.data | map(attribute='name') | list)
+  changed_when: true
+  no_log: true
+
+- name: Read ipset members
+  ansible.builtin.uri:
+    url: "{{ pve_api_url }}/cluster/firewall/ipset/{{ item.key }}"
+    headers: "{{ _pve_hdr }}"
+    validate_certs: "{{ pve_api_validate_certs }}"
+  loop: "{{ pve_fw_cluster_ipsets | dict2items }}"
+  register: _members
+  check_mode: false
+  no_log: true
+
+- name: Add missing ipset members
+  ansible.builtin.uri:
+    url: "{{ pve_api_url }}/cluster/firewall/ipset/{{ item.0.item.key }}"
+    method: POST
+    headers: "{{ _pve_hdr }}"
+    body_format: form-urlencoded
+    body: {cidr: "{{ item.1 }}"}
+    validate_certs: "{{ pve_api_validate_certs }}"
+  loop: "{{ _members.results | subelements('item.value.cidrs') }}"
+  when: item.1 not in (item.0.json.data | map(attribute='cidr') | list)
+  changed_when: true
+  no_log: true
+
+- name: Read aliases
+  ansible.builtin.uri:
+    url: "{{ pve_api_url }}/cluster/firewall/aliases"
+    headers: "{{ _pve_hdr }}"
+    validate_certs: "{{ pve_api_validate_certs }}"
+  register: _aliases
+  check_mode: false
+  no_log: true
+
+- name: Create missing aliases
+  ansible.builtin.uri:
+    url: "{{ pve_api_url }}/cluster/firewall/aliases"
+    method: POST
+    headers: "{{ _pve_hdr }}"
+    body_format: form-urlencoded
+    body: {name: "{{ item.key }}", cidr: "{{ item.value }}"}
+    validate_certs: "{{ pve_api_validate_certs }}"
+  loop: "{{ pve_fw_cluster_aliases | dict2items }}"
+  when: item.key not in (_aliases.json.data | map(attribute='name') | list)
+  changed_when: true
+  no_log: true
+
+- name: Read security groups
+  ansible.builtin.uri:
+    url: "{{ pve_api_url }}/cluster/firewall/groups"
+    headers: "{{ _pve_hdr }}"
+    validate_certs: "{{ pve_api_validate_certs }}"
+  register: _groups
+  check_mode: false
+  no_log: true
+
+- name: Create group ct_base with its rules
+  when: "'ct_base' not in (_groups.json.data | map(attribute='group') | list)"
+  block:
+    - name: Create group ct_base
+      ansible.builtin.uri:
+        url: "{{ pve_api_url }}/cluster/firewall/groups"
+        method: POST
+        headers: "{{ _pve_hdr }}"
+        body_format: form-urlencoded
+        body: {group: ct_base, comment: "forge: every guest - SSH from +management, icmp"}
+        validate_certs: "{{ pve_api_validate_certs }}"
+      changed_when: true
+      no_log: true
+    - name: Add ct_base rules (POST inserts at top, so reverse)
+      ansible.builtin.uri:
+        url: "{{ pve_api_url }}/cluster/firewall/groups/ct_base"
+        method: POST
+        headers: "{{ _pve_hdr }}"
+        body_format: form-urlencoded
+        body: "{{ {'type': 'in', 'enable': 1} | combine(item) }}"
+        validate_certs: "{{ pve_api_validate_certs }}"
+      loop: "{{ pve_fw_group_ct_base | reverse | list }}"
+      changed_when: true
+      no_log: true

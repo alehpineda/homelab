@@ -274,6 +274,9 @@ resource "proxmox_lxc" "ct_182" {
     # replacement. See docs/runbooks/terraform-import.md.
     # ignore_changes on mountpoint hides drift: mp3–mp20 added on the
     # node, a changed mp, or a missing ro=1 do not appear in the plan.
+    # net0 firewall=1 and the PVE guest firewall (.fw rules/options) are owned by
+    # ansible role pve_guest_firewall (group_vars/all/fw_allowlists.yml), live
+    # 2026-11-09. `network` stays in ignore_changes so Terraform never flaps the flag.
     ignore_changes = [
       ostemplate, password, ssh_public_keys, start, description, features,
       target_node, cmode, network, mountpoint, rootfs[0].storage,

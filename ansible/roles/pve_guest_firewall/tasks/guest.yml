@@ -1,0 +1,83 @@
+---
+- ansible.builtin.include_tasks: api_vars.yml
+
+- name: "CT {{ pve_fw_vmid }}: read current rules"
+  ansible.builtin.uri:
+    url: "{{ pve_api_url }}/nodes/{{ pve_node }}/lxc/{{ pve_fw_vmid }}/firewall/rules"
+    headers: "{{ _pve_hdr }}"
+    validate_certs: "{{ pve_api_validate_certs }}"
+  register: _rules
+  check_mode: false
+  no_log: true
+
+- name: "CT {{ pve_fw_vmid }}: desired vs live (normalised)"
+  ansible.builtin.set_fact:
+    _want: >-
+      {{ ['group:ct_base'] + (pve_fw_ct_rules[pve_fw_vmid] | map('pve_fw_rule_key') | list) }}
+    _have: >-
+      {{ _rules.json.data | sort(attribute='pos') | map('pve_fw_live_key') | list }}
+
+- name: "CT {{ pve_fw_vmid }}: refuse to overwrite drifted rules"
+  ansible.builtin.assert:
+    that: _have | length == 0 or _have == _want
+    fail_msg: "Live rules differ from fw_allowlists.yml. live={{ _have }} want={{ _want }}. Fix by hand, then re-run."
+
+- name: "CT {{ pve_fw_vmid }}: add rules (reverse; POST inserts at pos 0)"
+  ansible.builtin.uri:
+    url: "{{ pve_api_url }}/nodes/{{ pve_node }}/lxc/{{ pve_fw_vmid }}/firewall/rules"
+    method: POST
+    headers: "{{ _pve_hdr }}"
+    body_format: form-urlencoded
+    body: "{{ {'type': 'in', 'action': 'ACCEPT', 'enable': 1, 'comment': 'forge pve_guest_firewall'} | combine(item) }}"
+    validate_certs: "{{ pve_api_validate_certs }}"
+  loop: "{{ pve_fw_ct_rules[pve_fw_vmid] | reverse | list }}"
+  when: _have | length == 0
+  changed_when: true
+  no_log: true
+
+- name: "CT {{ pve_fw_vmid }}: attach group ct_base at the top"
+  ansible.builtin.uri:
+    url: "{{ pve_api_url }}/nodes/{{ pve_node }}/lxc/{{ pve_fw_vmid }}/firewall/rules"
+    method: POST
+    headers: "{{ _pve_hdr }}"
+    body_format: form-urlencoded
+    body: {type: group, action: ct_base, enable: 1}
+    validate_certs: "{{ pve_api_validate_certs }}"
+  when: _have | length == 0
+  changed_when: true
+  no_log: true
+
+- name: "CT {{ pve_fw_vmid }}: options (enable, policy_in DROP, ipfilter)"
+  ansible.builtin.uri:
+    url: "{{ pve_api_url }}/nodes/{{ pve_node }}/lxc/{{ pve_fw_vmid }}/firewall/options"
+    method: PUT
+    headers: "{{ _pve_hdr }}"
+    body_format: form-urlencoded
+    body: "{{ pve_fw_ct_options }}"
+    validate_certs: "{{ pve_api_validate_certs }}"
+  no_log: true
+
+- name: "CT {{ pve_fw_vmid }}: read config for NIC strings"
+  ansible.builtin.uri:
+    url: "{{ pve_api_url }}/nodes/{{ pve_node }}/lxc/{{ pve_fw_vmid }}/config"
+    headers: "{{ _pve_hdr }}"
+    validate_certs: "{{ pve_api_validate_certs }}"
+  register: _cfg
+  check_mode: false
+  no_log: true
+
+- name: "CT {{ pve_fw_vmid }}: net firewall=1 (pct set on the host; same MAC/IP)"
+  ansible.builtin.command:
+    argv:
+      - sudo
+      - pct
+      - set
+      - "{{ pve_fw_vmid }}"
+      - "-{{ item.key }}"
+      - "{{ (item.value.split(',') | reject('match', '^firewall=') | list + ['firewall=1']) | join(',') }}"
+  delegate_to: "{{ pve_fw_nic_host }}"
+  loop: "{{ _cfg.json.data | dict2items | selectattr('key', 'match', '^net[0-9]+$') | list }}"
+  when:
+    - pve_fw_set_nic_flag | bool
+    - "'firewall=1' not in item.value"
+  changed_when: true
