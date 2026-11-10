@@ -140,8 +140,8 @@ handle @dockge {
 	}
 	@adguard host adguard.alehpineda.com
 	handle @adguard {
-		# A primary HTTPS, B HTTPS failover (Caddy requires same scheme). B currently has no TLS/:443 path; stays unhealthy until that exists.
-		# owner 2026-11-09 19:43 CT failover; 20:09 CT loop fix
+		# A primary HTTPS, B HTTPS failover (Caddy requires same scheme). B has TLS and CT155 :443 from +caddy as of 2026-11-09 8:35 PM CT.
+		# owner 2026-11-09 19:43 CT failover; 20:09 CT loop fix; 20:35 CT B HTTPS
 		reverse_proxy https://10.10.0.53:443 https://10.10.0.55:443 {
 			lb_policy first
 			lb_try_duration 5s
