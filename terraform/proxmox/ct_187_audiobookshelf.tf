@@ -10,9 +10,20 @@
 # Install method (day-1, after create): community-scripts audiobookshelf
 # (install/audiobookshelf-install.sh). Official apt repo + ffmpeg,
 # systemd audiobookshelf :13378. Expected v2.37.2.
-# Mount: new ZFS dataset media/data/media/audiobooks (1100:1100) ->
-# /audiobooks, ro=1 after create. Dataset must exist before apply of
+# Mount: ZFS dataset media/data/media/audiobooks (host media:media 1100:1100)
+# -> /audiobooks, rw (the original plan said ro=1; the live bind is rw so
+# the service can write the library). Dataset must exist before apply of
 # this mount. Disk bumped to 8G (script floor is 5G).
+#
+# Per-mount idmap (not container-wide lxc.idmap): the community-script
+# service runs as uid 999 / gid 991, so the bind uses
+#   idmap=u:999:1100:1;g:991:1100:1
+# Applied with `pct set 187 --mp0` after create (or while stopped). The
+# rootfs stays on the default unprivileged map. Host ownership stays
+# media:media. Telmate 3.0.2-rc10 mountpoint has no idmap attribute, same
+# as the missing read-only flag; do not invent a provider argument.
+# lifecycle.ignore_changes includes mountpoint, so this idmap is recorded
+# here as comments only, matching ct_182's raw lxc.* comments.
 
 # Template is the Debian 13 vztmpl already on BRL local (same as CT183/184).
 # Confirm it is still on local before apply. nameserver is set after create
@@ -28,7 +39,7 @@ resource "proxmox_lxc" "ct_187" {
   target_node     = var.pm_node
   vmid            = 187
   hostname        = "audiobookshelf-blr-lxc"
-  description     = "Family Audiobookshelf. Community-script install. Audiobooks ro bind."
+  description     = "Family Audiobookshelf. Community-script install. Audiobooks rw bind + mp0 idmap."
   arch            = "amd64"
   ostype          = "debian"
   unprivileged    = true
@@ -57,8 +68,9 @@ resource "proxmox_lxc" "ct_187" {
     volume = "/media/data/media/audiobooks"
     mp     = "/audiobooks"
     backup = false
-    # ro=1 is set with pct after create. Telmate rc10 mountpoint has no
-    # read-only attribute.
+    # Live pct: ro is unset (rw). idmap=u:999:1100:1;g:991:1100:1 is set
+    # with pct after create. Telmate rc10 mountpoint has no read-only or
+    # idmap attribute.
   }
 
   network {
