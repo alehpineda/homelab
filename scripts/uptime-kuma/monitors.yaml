@@ -1,0 +1,448 @@
+# Uptime Kuma v1 inventory for CT184 (uptime.alehpineda.com).
+# Source of truth for scripts/uptime-kuma/seed.py.
+# No secrets in this file. Credentials and SMTP come from environment variables.
+#
+# Library pin: uptime-kuma-api2==2.10.0 (released 2026-11-09).
+# Upstream tests the socket API through Uptime Kuma 2.5.0; 2.10.0 is the
+# current release with runtime version gating. Login against this instance
+# (2.5.9) is the live verification.
+#
+# 38 enabled monitors (v1, no LXC/router pings). Six after-build placeholders
+# live under "placeholders" and are never created unless seed.py is passed
+# --include-placeholders (do not use that flag until CT185-190 exist).
+
+kuma:
+  url: https://uptime.alehpineda.com
+  expected_version: "2.5.9"
+
+library:
+  package: uptime-kuma-api2
+  version: "2.10.0"
+
+# Applied only when SMTP_HOST, SMTP_PORT, SMTP_FROM, and SMTP_TO are set,
+# plus SMTP_USER / SMTP_PASSWORD when the relay requires auth.
+# seed.py skips this block entirely when those env vars are absent.
+notification:
+  name: Forge Kuma email
+  type: smtp
+  is_default: true
+  apply_existing: true
+  smtp_secure: false   # STARTTLS on 587; set true only for implicit TLS (465)
+  smtp_host_env: SMTP_HOST
+  smtp_port_env: SMTP_PORT
+  smtp_user_env: SMTP_USER
+  smtp_password_env: SMTP_PASSWORD
+  smtp_from_env: SMTP_FROM
+  smtp_to_env: SMTP_TO
+  default_to: deathscythe+kuma@mail.grokbot.com
+
+tags:
+  - {name: hosts,  color: "#c0392b"}
+  - {name: admin,  color: "#2980b9"}
+  - {name: family, color: "#27ae60"}
+  - {name: public, color: "#8e44ad"}
+  - {name: dns,    color: "#f39c12"}
+  - {name: caddy,  color: "#16a085"}
+
+# Admin-only page at https://uptime.alehpineda.com/status/homelab
+# (the vhost is already Admin-Arr-DNS / .250; do not add a public or family name).
+status_page:
+  slug: homelab
+  title: Homelab
+  description: Admin-only status for the alehpineda homelab and public sites we own.
+  published: true
+  theme: auto
+  show_tags: true
+  show_powered_by: false
+  show_certificate_expiry: true
+  groups:
+    - name: PVE / PBS / LAN hosts
+      monitors:
+        - BRL PVE ping
+        - PBS ping
+        - Flint ping
+        - Comet ping
+        - bael ping
+    - name: Admin URLs
+      monitors:
+        - AdGuard UI
+        - Grafana
+        - n8n UI
+        - Postiz
+        - Firecrawl
+        - Ollama
+        - OpenBao
+        - Vaultwarden
+        - MeTube
+        - Dockge
+        - Prowlarr
+        - Sonarr
+        - Radarr
+        - Lidarr
+        - Bazarr
+        - qBittorrent
+        - PBS UI
+        - PVE UI
+        - Comet UI
+        - Uptime Kuma (Caddy canary)
+    - name: Family URLs
+      monitors:
+        - Jellyfin
+        - Seerr
+        - SearXNG
+    - name: VPS / public
+      monitors:
+        - gremory ping
+        - NetBird mgmt
+        - mtgdrops.com
+        - inspectorhacker.com
+    - name: DNS
+      monitors:
+        - AdGuard A recurse
+        - AdGuard B recurse
+        - Rewrite admin
+        - Rewrite family
+    - name: NetBird / Caddy
+      monitors:
+        - Caddy admin VIP
+        - Caddy family VIP
+
+# Shared defaults. resend_interval is minutes (Kuma UI). timeout is seconds.
+defaults:
+  maxretries: 3
+  maxredirects: 10
+  ignore_tls: false
+  accepted_statuscodes: ["200-299", "300-399"]
+  retry_interval_equals: interval
+  timeout: 15
+  dns_timeout: 5
+  resend_critical: 60
+  resend_standard: 360
+
+monitors:
+  # --- 1) PVE / PBS / LAN hosts (5) ---
+  - name: BRL PVE ping
+    type: ping
+    hostname: 10.10.0.21
+    tags: [hosts]
+    interval: 60
+    timeout: 15
+    resend_interval: 60
+  - name: PBS ping
+    type: ping
+    hostname: 10.10.0.25
+    tags: [hosts]
+    interval: 60
+    timeout: 15
+    resend_interval: 60
+  - name: Flint ping
+    type: ping
+    hostname: 10.10.0.1
+    tags: [hosts]
+    interval: 60
+    timeout: 15
+    resend_interval: 60
+  - name: Comet ping
+    type: ping
+    hostname: 10.10.0.20
+    tags: [hosts]
+    interval: 180
+    timeout: 15
+    resend_interval: 60
+  - name: bael ping
+    type: ping
+    hostname: 10.10.0.11
+    tags: [hosts]
+    interval: 300
+    timeout: 15
+    resend_interval: 360
+    description: Until bael is decommissioned.
+
+  # --- 2) Admin URLs on Caddy .250 (20) ---
+  - name: AdGuard UI
+    type: http
+    url: https://adguard.alehpineda.com
+    tags: [admin]
+    interval: 60
+    resend_interval: 60
+  - name: Grafana
+    type: http
+    url: https://grafana.alehpineda.com
+    tags: [admin]
+    interval: 180
+    resend_interval: 360
+    expiry_notification: true
+  - name: n8n UI
+    type: http
+    url: https://n8n.alehpineda.com
+    tags: [admin]
+    interval: 180
+    resend_interval: 360
+  - name: Postiz
+    type: http
+    url: https://postiz.alehpineda.com
+    tags: [admin]
+    interval: 180
+    resend_interval: 360
+  - name: Firecrawl
+    type: http
+    url: https://firecrawl.alehpineda.com
+    tags: [admin]
+    interval: 180
+    resend_interval: 360
+  - name: Ollama
+    type: keyword
+    url: https://ollama.alehpineda.com/api/version
+    keyword: version
+    tags: [admin]
+    interval: 180
+    resend_interval: 360
+  - name: OpenBao
+    type: http
+    url: https://openbao.alehpineda.com
+    tags: [admin]
+    interval: 180
+    resend_interval: 360
+  - name: Vaultwarden
+    type: http
+    url: https://vault.alehpineda.com
+    tags: [admin]
+    interval: 180
+    resend_interval: 360
+  - name: MeTube
+    type: http
+    url: https://metube.alehpineda.com
+    tags: [admin]
+    interval: 180
+    resend_interval: 360
+  - name: Dockge
+    type: http
+    url: https://dockge.alehpineda.com
+    tags: [admin]
+    interval: 180
+    resend_interval: 360
+  - name: Prowlarr
+    type: http
+    url: https://prowlarr.alehpineda.com
+    tags: [admin]
+    interval: 180
+    resend_interval: 360
+  - name: Sonarr
+    type: http
+    url: https://sonarr.alehpineda.com
+    tags: [admin]
+    interval: 180
+    resend_interval: 360
+  - name: Radarr
+    type: http
+    url: https://radarr.alehpineda.com
+    tags: [admin]
+    interval: 180
+    resend_interval: 360
+  - name: Lidarr
+    type: http
+    url: https://lidarr.alehpineda.com
+    tags: [admin]
+    interval: 180
+    resend_interval: 360
+  - name: Bazarr
+    type: http
+    url: https://bazarr.alehpineda.com
+    tags: [admin]
+    interval: 180
+    resend_interval: 360
+  - name: qBittorrent
+    type: http
+    url: https://qbittorrent.alehpineda.com
+    tags: [admin]
+    interval: 180
+    resend_interval: 360
+  - name: PBS UI
+    type: http
+    url: https://pbs.alehpineda.com
+    tags: [admin]
+    interval: 60
+    resend_interval: 60
+  - name: PVE UI
+    type: http
+    url: https://proxmox.alehpineda.com
+    tags: [admin]
+    interval: 60
+    resend_interval: 60
+  - name: Comet UI
+    type: http
+    url: https://comet.alehpineda.com
+    tags: [admin]
+    interval: 180
+    resend_interval: 360
+  - name: Uptime Kuma (Caddy canary)
+    type: http
+    url: https://uptime.alehpineda.com
+    tags: [admin]
+    interval: 180
+    resend_interval: 360
+    description: Kuma through Caddy. If Kuma itself is down this cannot alert; if the handle breaks, SMTP still can.
+
+  # --- 3) Family URLs on Caddy .251 (3) ---
+  - name: Jellyfin
+    type: http
+    url: https://jellyfin.alehpineda.com
+    tags: [family]
+    interval: 180
+    resend_interval: 360
+    expiry_notification: true
+  - name: Seerr
+    type: http
+    url: https://seerr.alehpineda.com
+    tags: [family]
+    interval: 180
+    resend_interval: 360
+  - name: SearXNG
+    type: http
+    url: https://searxng.alehpineda.com
+    tags: [family]
+    interval: 180
+    resend_interval: 360
+
+  # --- 4) VPS / public (4) ---
+  - name: gremory ping
+    type: port
+    hostname: 163.192.206.150
+    port: 443
+    tags: [public]
+    interval: 60
+    timeout: 15
+    resend_interval: 60
+    description: TCP 443 on the Oracle VPS (ICMP is filtered). Name kept so the seeder updates in place.
+  - name: NetBird mgmt
+    type: http
+    url: https://netbird.alehpineda.com
+    tags: [public]
+    interval: 60
+    resend_interval: 60
+    accepted_statuscodes: ["200-299", "300-399", "401"]
+    expiry_notification: true
+    description: Auth-gated dashboard; 401 is still up.
+  - name: mtgdrops.com
+    type: http
+    url: https://mtgdrops.com
+    tags: [public]
+    interval: 300
+    resend_interval: 360
+  - name: inspectorhacker.com
+    type: http
+    url: https://inspectorhacker.com
+    tags: [public]
+    interval: 300
+    resend_interval: 360
+
+  # --- 5) DNS, AdGuard A/B (4) ---
+  - name: AdGuard A recurse
+    type: dns
+    hostname: cloudflare.com
+    dns_resolve_server: 10.10.0.53
+    dns_resolve_type: A
+    port: 53
+    tags: [dns]
+    interval: 60
+    timeout: 5
+    resend_interval: 60
+  - name: AdGuard B recurse
+    type: dns
+    hostname: cloudflare.com
+    dns_resolve_server: 10.10.0.55
+    dns_resolve_type: A
+    port: 53
+    tags: [dns]
+    interval: 60
+    timeout: 5
+    resend_interval: 60
+  - name: Rewrite admin
+    type: dns
+    hostname: uptime.alehpineda.com
+    dns_resolve_server: 10.10.0.53
+    dns_resolve_type: A
+    port: 53
+    dns_last_result: 10.10.0.250
+    tags: [dns]
+    interval: 60
+    timeout: 5
+    resend_interval: 60
+    description: Expect A 10.10.0.250. dns_last_result is applied on edit if the add path drops it.
+  - name: Rewrite family
+    type: dns
+    hostname: jellyfin.alehpineda.com
+    dns_resolve_server: 10.10.0.53
+    dns_resolve_type: A
+    port: 53
+    dns_last_result: 10.10.0.251
+    tags: [dns]
+    interval: 60
+    timeout: 5
+    resend_interval: 60
+    description: Expect A 10.10.0.251.
+
+  # --- 6) NetBird / Caddy VIPs (2). Router pings are deferred (no new guest fw). ---
+  - name: Caddy admin VIP
+    type: port
+    hostname: 10.10.0.250
+    port: 443
+    tags: [caddy]
+    interval: 60
+    timeout: 15
+    resend_interval: 60
+  - name: Caddy family VIP
+    type: port
+    hostname: 10.10.0.251
+    port: 443
+    tags: [caddy]
+    interval: 60
+    timeout: 15
+    resend_interval: 60
+
+# After-build placeholders for CT185-190. seed.py validates these but does
+# not create them. Enable and move into monitors after each CT is live.
+placeholders:
+  - name: RomM
+    type: http
+    url: https://romm.alehpineda.com
+    tags: [family]
+    interval: 180
+    resend_interval: 360
+    after_build: CT185
+  - name: Navidrome
+    type: http
+    url: https://navidrome.alehpineda.com
+    tags: [family]
+    interval: 180
+    resend_interval: 360
+    after_build: CT186
+  - name: Audiobookshelf
+    type: http
+    url: https://audiobookshelf.alehpineda.com
+    tags: [family]
+    interval: 180
+    resend_interval: 360
+    after_build: CT187
+  - name: Dispatcharr
+    type: http
+    url: https://dispatcharr.alehpineda.com
+    tags: [admin]
+    interval: 180
+    resend_interval: 360
+    after_build: CT188
+    description: Admin UI only. Do not monitor /output or /hdhr on a public name.
+  - name: NetBox
+    type: http
+    url: https://netbox.alehpineda.com
+    tags: [admin]
+    interval: 180
+    resend_interval: 360
+    after_build: CT189
+  - name: Wazuh
+    type: http
+    url: https://wazuh.alehpineda.com
+    tags: [admin]
+    interval: 180
+    resend_interval: 360
+    after_build: CT190
