@@ -8,6 +8,13 @@
     _alloy_o2_password: "{{ lookup('ansible.builtin.ini', 'O2_USER_PASSWORD', type='properties', file=alloy_o2_ingest_secret_file) }}"
   no_log: true
 
+- name: Ensure gnupg (needed for the key fingerprint check; minimal CTs lack it)
+  ansible.builtin.apt:
+    name: gnupg
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+
 - name: Ensure the apt keyrings directory
   ansible.builtin.file:
     path: /etc/apt/keyrings
