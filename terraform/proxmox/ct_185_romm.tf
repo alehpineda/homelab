@@ -21,8 +21,9 @@
 # library scan filled swap on the old size; owner approved the bump.
 # Rootfs grown 20G -> 40G online on 2026-11-10 ~11:28 PM CT (pct resize,
 # owner yes) after scan-downloaded covers/screenshots in
-# /var/lib/romm/resources filled the 20G root to 100%. Planned follow-up:
-# move resources to a dedicated media/data/romm-resources dataset (mp1).
+# /var/lib/romm/resources filled the 20G root to 100%. Resources moved
+# 2026-11-10 ~11:41 PM CT (owner yes, t742s4011) to the ZFS dataset
+# media/data/romm-resources (mp1), so scan downloads no longer fill rootfs.
 
 # Template is the Debian 13 vztmpl already on BRL local (same as CT183/184).
 # Confirm it is still on local before apply. nameserver is set after create
@@ -69,6 +70,20 @@ resource "proxmox_lxc" "ct_185" {
     backup = false
     # ro=1 is set with pct after create. Telmate rc10 mountpoint has no
     # read-only attribute.
+  }
+
+  # RomM covers/screenshots (ROMM_BASE_PATH/resources). Mounted over
+  # /var/lib/romm/resources; the Angie /assets/romm/resources symlink still
+  # resolves. Dataset created by root on BRL (zfs create, not Terraform):
+  # media/data/romm-resources, owner 100000:100000 (CT root), mode 0755,
+  # lz4, atime=off, recordsize 128K. Not in PBS (backup=0): covers can be
+  # downloaded again. Declarative only: mountpoint is in ignore_changes.
+  mountpoint {
+    key    = "1"
+    slot   = 1
+    volume = "/media/data/romm-resources"
+    mp     = "/var/lib/romm/resources"
+    backup = false
   }
 
   network {
