@@ -1,0 +1,10 @@
+---
+# Loki 3.7.9 on CT 173 (community-script deb). This role only owns
+# /etc/loki/config.yml. It does not install or upgrade Loki.
+loki_config_path: /etc/loki/config.yml
+loki_http_port: 3100
+loki_grpc_port: 9095
+loki_path_prefix: /var/lib/loki
+# 30 days, same window as OpenObserve CT 177 for a fair footprint comparison.
+loki_retention_period: 720h
+loki_reject_old_samples_max_age: 168h

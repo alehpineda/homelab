@@ -1,0 +1,35 @@
+---
+- name: Require the community-script Loki unit
+  ansible.builtin.stat:
+    path: /etc/systemd/system/loki.service
+  register: _loki_unit
+
+- name: Fail when Loki is not installed
+  ansible.builtin.assert:
+    that:
+      - _loki_unit.stat.exists
+    fail_msg: loki.service is missing. This role does not install Loki.
+
+- name: Write the Loki config (verified before replace)
+  ansible.builtin.template:
+    src: config.yml.j2
+    dest: "{{ loki_config_path }}"
+    owner: loki
+    group: root
+    mode: "0664"
+    backup: true
+    validate: /usr/bin/loki -verify-config -config.file %s
+  notify: Restart loki
+
+- name: Flush handlers before the readiness check
+  ansible.builtin.meta: flush_handlers
+
+- name: Wait for /ready
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ loki_http_port }}/ready"
+    status_code: 200
+  register: _loki_ready
+  retries: 30
+  delay: 2
+  until: _loki_ready.status == 200
+  check_mode: false

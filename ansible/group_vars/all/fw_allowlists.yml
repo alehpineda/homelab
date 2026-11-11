@@ -12,12 +12,17 @@ pve_fw_cluster_ipsets:
   nb_routers:
     comment: NetBird routing peers (masquerade)
     cidrs: [10.10.0.50, 10.10.0.51]
+  log_shippers:
+    comment: Grafana Alloy agents (BRL host, Caddy CT250, arr CT182); AdGuard .53 joins in phase 1b
+    cidrs: [10.10.0.21, 10.10.0.250, 10.10.0.82]
   # `management` already exists (10.10.0.0/24, 100.85.0.0/16) and is used by
   # node rules for 22/8006/3128. Not managed here; change it only with NetTit.
 
 pve_fw_cluster_aliases:
   grafana: 10.10.0.71
   prometheus: 10.10.0.72
+  loki: 10.10.0.73
+  openobserve: 10.10.0.77
   firecrawl: 10.10.0.64
   n8n: 10.10.0.70
   seerr: 10.10.0.83
@@ -63,9 +68,14 @@ pve_fw_ct_rules:
     - {proto: tcp, dport: "11434", source: n8n}
   172:  # prometheus
     - {proto: tcp, dport: "9090", source: grafana}
-  173:  # loki
+  173:  # loki (push from Alloy agents; 9095 gRPC stays Grafana-only)
     - {proto: tcp, dport: "3100", source: grafana}
     - {proto: tcp, dport: "9095", source: grafana}
+    - {proto: tcp, dport: "3100", source: +log_shippers, comment: "Alloy push"}
+  177:  # openobserve — UI via Caddy; Loki push from Alloy; remote_write from Prometheus; 5081 closed
+    - {proto: tcp, dport: "5080", source: +caddy}
+    - {proto: tcp, dport: "5080", source: +log_shippers, comment: "Alloy loki push"}
+    - {proto: tcp, dport: "5080", source: prometheus, comment: "remote_write"}
   174:  # pve-exporter
     - {proto: tcp, dport: "9221", source: prometheus}
   180:  # jellyfin (NetBird peer; LAN stays open until a guest VLAN exists)

@@ -8,6 +8,18 @@ https://*.alehpineda.com {
 		dns cloudflare {env.CF_API_TOKEN}
 		resolvers 1.1.1.1
 	}
+	# Access log for Alloy (CT250 -> Loki CT173 + OpenObserve CT177), 2026-11-11.
+	# Caddy redacts Cookie/Authorization by default. Dir /var/log/caddy is
+	# caddy:caddy 0750 (ansible role alloy); alloy is in group caddy.
+	log {
+		output file /var/log/caddy/access.log {
+			roll_size 50MiB
+			roll_keep 5
+			roll_keep_for 720h
+			mode 0640
+		}
+		format json
+	}
 route {
 @family_ingress expression `{http.request.local.host} == "10.10.0.251"`
 handle @family_ingress {
@@ -233,6 +245,10 @@ handle @dockge {
 	@grafana host grafana.alehpineda.com
 	handle @grafana {
 		reverse_proxy http://10.10.0.71:3000
+	}
+	@openobserve host openobserve.alehpineda.com
+	handle @openobserve {
+		reverse_proxy http://10.10.0.77:5080
 	}
 	@uptime host uptime.alehpineda.com
 	handle @uptime {

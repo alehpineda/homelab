@@ -28,9 +28,11 @@ is not set (same as the firecrawl and jellyfin declarations).
 | 172 | prometheus-blr-lxc | 10.10.0.72 | Prometheus | :9090 LAN |
 | 173 | loki-blr-lxc | 10.10.0.73 | Loki 3.7.9 | :3100 LAN |
 | 174 | pve-exporter-blr-lxc | 10.10.0.74 | prometheus-pve-exporter | :9221 LAN |
+| 177 | openobserve-blr-lxc | 10.10.0.77 | OpenObserve OSS 1.1.2 (declared 2026-11-11, not created yet) | :5080 via Caddy `.250` |
 
 Resources: 169 is 4 cores / 8192 MB / 20G; 171 is 1 / 1024 MB / 8G; 172 is
-2 / 2048 MB / 20G; 173 is 1 / 1024 MB / 20G; 174 is 1 / 512 MB / 4G.
+2 / 2048 MB / 20G; 173 is 1 / 1024 MB / 20G; 174 is 1 / 512 MB / 4G;
+177 is 2 / 2048 MB / 8G root + 30G data volume (`mp0`, `backup=1`).
 Swap in Terraform is 512 MB, matching the other `ct_*.tf` files.
 
 `vzdump` job `forge-backup-ssd` includes 169 and 171–174. Unattended
@@ -110,8 +112,32 @@ To `deathscythe+kuma@mail.grokbot.com`. The app password is supplied at run
 time via `SMTP_PASSWORD`; it is not in the repo. Grafana/Prometheus remain
 the metrics path; Kuma is up/down, cert-expiry, and SMTP alerting.
 
+## Logging: Loki and OpenObserve side by side (2026-11-11)
+
+Plan: Forge `/workspace/forge/plans/openobserve-loki-plan-20261111.md`.
+Runbook: [runbooks/logging-loki-openobserve.md](runbooks/logging-loki-openobserve.md).
+
+- Grafana Alloy (`ansible/roles/alloy`) runs on each log source and sends the
+  same entries to Loki CT 173 (`/loki/api/v1/push`) and OpenObserve CT 177
+  (`/api/default/loki/api/v1/push`, stream = `o2_stream_name` = `job`).
+- Phase 1 sources: BRL host journald (`pve_journal`), CT 250 Caddy access log
+  (`caddy_access`), CT 182 Docker (`arr_docker`). AdGuard querylog
+  (`adguard_query`) is phase 1b.
+- Labels: `host`, `job`, plus `unit`/`level` (journal), `filename` (files),
+  `container` (Docker).
+- Retention 30 days on both: Loki compactor (`ansible/roles/loki_config`),
+  OpenObserve `ZO_COMPACT_DATA_RETENTION_DAYS=30`.
+- Prometheus CT 172 also remote_writes `pve` and `node` jobs (noisy families
+  dropped) to OpenObserve (`ansible/roles/prometheus_remote_write`).
+  Grafana -> Prometheus is unchanged.
+- `openobserve.alehpineda.com` -> Caddy `.250` (admin only; `.251` falls
+  through to `abort`). Loki keeps no hostname; Grafana is its UI.
+- OpenObserve root and ingest credentials live outside git (controller
+  files `~/.config/forge/openobserve_root`, `openobserve_ingest`).
+- vzdump `forge-backup-ssd` gains 177 (both disks).
+
 ## Still pending
 
 Flint DHCP reservations for `10.10.0.71`–`10.10.0.74` (MACs on CTs
-171–174) are still pending. Until those exist, the static addresses in
+171–174) and `10.10.0.77` (`02:46:4F:52:01:77`, CT 177) are still pending. Until those exist, the static addresses in
 the LXC configs are what Terraform records.

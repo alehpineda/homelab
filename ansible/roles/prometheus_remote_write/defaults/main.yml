@@ -1,0 +1,12 @@
+---
+# Adds an OpenObserve remote_write block to Prometheus on CT 172. Scrapes and
+# the Grafana -> Prometheus path are unchanged; this is an extra copy.
+prometheus_config_path: /etc/prometheus/prometheus.yml
+prometheus_promtool: /usr/local/bin/promtool
+prometheus_o2_remote_write_url: http://10.10.0.77:5080/api/default/prometheus/api/v1/write
+prometheus_o2_password_file: /etc/prometheus/openobserve_ingest.pass
+# Controller-side secret file (KEY=VALUE, 0600): O2_USER_EMAIL / O2_USER_PASSWORD.
+prometheus_o2_ingest_secret_file: "{{ lookup('ansible.builtin.env', 'HOME') }}/.config/forge/openobserve_ingest"
+# Low cardinality: only these jobs leave Prometheus, minus noisy families.
+prometheus_o2_keep_jobs: "pve|node"
+prometheus_o2_drop_metrics: "go_.*|process_.*|promhttp_.*|scrape_.*|node_cpu_seconds_total|node_softnet_.*|node_interrupts_total|node_scrape_collector_.*|node_cpu_guest_seconds_total"

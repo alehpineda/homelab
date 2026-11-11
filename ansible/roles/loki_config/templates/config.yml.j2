@@ -1,0 +1,53 @@
+# Managed by ansible role loki_config (alehpineda/homelab). Do not edit live.
+# Base = community-scripts Loki default (2026-11-03). Changes 2026-11-11:
+#   + compactor retention (30d) and limits
+#   - ruler.alertmanager_url http://localhost:9093 (no Alertmanager exists;
+#     alerts use Grafana-managed rules on the loki-brl datasource instead)
+auth_enabled: false
+
+server:
+  http_listen_port: {{ loki_http_port }}
+  grpc_listen_port: {{ loki_grpc_port }}
+  log_level: info
+
+common:
+  instance_addr: 127.0.0.1
+  path_prefix: {{ loki_path_prefix }}
+  storage:
+    filesystem:
+      chunks_directory: {{ loki_path_prefix }}/chunks
+      rules_directory: {{ loki_path_prefix }}/rules
+  replication_factor: 1
+  ring:
+    kvstore:
+      store: inmemory
+
+schema_config:
+  configs:
+    - from: 2020-10-24
+      store: tsdb
+      object_store: filesystem
+      schema: v13
+      index:
+        prefix: index_
+        period: 24h
+
+query_range:
+  results_cache:
+    cache:
+      embedded_cache:
+        enabled: true
+        max_size_mb: 100
+
+compactor:
+  working_directory: {{ loki_path_prefix }}/compactor
+  compaction_interval: 10m
+  retention_enabled: true
+  retention_delete_delay: 2h
+  delete_request_store: filesystem
+
+limits_config:
+  metric_aggregation_enabled: true
+  retention_period: {{ loki_retention_period }}
+  reject_old_samples: true
+  reject_old_samples_max_age: {{ loki_reject_old_samples_max_age }}

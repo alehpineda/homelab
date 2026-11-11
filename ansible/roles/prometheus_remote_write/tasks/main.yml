@@ -1,0 +1,49 @@
+---
+# Appends a marked remote_write block to prometheus.yml (validated with
+# promtool before replace). Does not touch scrape_configs.
+
+- name: Read OpenObserve ingest credentials from the controller secret file
+  ansible.builtin.set_fact:
+    _prw_user: "{{ lookup('ansible.builtin.ini', 'O2_USER_EMAIL', type='properties', file=prometheus_o2_ingest_secret_file) }}"
+    _prw_password: "{{ lookup('ansible.builtin.ini', 'O2_USER_PASSWORD', type='properties', file=prometheus_o2_ingest_secret_file) }}"
+  no_log: true
+
+- name: Write the remote_write password file (0600; Prometheus runs as root on CT 172)
+  ansible.builtin.copy:
+    dest: "{{ prometheus_o2_password_file }}"
+    content: "{{ _prw_password }}"
+    owner: root
+    group: root
+    mode: "0600"
+  no_log: true
+  notify: Reload prometheus
+
+- name: Refuse to add a second remote_write key
+  ansible.builtin.command:
+    argv: [grep, -c, -E, '^remote_write:', "{{ prometheus_config_path }}"]
+  register: _prw_existing
+  changed_when: false
+  failed_when: false
+
+- name: Check for this role's marker
+  ansible.builtin.command:
+    argv: [grep, -c, "BEGIN FORGE openobserve remote_write", "{{ prometheus_config_path }}"]
+  register: _prw_marker
+  changed_when: false
+  failed_when: false
+
+- name: Fail when an unmanaged remote_write already exists
+  ansible.builtin.assert:
+    that:
+      - (_prw_existing.stdout | int) == 0 or (_prw_marker.stdout | int) > 0
+    fail_msg: prometheus.yml already has an unmanaged remote_write block. Merge by hand.
+
+- name: Add the OpenObserve remote_write block
+  ansible.builtin.blockinfile:
+    path: "{{ prometheus_config_path }}"
+    marker: "# {mark} FORGE openobserve remote_write"
+    block: "{{ lookup('ansible.builtin.template', 'remote_write.yml.j2') }}"
+    insertafter: EOF
+    backup: true
+    validate: "{{ prometheus_promtool }} check config %s"
+  notify: Reload prometheus

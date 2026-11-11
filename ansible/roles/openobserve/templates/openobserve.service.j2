@@ -1,0 +1,37 @@
+# Managed by ansible role openobserve. Community-script unit plus a service
+# user and sandboxing. EnvironmentFile lives outside the data dir.
+[Unit]
+Description=OpenObserve
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=simple
+User={{ openobserve_user }}
+Group={{ openobserve_group }}
+EnvironmentFile={{ openobserve_env_file }}
+WorkingDirectory={{ openobserve_home }}
+ExecStart={{ openobserve_home }}/openobserve
+Restart=on-failure
+RestartSec=5s
+LimitNOFILE=65536
+NoNewPrivileges=true
+{% if openobserve_unit_sandbox %}
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+RestrictNamespaces=true
+LockPersonality=true
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX AF_NETLINK
+CapabilityBoundingSet=
+AmbientCapabilities=
+{% endif %}
+ReadWritePaths={{ openobserve_data_dir }}
+
+[Install]
+WantedBy=multi-user.target
