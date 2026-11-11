@@ -19,6 +19,10 @@
 # Sizing raised 2026-11-10: 8 cores / 32768 MiB / 8192 MiB swap / 20G root.
 # Was the community-script floor (2 cores / 4096 MiB / 512 MiB swap). A
 # library scan filled swap on the old size; owner approved the bump.
+# Rootfs grown 20G -> 40G online on 2026-11-10 ~11:28 PM CT (pct resize,
+# owner yes) after scan-downloaded covers/screenshots in
+# /var/lib/romm/resources filled the 20G root to 100%. Planned follow-up:
+# move resources to a dedicated media/data/romm-resources dataset (mp1).
 
 # Template is the Debian 13 vztmpl already on BRL local (same as CT183/184).
 # Confirm it is still on local before apply. nameserver is set after create
@@ -54,7 +58,7 @@ resource "proxmox_lxc" "ct_185" {
 
   rootfs {
     storage = var.pm_storage
-    size    = "20G"
+    size    = "40G"
   }
 
   mountpoint {
