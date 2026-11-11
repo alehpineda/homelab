@@ -16,7 +16,9 @@
 # after install (the installer mkdirs that path). After install, symlink
 # /var/lib/romm/library -> /mnt/arcade-collections. No arcade chown, no
 # scan in this raise.
-# Sizing matches the script floor: 2 cores / 4096 MiB / 20G root.
+# Sizing raised 2026-11-10: 8 cores / 32768 MiB / 8192 MiB swap / 20G root.
+# Was the community-script floor (2 cores / 4096 MiB / 512 MiB swap). A
+# library scan filled swap on the old size; owner approved the bump.
 
 # Template is the Debian 13 vztmpl already on BRL local (same as CT183/184).
 # Confirm it is still on local before apply. nameserver is set after create
@@ -37,9 +39,9 @@ resource "proxmox_lxc" "ct_185" {
   ostype          = "debian"
   unprivileged    = true
   onboot          = true
-  cores           = 2
-  memory          = 4096
-  swap            = 512
+  cores           = 8
+  memory          = 32768
+  swap            = 8192
   tags            = "community-script;family;media;romm;storage-data2"
   ostemplate      = "local:vztmpl/debian-13-standard_13.6-1_amd64.tar.zst"
   ssh_public_keys = var.ct185_ssh_public_keys
