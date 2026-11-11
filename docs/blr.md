@@ -94,6 +94,7 @@ Names only. Paths and credentials stay on the node.
 | `data2` | Root-disk storage for all CTs and default `pm_storage`. CT 175 rootfs is 24G on `data2`. |
 | `media` | Media storage on the node. Not wired to Terraform. |
 | `media/ollama-models` | ZFS dataset, host mount `/media/ollama-models`. CT 175 mp0 binds it at guest `/mnt/ollama-models` with `backup=0`. Measured 2026-11-05: used about 203G, refquota 400G. Not a Terraform resource. |
+| `media/data/romm-resources` | ZFS dataset, host mount `/media/data/romm-resources`, owner 100000:100000, lz4, atime=off. CT 185 mp1 binds it at guest `/var/lib/romm/resources` with `backup=0` (RomM covers, re-downloadable). Created 2026-11-10, about 15G at move. Not a Terraform resource. |
 | SMB mounts | Present on the node. Do not encode share users or passwords in this repo. |
 
 ## API access
