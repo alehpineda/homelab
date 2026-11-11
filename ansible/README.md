@@ -33,6 +33,11 @@ SSH port **4488**. Fresh LXCs often still listen on **22**. Set
 | `roles/console_autologin/` | Getty drop-ins for that playbook. Default off. |
 | `playbooks/arr.yml` | CT 182 Docker, Dockge, and the phase-1 stack. Not run by `site.yml`. |
 | `roles/arr/` | That playbook. Skips gluetun, qBittorrent, and Watchtower when `.env` is missing. |
+| `playbooks/logging.yml` | Loki CT 173 config, OpenObserve CT 177, Alloy agents, Prometheus remote_write. Per-phase `--tags`. Not run by `site.yml`. |
+| `roles/loki_config/` | `/etc/loki/config.yml` (30d compactor retention). `-verify-config` before replace. |
+| `roles/openobserve/` | OpenObserve OSS pinned binary, service user, hardened unit, `/etc/openobserve/openobserve.env` 0600 from controller secret files. |
+| `roles/alloy/` | Grafana Alloy pinned + held; per-host sources fan out to Loki and OpenObserve. |
+| `roles/prometheus_remote_write/` | Marked `remote_write` block to OpenObserve; `promtool check config` before replace. |
 
 ## Inventory
 

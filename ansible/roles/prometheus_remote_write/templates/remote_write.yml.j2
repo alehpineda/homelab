@@ -1,0 +1,25 @@
+remote_write:
+  - name: openobserve
+    url: {{ prometheus_o2_remote_write_url }}
+    basic_auth:
+      username: {{ _prw_user }}
+      password_file: {{ prometheus_o2_password_file }}
+    remote_timeout: 30s
+    write_relabel_configs:
+      - source_labels: [job]
+        regex: "{{ prometheus_o2_keep_jobs }}"
+        action: keep
+      - source_labels: [__name__]
+        regex: "{{ prometheus_o2_drop_metrics }}"
+        action: drop
+    queue_config:
+      capacity: 10000
+      max_shards: 4
+      min_shards: 1
+      max_samples_per_send: 2000
+      batch_send_deadline: 10s
+      min_backoff: 1s
+      max_backoff: 30s
+    metadata_config:
+      send: true
+      send_interval: 1m

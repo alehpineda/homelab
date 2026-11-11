@@ -1,0 +1,97 @@
+// Managed by ansible role alloy (alehpineda/homelab). Do not edit live.
+// Host: {{ alloy_host_label }}. Every source forwards the same entries to
+// Loki (CT 173) and OpenObserve (CT 177). Labels kept low-cardinality:
+// host, job, unit|container|filename, level.
+
+loki.write "loki" {
+  endpoint {
+    url = "{{ alloy_loki_push_url }}"
+  }
+  external_labels = { host = "{{ alloy_host_label }}" }
+}
+
+loki.write "o2" {
+  endpoint {
+    url = "{{ alloy_o2_push_url }}"
+    basic_auth {
+      username = sys.env("O2_INGEST_USER")
+      password = sys.env("O2_INGEST_PASSWORD")
+    }
+  }
+  external_labels = { host = "{{ alloy_host_label }}" }
+}
+
+// OpenObserve routes Loki pushes by o2_stream_name; one stream per job.
+loki.relabel "o2route" {
+  forward_to = [loki.write.o2.receiver]
+  rule {
+    source_labels = ["job"]
+    target_label  = "o2_stream_name"
+  }
+}
+{% if alloy_source_journal %}
+
+loki.relabel "journal" {
+  forward_to = []
+  rule {
+    source_labels = ["__journal__systemd_unit"]
+    target_label  = "unit"
+  }
+  rule {
+    source_labels = ["__journal_priority_keyword"]
+    target_label  = "level"
+  }
+}
+
+loki.source.journal "host" {
+  max_age       = "{{ alloy_journal_max_age }}"
+  relabel_rules = loki.relabel.journal.rules
+  labels        = { job = "pve_journal" }
+  forward_to    = [loki.write.loki.receiver, loki.relabel.o2route.receiver]
+}
+{% endif %}
+{% if alloy_source_caddy %}
+
+local.file_match "caddy" {
+  path_targets = [{ "__path__" = "{{ alloy_caddy_log_file }}", "job" = "caddy_access" }]
+}
+
+loki.source.file "caddy" {
+  targets    = local.file_match.caddy.targets
+  forward_to = [loki.write.loki.receiver, loki.relabel.o2route.receiver]
+}
+{% endif %}
+{% if alloy_source_docker %}
+
+discovery.docker "local" {
+  host = "{{ alloy_docker_socket }}"
+}
+
+discovery.relabel "docker" {
+  targets = []
+  rule {
+    source_labels = ["__meta_docker_container_name"]
+    regex         = "/(.*)"
+    target_label  = "container"
+  }
+}
+
+loki.source.docker "arr" {
+  host          = "{{ alloy_docker_socket }}"
+  targets       = discovery.docker.local.targets
+  relabel_rules = discovery.relabel.docker.rules
+  labels        = { job = "arr_docker" }
+  forward_to    = [loki.write.loki.receiver, loki.relabel.o2route.receiver]
+}
+{% endif %}
+{% if alloy_source_adguard %}
+
+local.file_match "adguard" {
+  path_targets = [{ "__path__" = "{{ alloy_adguard_querylog }}", "job" = "adguard_query" }]
+}
+
+loki.source.file "adguard" {
+  targets    = local.file_match.adguard.targets
+  forward_to = [loki.write.loki.receiver, loki.relabel.o2route.receiver]
+}
+{% endif %}

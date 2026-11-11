@@ -5,6 +5,7 @@
 # here. playbooks/grokbot-headless.yml (CT 176) is not imported either.
 # playbooks/arr.yml (CT 182) is not imported either.
 # playbooks/caddy.yml (CT 250 drop-in) is not imported either.
+# playbooks/logging.yml (Loki/OpenObserve/Alloy) is not imported either.
 # Run any of these only from a separate approved plan.
 - name: Include connectivity smoke
   ansible.builtin.import_playbook: ping.yml

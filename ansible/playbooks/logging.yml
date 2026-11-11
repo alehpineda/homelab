@@ -1,0 +1,58 @@
+---
+# Loki CT 173 + OpenObserve CT 177 side by side, fed the same logs by
+# Grafana Alloy. Not imported by site.yml. Run one phase at a time with
+# --tags, only from an approved plan:
+#   loki          CT 173 config (30d retention, no bogus Alertmanager URL)
+#   openobserve   CT 177 install (needs ~/.config/forge/openobserve_{root,ingest})
+#   alloy_host    BRL host journald  -> Loki + OpenObserve
+#   alloy_caddy   CT 250 access log  -> Loki + OpenObserve (Caddyfile log block first)
+#   alloy_arr     CT 182 Docker logs -> Loki + OpenObserve
+#   prom_rw       CT 172 Prometheus remote_write -> OpenObserve
+# See docs/runbooks/logging-loki-openobserve.md.
+- name: Loki config
+  hosts: loki-blr-lxc
+  gather_facts: false
+  tags: [loki]
+  roles:
+    - role: loki_config
+
+- name: OpenObserve
+  hosts: openobserve-blr-lxc
+  gather_facts: false
+  tags: [openobserve]
+  roles:
+    - role: openobserve
+
+- name: Alloy on the BRL host (journald)
+  hosts: barbatoslupusrex
+  gather_facts: false
+  tags: [alloy_host]
+  roles:
+    - role: alloy
+      vars:
+        alloy_source_journal: true
+
+- name: Alloy on CT 250 (Caddy access log)
+  hosts: caddy-blr-lxc
+  gather_facts: false
+  tags: [alloy_caddy]
+  roles:
+    - role: alloy
+      vars:
+        alloy_source_caddy: true
+
+- name: Alloy on CT 182 (Docker)
+  hosts: arr-blr-lxc
+  gather_facts: false
+  tags: [alloy_arr]
+  roles:
+    - role: alloy
+      vars:
+        alloy_source_docker: true
+
+- name: Prometheus remote_write to OpenObserve
+  hosts: prometheus-blr-lxc
+  gather_facts: false
+  tags: [prom_rw]
+  roles:
+    - role: prometheus_remote_write

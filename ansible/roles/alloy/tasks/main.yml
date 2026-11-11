@@ -1,0 +1,146 @@
+---
+# Installs Grafana Alloy (pinned + held) and renders a per-host config.
+# Does not edit the Caddyfile, Docker, or journald.
+
+- name: Read OpenObserve ingest credentials from the controller secret file
+  ansible.builtin.set_fact:
+    _alloy_o2_user: "{{ lookup('ansible.builtin.ini', 'O2_USER_EMAIL', type='properties', file=alloy_o2_ingest_secret_file) }}"
+    _alloy_o2_password: "{{ lookup('ansible.builtin.ini', 'O2_USER_PASSWORD', type='properties', file=alloy_o2_ingest_secret_file) }}"
+  no_log: true
+
+- name: Ensure the apt keyrings directory
+  ansible.builtin.file:
+    path: /etc/apt/keyrings
+    state: directory
+    mode: "0755"
+
+- name: Fetch the Grafana apt key
+  ansible.builtin.get_url:
+    url: "{{ alloy_apt_key_url }}"
+    dest: /etc/apt/keyrings/grafana.asc
+    mode: "0644"
+
+- name: Verify the Grafana apt key fingerprint
+  ansible.builtin.command:
+    argv: [gpg, --show-keys, --with-colons, /etc/apt/keyrings/grafana.asc]
+  register: _alloy_key
+  changed_when: false
+
+- name: Fail on an unexpected key
+  ansible.builtin.assert:
+    that:
+      - ("fpr:::::::::" ~ alloy_apt_key_fingerprint ~ ":") in _alloy_key.stdout
+    fail_msg: /etc/apt/keyrings/grafana.asc fingerprint does not match {{ alloy_apt_key_fingerprint }}.
+
+- name: Add the Grafana apt source (Alloy only is installed from it)
+  ansible.builtin.copy:
+    dest: /etc/apt/sources.list.d/grafana.sources
+    owner: root
+    group: root
+    mode: "0644"
+    content: |
+      Types: deb
+      URIs: {{ alloy_apt_repo_uri }}
+      Suites: stable
+      Components: main
+      Signed-By: /etc/apt/keyrings/grafana.asc
+
+- name: Pin only alloy from apt.grafana.com
+  ansible.builtin.copy:
+    dest: /etc/apt/preferences.d/grafana-alloy-only
+    owner: root
+    group: root
+    mode: "0644"
+    content: |
+      Package: alloy
+      Pin: origin "apt.grafana.com"
+      Pin-Priority: 500
+
+      Package: *
+      Pin: origin "apt.grafana.com"
+      Pin-Priority: -1
+
+- name: Install the pinned alloy package
+  ansible.builtin.apt:
+    name: "alloy={{ alloy_version }}"
+    update_cache: true
+    allow_downgrade: false
+
+- name: Hold alloy
+  ansible.builtin.dpkg_selections:
+    name: alloy
+    selection: hold
+
+- name: Let alloy read the journal
+  ansible.builtin.user:
+    name: alloy
+    groups: [systemd-journal, adm]
+    append: true
+  when: alloy_source_journal
+  notify: Restart alloy
+
+- name: Ensure the Caddy log directory (group-readable for alloy)
+  ansible.builtin.file:
+    path: "{{ alloy_caddy_log_dir }}"
+    state: directory
+    owner: caddy
+    group: caddy
+    mode: "0750"
+  when: alloy_source_caddy
+
+- name: Let alloy read Caddy logs
+  ansible.builtin.user:
+    name: alloy
+    groups: [caddy]
+    append: true
+  when: alloy_source_caddy
+  notify: Restart alloy
+
+- name: Let alloy read the Docker socket (root-equivalent inside this CT only)
+  ansible.builtin.user:
+    name: alloy
+    groups: [docker]
+    append: true
+  when: alloy_source_docker
+  notify: Restart alloy
+
+- name: Write the OpenObserve ingest env file (0600)
+  ansible.builtin.template:
+    src: o2.env.j2
+    dest: "{{ alloy_o2_env_file }}"
+    owner: root
+    group: root
+    mode: "0600"
+  no_log: true
+  notify: Restart alloy
+
+- name: Ensure the alloy unit drop-in directory
+  ansible.builtin.file:
+    path: /etc/systemd/system/alloy.service.d
+    state: directory
+    mode: "0755"
+
+- name: Add the OpenObserve env drop-in
+  ansible.builtin.template:
+    src: 10-forge-o2.conf.j2
+    dest: /etc/systemd/system/alloy.service.d/10-forge-o2.conf
+    mode: "0644"
+  notify: Restart alloy
+
+- name: Render config.alloy (validated with alloy fmt)
+  ansible.builtin.template:
+    src: config.alloy.j2
+    dest: /etc/alloy/config.alloy
+    owner: root
+    group: alloy
+    mode: "0640"
+    backup: true
+    validate: /usr/bin/alloy fmt %s
+  notify: Restart alloy
+
+- name: Enable and start alloy
+  ansible.builtin.systemd_service:
+    name: alloy
+    enabled: true
+    state: started
+    daemon_reload: true

@@ -1,0 +1,170 @@
+---
+# Installs OpenObserve OSS on CT 177. Does not create the CT or mp0.
+# Never logs credentials (no_log on every task that touches them).
+
+- name: Read root credentials from the controller secret file
+  ansible.builtin.set_fact:
+    _o2_root_email: "{{ lookup('ansible.builtin.ini', 'O2_USER_EMAIL', type='properties', file=openobserve_root_secret_file) }}"
+    _o2_root_password: "{{ lookup('ansible.builtin.ini', 'O2_USER_PASSWORD', type='properties', file=openobserve_root_secret_file) }}"
+  no_log: true
+
+- name: Require non-empty root credentials
+  ansible.builtin.assert:
+    that:
+      - _o2_root_email | length > 3
+      - _o2_root_password | length >= 12
+    fail_msg: "{{ openobserve_root_secret_file }} must hold O2_USER_EMAIL and O2_USER_PASSWORD."
+    quiet: true
+  no_log: true
+
+- name: Confirm the data path is the mp0 volume
+  ansible.builtin.command:
+    argv: [findmnt, --mountpoint, "{{ openobserve_data_dir }}", --noheadings]
+  register: _o2_mount
+  changed_when: false
+  failed_when: false
+
+- name: Fail when the data path is not a mountpoint
+  ansible.builtin.assert:
+    that:
+      - _o2_mount.rc == 0
+    fail_msg: >-
+      {{ openobserve_data_dir }} is not a mountpoint. CT 177 mp0 (30G data2)
+      must exist so log data does not land on the 8G rootfs.
+
+- name: Ensure the service group
+  ansible.builtin.group:
+    name: "{{ openobserve_group }}"
+    system: true
+
+- name: Ensure the service user
+  ansible.builtin.user:
+    name: "{{ openobserve_user }}"
+    group: "{{ openobserve_group }}"
+    system: true
+    shell: /usr/sbin/nologin
+    home: "{{ openobserve_home }}"
+    create_home: false
+
+- name: Ensure install and data directories
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: directory
+    owner: "{{ item.owner }}"
+    group: "{{ openobserve_group }}"
+    mode: "{{ item.mode }}"
+  loop:
+    - {path: "{{ openobserve_home }}", owner: root, mode: "0755"}
+    - {path: "{{ openobserve_data_dir }}", owner: "{{ openobserve_user }}", mode: "0750"}
+    - {path: "{{ openobserve_env_dir }}", owner: root, mode: "0750"}
+
+- name: Check the installed version marker
+  ansible.builtin.slurp:
+    src: "{{ openobserve_home }}/.forge-version"
+  register: _o2_marker
+  failed_when: false
+
+- name: Download the pinned tarball (sha256 checked)
+  ansible.builtin.get_url:
+    url: "{{ openobserve_tarball_url }}"
+    dest: "/root/openobserve-v{{ openobserve_version }}-linux-amd64.tar.gz"
+    checksum: "sha256:{{ openobserve_tarball_sha256 }}"
+    mode: "0600"
+  when: (_o2_marker.content | default('') | b64decode | trim) != openobserve_version
+
+- name: Unpack the binary
+  ansible.builtin.unarchive:
+    src: "/root/openobserve-v{{ openobserve_version }}-linux-amd64.tar.gz"
+    dest: "{{ openobserve_home }}"
+    remote_src: true
+    owner: root
+    group: root
+    extra_opts: [--no-same-owner]
+  when: (_o2_marker.content | default('') | b64decode | trim) != openobserve_version
+  notify: Restart openobserve
+
+- name: Write the version marker
+  ansible.builtin.copy:
+    dest: "{{ openobserve_home }}/.forge-version"
+    content: "{{ openobserve_version }}\n"
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Write the environment file (0600, root)
+  ansible.builtin.template:
+    src: openobserve.env.j2
+    dest: "{{ openobserve_env_file }}"
+    owner: root
+    group: root
+    mode: "0600"
+  no_log: true
+  notify: Restart openobserve
+
+- name: Install the systemd unit
+  ansible.builtin.template:
+    src: openobserve.service.j2
+    dest: /etc/systemd/system/openobserve.service
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Restart openobserve
+
+- name: Enable and start openobserve
+  ansible.builtin.systemd_service:
+    name: openobserve
+    enabled: true
+    state: started
+    daemon_reload: true
+
+- name: Flush handlers before health checks
+  ansible.builtin.meta: flush_handlers
+
+- name: Wait for /healthz
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ openobserve_http_port }}/healthz"
+    status_code: 200
+  register: _o2_health
+  retries: 30
+  delay: 2
+  until: _o2_health.status == 200
+  check_mode: false
+
+- name: Read ingest credentials from the controller secret file
+  ansible.builtin.set_fact:
+    _o2_ingest_email: "{{ lookup('ansible.builtin.ini', 'O2_USER_EMAIL', type='properties', file=openobserve_ingest_secret_file) }}"
+    _o2_ingest_password: "{{ lookup('ansible.builtin.ini', 'O2_USER_PASSWORD', type='properties', file=openobserve_ingest_secret_file) }}"
+  no_log: true
+  when: openobserve_create_ingest_user
+
+- name: List users in the org
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ openobserve_http_port }}/api/{{ openobserve_org }}/users"
+    user: "{{ _o2_root_email }}"
+    password: "{{ _o2_root_password }}"
+    force_basic_auth: true
+  register: _o2_users
+  no_log: true
+  check_mode: false
+  when: openobserve_create_ingest_user
+
+- name: Create the ingest user (OSS role admin)
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ openobserve_http_port }}/api/{{ openobserve_org }}/users"
+    method: POST
+    user: "{{ _o2_root_email }}"
+    password: "{{ _o2_root_password }}"
+    force_basic_auth: true
+    body_format: json
+    body:
+      email: "{{ _o2_ingest_email }}"
+      password: "{{ _o2_ingest_password }}"
+      role: admin
+      first_name: alloy
+      last_name: ingest
+    status_code: [200, 201]
+  no_log: true
+  changed_when: true
+  when:
+    - openobserve_create_ingest_user
+    - _o2_ingest_email | lower not in (_o2_users.json.data | default([]) | map(attribute='email') | map('lower') | list)

@@ -1,0 +1,37 @@
+---
+# OpenObserve OSS on CT 177. Same layout as community-scripts
+# install/openobserve-install.sh (/opt/openobserve, openobserve.service),
+# pinned instead of floating to GitHub "latest" (v1.2.0-rc1 on 2026-11-11).
+openobserve_version: "1.1.2"
+# sha256 of openobserve-v1.1.2-linux-amd64.tar.gz; matches the vendor's
+# .sha256sum file and was re-hashed by Forge on 2026-11-11.
+openobserve_tarball_sha256: "225883447a9e3c75cb52d5a64ece8618cf0d8f3d2eb0b424eebb2e51b0126faa"
+openobserve_tarball_url: "https://downloads.openobserve.ai/releases/openobserve/v{{ openobserve_version }}/openobserve-v{{ openobserve_version }}-linux-amd64.tar.gz"
+
+openobserve_user: openobserve
+openobserve_group: openobserve
+openobserve_home: /opt/openobserve
+# CT 177 mp0 (30G data2). The role refuses to run if this is not a mountpoint.
+openobserve_data_dir: /opt/openobserve/data
+openobserve_env_dir: /etc/openobserve
+openobserve_env_file: /etc/openobserve/openobserve.env
+
+openobserve_http_port: 5080
+openobserve_grpc_port: 5081
+openobserve_web_url: "https://openobserve.alehpineda.com"
+openobserve_retention_days: 30
+# MB. Keeps the process well inside the 2048 MiB CT.
+openobserve_memory_cache_max_mb: 256
+openobserve_datafusion_max_mb: 512
+openobserve_org: default
+# systemd sandboxing. Works in unprivileged LXC with nesting=1. If the unit
+# fails with status 226/NAMESPACE, set false (keeps User= and NoNewPrivileges).
+openobserve_unit_sandbox: true
+
+# Controller-side secret files (KEY=VALUE, mode 0600). Never commit them.
+# Format: O2_USER_EMAIL=... / O2_USER_PASSWORD=...
+# Box source: /home/box/secrets/openobserve_root, openobserve_ingest.
+openobserve_root_secret_file: "{{ lookup('ansible.builtin.env', 'HOME') }}/.config/forge/openobserve_root"
+openobserve_ingest_secret_file: "{{ lookup('ansible.builtin.env', 'HOME') }}/.config/forge/openobserve_ingest"
+# Create the ingest user (role admin; OSS has no narrower role) after start.
+openobserve_create_ingest_user: true

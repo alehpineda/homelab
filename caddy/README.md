@@ -11,3 +11,5 @@ Live on CT250 as of 2026-11-09 8:47 PM CT is **Caddyfile.final** (sha adb4c10aâ€
 Firewall vars for CT250 (`ipfilter-net0` {.250,.251}, tcp 80/443 + udp 443 from `+management`) already landed in `ansible/group_vars/all/fw_allowlists.yml` via PR #38.
 
 On 2026-11-10 a systemd drop-in `/etc/systemd/system/caddy.service.d/10-forge-boot.conf` was added live so Caddy retries if it starts before `.250`/`.251` exist (`Restart=on-failure`, `RestartSec=3s`, `StartLimitIntervalSec=0`). The main unit already had `Wants`/`After` `network-online.target`, but this guest has no wait-online provider. IaC: `ansible/playbooks/caddy.yml` and `ansible/roles/caddy_boot/`. The role daemon-reloads and does not restart Caddy. `net.ipv4.ip_nonlocal_bind` was considered and not applied.
+
+2026-11-11 (PR for CT177, not live until applied): `Caddyfile.final` adds `openobserve.alehpineda.com` on `.250` (admin only; `.251` default `abort`) and a JSON access `log` to `/var/log/caddy/access.log` (roll 50MiB x5, 30 days, mode 0640) for Alloy. Create `/var/log/caddy` (caddy:caddy 0750) before reload; `ansible/roles/alloy` does that on CT250.
