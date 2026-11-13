@@ -1,0 +1,22 @@
+---
+# Copy to /opt/arr/recyclarr/recyclarr.yml on CT 182. Do not commit the
+# copy. API keys stay in /opt/arr/recyclarr/secrets.yml (mode 0600,
+# owner uid 1000), which is also not in git. Expected keys:
+# sonarr_api_key and radarr_api_key.
+#
+# Do not enable global reset_unmatched_scores. That would zero scores
+# for custom formats this file does not manage, including the local
+# Malware extensions CF (-10000) and the language CFs.
+# delete_old_custom_formats stays false for the same reason.
+
+sonarr:
+  sonarr:
+    base_url: http://127.0.0.1:8989
+    api_key: !secret sonarr_api_key
+    delete_old_custom_formats: false
+
+radarr:
+  radarr:
+    base_url: http://127.0.0.1:7878
+    api_key: !secret radarr_api_key
+    delete_old_custom_formats: false

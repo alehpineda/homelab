@@ -118,6 +118,30 @@ com.centurylinklabs.watchtower.monitor-only=true
 Labels cannot turn updates on. Pinned digests do not by themselves
 produce new-release mail.
 
+## Recyclarr
+
+Recyclarr 8.8.1 shares gluetun's network and publishes no port, so it is
+not added to `FIREWALL_INPUT_PORTS`. Include `recyclarr` when recreating
+that namespace. The image does not honor `PUID` or `PGID`. Compose sets
+`user: "1000:1000"`. The role creates `/opt/arr/recyclarr` (container
+`/config`), owner `1000:1000`, mode `0750`. It does not copy a config.
+
+Copy `ansible/roles/arr/files/recyclarr.yml.example` to
+`/opt/arr/recyclarr/recyclarr.yml` on the guest. API keys belong only in
+`/opt/arr/recyclarr/secrets.yml`, mode `0600`, owner uid `1000`. Do not
+commit that file. `delete_old_custom_formats` stays `false`. Do not
+enable global `reset_unmatched_scores`: that would zero the local
+`Malware extensions` custom format (`-10000`) and the language custom
+formats.
+
+The container cron is `0 4 * * *` (`America/Chicago`) and runs
+`recyclarr sync` once `recyclarr.yml` is present. Preview before that
+live sync:
+
+```bash
+docker exec recyclarr recyclarr sync --preview
+```
+
 ## Apply
 
 Same play as phase 1, only after the child mounts are present and a

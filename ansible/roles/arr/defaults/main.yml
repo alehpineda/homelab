@@ -19,6 +19,7 @@ arr_radarr_config: /opt/arr/radarr
 arr_lidarr_config: /opt/arr/lidarr
 arr_bazarr_config: /opt/arr/bazarr
 arr_listenarr_config: /opt/arr/listenarr
+arr_recyclarr_config: /opt/arr/recyclarr
 arr_media_mount: /data/media
 arr_downloads_mount: /data/downloads
 arr_usenet_mount: /data/usenet
