@@ -6,10 +6,12 @@
 # A pin change pulls because the new digest is not local.
 # Listenarr (2026-11-10) joins gluetun's network on 4545; it imports
 # audiobooks by COPY into /data/media/audiobooks (CT182 mp21 leaf bind).
+# Recyclarr 8.8.1 (2026-11-13) joins that network with no published port.
+# It syncs TRaSH custom formats to Sonarr and Radarr on localhost.
 # Recreate the VPN namespace without upgrading, from /opt/stacks/arr.
 # Watchtower is not on that network and stays up:
 #   docker compose up -d --force-recreate \
-#     gluetun qbittorrent prowlarr sonarr radarr lidarr bazarr flaresolverr listenarr
+#     gluetun qbittorrent prowlarr sonarr radarr lidarr bazarr flaresolverr listenarr recyclarr
 # Do not run `docker compose config` against a populated .env.
 # FlareSolverr listens on 8191 inside the gluetun namespace. That port
 # is not published and is not in FIREWALL_INPUT_PORTS.
@@ -209,6 +211,31 @@ services:
       - /data/media/audiobooks:/data/media/audiobooks
       - /data/downloads/books:/data/downloads/books
       - /data/usenet/complete/books:/data/usenet/complete/books
+    restart: unless-stopped
+    labels:
+      com.centurylinklabs.watchtower.enable: "true"
+      com.centurylinklabs.watchtower.monitor-only: "true"
+    security_opt:
+      - no-new-privileges:true
+
+  recyclarr:
+    # ghcr.io/recyclarr/recyclarr:8.8.1 linux/amd64.
+    # Index digest sha256:3e9c41b9ec29bbf65fe846864058730d321a21f7695d8c0d9437b73e34d50ad9
+    # Image USER is 1000:1000. The entrypoint does not honor PUID/PGID.
+    # No listener. Sonarr is localhost:8989 and Radarr is localhost:7878.
+    image: ghcr.io/recyclarr/recyclarr@sha256:1a8370c4e830ee3b46709225cc888013e20f667c6bc87593fd58ecfbf149afbf
+    pull_policy: missing
+    container_name: recyclarr
+    user: "1000:1000"
+    network_mode: service:gluetun
+    depends_on:
+      gluetun:
+        condition: service_healthy
+    environment:
+      TZ: America/Chicago
+      CRON_SCHEDULE: "0 4 * * *"
+    volumes:
+      - /opt/arr/recyclarr:/config
     restart: unless-stopped
     labels:
       com.centurylinklabs.watchtower.enable: "true"
