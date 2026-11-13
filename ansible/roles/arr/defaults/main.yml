@@ -27,7 +27,9 @@ arr_usenet_mount: /data/usenet
 # play. Docker would otherwise create a local directory at the source.
 arr_phase2_mounts:
   - /data/media/movies
+  - /data/media/anime-movies
   - /data/media/tv
+  - /data/media/anime-tv
   - /data/media/music
   - /data/media/audiobooks
   - /data/downloads/movies
