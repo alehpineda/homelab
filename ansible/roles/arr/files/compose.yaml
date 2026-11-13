@@ -108,6 +108,7 @@ services:
     volumes:
       - /opt/arr/sonarr:/config
       - /data/media/tv:/data/media/tv
+      - /data/media/anime-tv:/data/media/anime-tv
       - /data/downloads/tv:/data/downloads/tv
       - /data/usenet/complete/tv:/data/usenet/complete/tv
     restart: unless-stopped
@@ -132,6 +133,7 @@ services:
     volumes:
       - /opt/arr/radarr:/config
       - /data/media/movies:/data/media/movies
+      - /data/media/anime-movies:/data/media/anime-movies
       - /data/downloads/movies:/data/downloads/movies
       - /data/usenet/complete/movies:/data/usenet/complete/movies
     restart: unless-stopped
@@ -180,7 +182,9 @@ services:
     volumes:
       - /opt/arr/bazarr:/config
       - /data/media/movies:/data/media/movies
+      - /data/media/anime-movies:/data/media/anime-movies
       - /data/media/tv:/data/media/tv
+      - /data/media/anime-tv:/data/media/anime-tv
     restart: unless-stopped
     labels:
       com.centurylinklabs.watchtower.enable: "true"

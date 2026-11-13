@@ -45,6 +45,24 @@ resource "proxmox_lxc" "ct_180" {
     backup = false
   }
 
+  mountpoint {
+    key    = "3"
+    slot   = 3
+    volume = "/media/data/media/anime-tv"
+    mp     = "/media/anime-tv"
+    # ro=1, backup=0 in pct config. Telmate rc10 mountpoint has no read-only attribute.
+    backup = false
+  }
+
+  mountpoint {
+    key    = "4"
+    slot   = 4
+    volume = "/media/data/media/anime-movies"
+    mp     = "/media/anime-movies"
+    # ro=1, backup=0 in pct config. Telmate rc10 mountpoint has no read-only attribute.
+    backup = false
+  }
+
   network {
     name   = "eth0"
     bridge = "vmbr1"

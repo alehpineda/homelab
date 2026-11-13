@@ -94,10 +94,10 @@ work; imports stay copies.
 | App | Binds |
 |---|---|
 | Prowlarr | config only |
-| Sonarr | `/data/media/tv`, `/data/downloads/tv`, `/data/usenet/complete/tv` |
-| Radarr | `/data/media/movies`, `/data/downloads/movies`, `/data/usenet/complete/movies` |
+| Sonarr | `/data/media/tv`, `/data/media/anime-tv`, `/data/downloads/tv`, `/data/usenet/complete/tv` |
+| Radarr | `/data/media/movies`, `/data/media/anime-movies`, `/data/downloads/movies`, `/data/usenet/complete/movies` |
 | Lidarr | `/data/media/music`, `/data/downloads/music`, `/data/usenet/complete/music` |
-| Bazarr | `/data/media/movies`, `/data/media/tv` |
+| Bazarr | `/data/media/movies`, `/data/media/anime-movies`, `/data/media/tv`, `/data/media/anime-tv` |
 | FlareSolverr | none |
 
 The role checks `findmnt` for each of those paths and fails if one is

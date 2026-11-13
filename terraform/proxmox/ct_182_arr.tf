@@ -272,6 +272,25 @@ resource "proxmox_lxc" "ct_182" {
     backup = false
   }
 
+  # Anime TV and Anime Movies: leaf binds. The parent mp0 bind does not
+  # propagate nested datasets. rw, backup=0, same shape as mp3, mp4, mp6,
+  # and mp21.
+  mountpoint {
+    key    = "22"
+    slot   = 22
+    volume = "/media/data/media/anime-tv"
+    mp     = "/data/media/anime-tv"
+    backup = false
+  }
+
+  mountpoint {
+    key    = "23"
+    slot   = 23
+    volume = "/media/data/media/anime-movies"
+    mp     = "/data/media/anime-movies"
+    backup = false
+  }
+
   network {
     name   = "eth0"
     bridge = "vmbr0"
@@ -287,7 +306,7 @@ resource "proxmox_lxc" "ct_182" {
     # target_node, cmode, network, mountpoint, rootfs[0].storage: Telmate
     # 3.0.2-rc10 import does not read these back, so they would force
     # replacement. See docs/runbooks/terraform-import.md.
-    # ignore_changes on mountpoint hides drift: mp3–mp21 added on the
+    # ignore_changes on mountpoint hides drift: mp3–mp23 added on the
     # node, a changed mp, or a missing ro=1 do not appear in the plan.
     # net0 firewall=1 and the PVE guest firewall (.fw rules/options) are owned by
     # ansible role pve_guest_firewall (group_vars/all/fw_allowlists.yml), live
