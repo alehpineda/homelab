@@ -48,4 +48,14 @@ alloy_journal_drop_rules: []
 alloy_caddy_log_dir: /var/log/caddy
 alloy_caddy_log_file: /var/log/caddy/access.log
 alloy_docker_socket: unix:///var/run/docker.sock
+# arr_docker JSON pack (CT 182). Containers whose text console lines are
+# parsed into the standard body {ts, level, service, host, env, [component],
+# msg}; known formats: bazarr, jackett, flaresolverr, gluetun, recyclarr,
+# watchtower, listenarr. Empty = arr_docker lines pass through unchanged.
+alloy_docker_json_containers: []
+# CLEF containers (Servarr): JSON lines untouched, only the non-JSON lines
+# (linuxserver/s6 banner, NLog text) are packed as level info.
+alloy_docker_banner_containers: []
+# Zone of container wall-clock timestamps that carry no offset (TZ in compose).
+alloy_docker_local_tz: America/Chicago
 alloy_adguard_querylog: /opt/AdGuardHome/data/querylog.json
