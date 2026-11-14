@@ -1,0 +1,10 @@
+---
+# Read-only grokaudit account on BRL LXCs (key-only, no sudo, uid 2990).
+# Targets the grokaudit_lxc group. site.yml does not import this file.
+# Day-1 for a new LXC: add it to grokaudit_lxc and run with --limit.
+- name: Grokaudit audit account on LXC guests
+  hosts: grokaudit_lxc
+  gather_facts: false
+  become: true
+  roles:
+    - lxc_grokaudit

@@ -1,0 +1,22 @@
+---
+# Read-only audit account for Surface Scout on BRL LXCs.
+# Owner approval: DeathScythe, 2026-11-09 4:46 PM CT (key-only, no sudo).
+lxc_grokaudit_user: grokaudit
+# Fixed UID/GID. Never 1000: CT 182 maps guest uid 1000 to host 1100
+# (media) and the *arr apps run as uid 1000 there.
+lxc_grokaudit_uid: 2990
+
+# Public key only (secops_ssh.pub on the bot box).
+lxc_grokaudit_pubkey: >-
+  ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAICHYly9HcArNUHAgqk8av76uTHrqZuH3jJMO0Wu6V8+b grokaudit@grokbot-box
+
+# Never added to these groups. Removed if present.
+lxc_grokaudit_denied_groups: [sudo, wheel, docker, adm, lxd]
+
+# Guests where a login user could read app secrets (world-readable vault DB,
+# .env or API keys). The role refuses them until those files are 0600.
+lxc_grokaudit_excluded:
+  - vaultwarden-blr-lxc   # CT 161
+  - postiz-blr-lxc        # CT 169
+  - seerr-blr-lxc         # CT 183
+  - forge-ws-blr-lxc      # CT 176, uses the scout account instead
