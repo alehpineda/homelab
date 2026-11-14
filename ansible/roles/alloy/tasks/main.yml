@@ -21,15 +21,20 @@
     state: directory
     mode: "0755"
 
+- name: Pick the Grafana key file to verify
+  ansible.builtin.set_fact:
+    _alloy_key_file: "{{ alloy_apt_existing_key if alloy_apt_existing_grafana_repo else '/etc/apt/keyrings/grafana.asc' }}"
+
 - name: Fetch the Grafana apt key
   ansible.builtin.get_url:
     url: "{{ alloy_apt_key_url }}"
     dest: /etc/apt/keyrings/grafana.asc
     mode: "0644"
+  when: not alloy_apt_existing_grafana_repo
 
 - name: Verify the Grafana apt key fingerprint
   ansible.builtin.command:
-    argv: [gpg, --show-keys, --with-colons, /etc/apt/keyrings/grafana.asc]
+    argv: [gpg, --show-keys, --with-colons, "{{ _alloy_key_file }}"]
   register: _alloy_key
   changed_when: false
 
@@ -37,7 +42,7 @@
   ansible.builtin.assert:
     that:
       - ("fpr:::::::::" ~ alloy_apt_key_fingerprint ~ ":") in _alloy_key.stdout
-    fail_msg: /etc/apt/keyrings/grafana.asc fingerprint does not match {{ alloy_apt_key_fingerprint }}.
+    fail_msg: "{{ _alloy_key_file }} fingerprint does not match {{ alloy_apt_key_fingerprint }}."
 
 - name: Add the Grafana apt source (Alloy only is installed from it)
   ansible.builtin.copy:
@@ -51,6 +56,8 @@
       Suites: stable
       Components: main
       Signed-By: /etc/apt/keyrings/grafana.asc
+  when: not alloy_apt_existing_grafana_repo
+  register: _alloy_src
 
 - name: Pin only alloy from apt.grafana.com
   ansible.builtin.copy:
@@ -62,10 +69,18 @@
       Package: alloy
       Pin: origin "apt.grafana.com"
       Pin-Priority: 500
+      {% if not alloy_apt_existing_grafana_repo %}
 
       Package: *
       Pin: origin "apt.grafana.com"
       Pin-Priority: -1
+      {% endif %}
+  register: _alloy_pin
+
+- name: Refresh apt after the Grafana source or pin changed
+  ansible.builtin.apt:
+    update_cache: true
+  when: (_alloy_src is changed) or (_alloy_pin is changed)
 
 - name: Install the pinned alloy package
   ansible.builtin.apt:

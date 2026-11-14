@@ -6,6 +6,13 @@ alloy_apt_key_url: https://apt.grafana.com/gpg.key
 # Grafana Labs <engineering@grafana.com>, expires 2027-08-22.
 alloy_apt_key_fingerprint: B53AE77BADB630A683046005963FA27710458545  # gitleaks:allow (public GPG fingerprint)
 alloy_apt_repo_uri: https://apt.grafana.com
+# Hosts that already install packages from apt.grafana.com (CT171 grafana,
+# CT173 loki via the community-scripts deb822 source + grafana.gpg): keep
+# their grafana.sources and key, verify that key's fingerprint, and do NOT
+# add the "Package: * Pin-Priority -1" block (it would freeze grafana/loki
+# upgrades). Found 2026-11-14 on CT171 (rolled back).
+alloy_apt_existing_grafana_repo: false
+alloy_apt_existing_key: /etc/apt/keyrings/grafana.gpg
 
 alloy_loki_push_url: http://10.10.0.73:3100/loki/api/v1/push
 alloy_o2_push_url: http://10.10.0.77:5080/api/default/loki/api/v1/push
