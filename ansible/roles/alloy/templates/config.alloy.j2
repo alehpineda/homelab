@@ -100,6 +100,15 @@ loki.process "journal_json" {
     expression          = "^\\s*$"
     drop_counter_reason = "blank_line"
   }
+{% for rule in alloy_journal_drop_rules %}
+
+  // {{ rule.comment | default('Per-host noise filter (alloy_journal_drop_rules).') }}
+  stage.drop {
+    source              = "msg"
+    expression          = {{ rule.expression | to_json }}
+    drop_counter_reason = "{{ rule.reason }}"
+  }
+{% endfor %}
 
   stage.template {
     source   = "level_norm"

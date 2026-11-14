@@ -111,6 +111,19 @@
         alloy_journal_job: kuma_journal
         alloy_service_label: kuma
         alloy_ct_label: "184"
+        # Drop the prom-client "is not included in initial labelset" error
+        # and its ~15-line stack (upstream louislam/uptime-kuma#6470, ~2.2k
+        # lines/min). Only these exact frames; other Kuma lines ship as-is.
+        alloy_journal_drop_rules:
+          - reason: kuma_labelset
+            comment: "Kuma prom-client labelset error header (uptime-kuma#6470)."
+            expression: '(PROMETHEUS.*ERROR:.*Caught error\s*$|Error: Added label "[^"]*" is not included in initial labelset)'
+          - reason: kuma_labelset
+            comment: "Kuma labelset error: label-name list lines and closing bracket."
+            expression: "^(\\s+'(monitor_(id|name|type|url|hostname|port)|window)',?|\\])$"
+          - reason: kuma_labelset
+            comment: "Kuma labelset error: prom-client / prometheus.js / monitor.js stack frames."
+            expression: '^\s+at ([^ ]+ )+\(/opt/uptime-kuma/(node_modules/prom-client/lib/|server/prometheus\.js:)|^\s+at (beat|async safeBeat|Proxy\.handleTlsInfo|async TLSSocket\.<anonymous>|Proxy\.stop) \(/opt/uptime-kuma/server/model/monitor\.js:'
 
 - name: Alloy on CT 173 (Loki journal, wave 1)
   hosts: loki-blr-lxc

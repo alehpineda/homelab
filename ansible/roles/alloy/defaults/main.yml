@@ -40,6 +40,11 @@ alloy_service_label: "{{ alloy_journal_job }}"
 # CT id as a string stream label. Empty (BRL host) = no ct/service stream
 # labels, so the live pve_journal stream identity stays unchanged.
 alloy_ct_label: ""
+# Optional per-host journal drop filters, applied to MESSAGE (the "msg"
+# field) before the JSON line is built, so both Loki and OpenObserve lose
+# the same lines. List of {expression: RE2 regex, reason: drop_counter_reason,
+# comment: optional}. Empty = rendered config unchanged.
+alloy_journal_drop_rules: []
 alloy_caddy_log_dir: /var/log/caddy
 alloy_caddy_log_file: /var/log/caddy/access.log
 alloy_docker_socket: unix:///var/run/docker.sock
