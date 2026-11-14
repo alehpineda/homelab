@@ -56,6 +56,18 @@ all:
         arr-blr-lxc:
           ansible_host: 10.10.0.82
           ansible_port: 22
+        # CT 191 / 198. playbooks/dashboards.yml targets these. site.yml does not.
+        # Set dashboard_editor_pubkeys here in the local copy (public keys only).
+        homepage-blr-lxc:
+          ansible_host: 10.10.0.91
+          ansible_port: 22
+          dashboard_editor_config_file: /opt/homepage/config/services.yaml
+          # dashboard_editor_pubkeys: ["ssh-ed25519 AAAA... forge-ct176"]
+        homer-blr-lxc:
+          ansible_host: 10.10.0.98
+          ansible_port: 22
+          dashboard_editor_config_file: /opt/homer/assets/config.yml
+          # dashboard_editor_pubkeys: ["ssh-ed25519 AAAA... forge-ct176"]
         # CT 250. playbooks/caddy.yml targets this host. site.yml does not.
         # Port 22: Debian 13 Caddy guest, not an ansible-playbooks harden.
         caddy-blr-lxc:

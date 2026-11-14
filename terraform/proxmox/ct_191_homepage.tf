@@ -59,6 +59,8 @@ resource "proxmox_lxc" "ct_191" {
   lifecycle {
     prevent_destroy = true
     # ostemplate/password/ssh_public_keys/start/features: create-time only.
+    # ssh_public_keys is ForceNew in Telmate; grokops editor access is
+    # ansible playbooks/dashboards.yml, not this field.
     # features is ignored so a later read does not drop nesting.
     # target_node, cmode, network, mountpoint, rootfs[0].storage: Telmate
     # 3.0.2-rc10 import does not read these back, so they would force

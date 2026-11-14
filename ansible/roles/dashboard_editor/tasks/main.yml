@@ -1,0 +1,76 @@
+---
+# Idempotent. Adds keys only; never removes existing ones. Keeps root as
+# owner of the config file and directory; only the group and g+w change.
+# No service restart: Homepage hot-reloads services.yaml and Homer serves
+# config.yml as a static file.
+
+- name: Require a config file path and at least one public key
+  ansible.builtin.assert:
+    that:
+      - dashboard_editor_config_file is defined
+      - dashboard_editor_config_file | length > 0
+      - dashboard_editor_pubkeys | length > 0
+    fail_msg: >-
+      Set dashboard_editor_config_file per host and dashboard_editor_pubkeys
+      in the gitignored inventory/blr.yml.
+
+- name: Check the config file exists
+  ansible.builtin.stat:
+    path: "{{ dashboard_editor_config_file }}"
+  register: dashboard_editor_cfg
+
+- name: Require the existing config file
+  ansible.builtin.assert:
+    that:
+      - dashboard_editor_cfg.stat.exists
+      - dashboard_editor_cfg.stat.isreg
+    fail_msg: "{{ dashboard_editor_config_file }} is missing. This role does not install the dashboard."
+
+- name: Create the editor group
+  ansible.builtin.group:
+    name: "{{ dashboard_editor_group }}"
+    system: true
+
+- name: Create the editor user (no sudo group, locked password)
+  ansible.builtin.user:
+    name: "{{ dashboard_editor_user }}"
+    shell: /bin/bash
+    create_home: true
+    groups: ["{{ dashboard_editor_group }}"]
+    append: true
+    password_lock: true
+
+- name: Create the editor .ssh directory
+  ansible.builtin.file:
+    path: "/home/{{ dashboard_editor_user }}/.ssh"
+    state: directory
+    owner: "{{ dashboard_editor_user }}"
+    group: "{{ dashboard_editor_user }}"
+    mode: "0700"
+
+# Builtin lineinfile keeps the repo free of extra collections.
+- name: Authorize editor public keys
+  ansible.builtin.lineinfile:
+    path: "/home/{{ dashboard_editor_user }}/.ssh/authorized_keys"
+    line: "{{ item }}"
+    create: true
+    owner: "{{ dashboard_editor_user }}"
+    group: "{{ dashboard_editor_user }}"
+    mode: "0600"
+  loop: "{{ dashboard_editor_pubkeys }}"
+
+- name: Group-write the config directory (setgid so new files keep the group)
+  ansible.builtin.file:
+    path: "{{ dashboard_editor_config_file | dirname }}"
+    state: directory
+    owner: root
+    group: "{{ dashboard_editor_group }}"
+    mode: "2775"
+
+- name: Group-write the config file
+  ansible.builtin.file:
+    path: "{{ dashboard_editor_config_file }}"
+    state: file
+    owner: root
+    group: "{{ dashboard_editor_group }}"
+    mode: "0664"
