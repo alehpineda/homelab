@@ -126,6 +126,47 @@
   when: alloy_source_docker
   notify: Restart alloy
 
+- name: Ensure acl (setfacl) for the AdGuard querylog read grant
+  ansible.builtin.apt:
+    name: acl
+    state: present
+  when: alloy_source_adguard
+
+- name: Install the AdGuard querylog ACL re-apply script
+  ansible.builtin.template:
+    src: alloy-adguard-acl.sh.j2
+    dest: /usr/local/sbin/alloy-adguard-acl
+    owner: root
+    group: root
+    mode: "0755"
+  when: alloy_source_adguard
+
+- name: Install the AdGuard querylog ACL service and timer
+  ansible.builtin.template:
+    src: "{{ item }}.j2"
+    dest: "/etc/systemd/system/{{ item }}"
+    owner: root
+    group: root
+    mode: "0644"
+  loop: [alloy-adguard-acl.service, alloy-adguard-acl.timer]
+  when: alloy_source_adguard
+
+- name: Apply the AdGuard querylog ACL now
+  ansible.builtin.systemd_service:
+    name: alloy-adguard-acl.service
+    state: started
+    daemon_reload: true
+  changed_when: false
+  when: alloy_source_adguard
+
+- name: Enable the AdGuard querylog ACL timer
+  ansible.builtin.systemd_service:
+    name: alloy-adguard-acl.timer
+    state: started
+    enabled: true
+    daemon_reload: true
+  when: alloy_source_adguard
+
 - name: Write the OpenObserve ingest env file (0600)
   ansible.builtin.template:
     src: o2.env.j2
