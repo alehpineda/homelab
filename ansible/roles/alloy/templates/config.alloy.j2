@@ -1,7 +1,7 @@
 // Managed by ansible role alloy (alehpineda/homelab). Do not edit live.
 // Host: {{ alloy_host_label }}. Every source forwards the same entries to
 // Loki (CT 173) and OpenObserve (CT 177). Labels kept low-cardinality:
-// host, job, unit|container|filename, level.
+// host, job, env, unit|container|filename, level.
 
 loki.write "loki" {
   endpoint {
@@ -33,10 +33,22 @@ loki.relabel "o2route" {
 
 loki.relabel "journal" {
   forward_to = []
+
   rule {
     source_labels = ["__journal__systemd_unit"]
     target_label  = "unit"
   }
+
+  // SSH/login session scopes (session-<id>.scope) are one stream each.
+  // Collapse them to one value; the full unit stays in the JSON body and
+  // in structured metadata (systemd_unit).
+  rule {
+    source_labels = ["unit"]
+    regex         = "session-.+\\.scope"
+    replacement   = "session-scope"
+    target_label  = "unit"
+  }
+
   rule {
     source_labels = ["__journal_priority_keyword"]
     target_label  = "level"
@@ -44,10 +56,70 @@ loki.relabel "journal" {
 }
 
 loki.source.journal "host" {
-  max_age       = "{{ alloy_journal_max_age }}"
-  relabel_rules = loki.relabel.journal.rules
-  labels        = { job = "pve_journal" }
-  forward_to    = [loki.write.loki.receiver, loki.relabel.o2route.receiver]
+  max_age        = "{{ alloy_journal_max_age }}"
+  format_as_json = true
+  relabel_rules  = loki.relabel.journal.rules
+  labels         = { job = "pve_journal" }
+  forward_to     = [loki.process.journal_json.receiver]
+}
+
+// Pack each journal entry into one JSON line:
+// {ts, level, service, host, env, unit, msg}. Never emits an empty line.
+loki.process "journal_json" {
+  // Drop empty / whitespace-only lines (OpenObserve rejects a whole
+  // Loki-push batch that contains one).
+  stage.drop {
+    expression          = "^\\s*$"
+    drop_counter_reason = "blank_line"
+  }
+
+  stage.json {
+    expressions = {
+      msg      = "MESSAGE",
+      unit_raw = "_SYSTEMD_UNIT",
+      prio     = "PRIORITY",
+      ts_us    = "_SOURCE_REALTIME_TIMESTAMP",
+    }
+  }
+
+  // A whitespace-only MESSAGE would become {"msg":"  "}; drop it too.
+  stage.drop {
+    source              = "msg"
+    expression          = "^\\s*$"
+    drop_counter_reason = "blank_line"
+  }
+
+  stage.template {
+    source   = "level_norm"
+{% raw %}    template = `{{ $p := default "" .prio }}{{ if eq $p "0" }}emerg{{ else if eq $p "1" }}alert{{ else if eq $p "2" }}crit{{ else if eq $p "3" }}error{{ else if eq $p "4" }}warning{{ else if eq $p "5" }}notice{{ else if eq $p "6" }}info{{ else if eq $p "7" }}debug{{ else }}unknown{{ end }}`{% endraw %}
+  }
+
+  // ts = journald _SOURCE_REALTIME_TIMESTAMP (RFC3339, UTC, microseconds).
+  // Alloy does not expose the entry's __REALTIME_TIMESTAMP to templates, so
+  // entries without a source timestamp (most service stdout) get ts=null;
+  // the Loki/OpenObserve entry timestamp is always the journal time.
+  stage.template {
+    source   = "ts"
+{% raw %}    template = `{{ $raw := default "" .ts_us }}{{ if $raw }}"{{ $us := atoi $raw }}{{ dateInZone "2006-01-02T15:04:05" (div $us 1000000) "UTC" }}.{{ printf "%06d" (mod $us 1000000) }}Z"{{ else }}null{{ end }}`{% endraw %}
+  }
+
+  stage.template {
+    source   = "line_json"
+{% raw %}    template = `{"ts":{{ .ts }},"level":{{ toJson .level_norm }},"service":"pve_journal","host":"{% endraw %}{{ alloy_host_label }}{% raw %}","env":"homelab","unit":{{ toJson (default "" .unit_raw) }},"msg":{{ toJson (default "" .msg) }}}`{% endraw %}
+  }
+
+  stage.output {
+    source = "line_json"
+  }
+
+  stage.structured_metadata {
+    values = { systemd_unit = "unit_raw" }
+  }
+
+  stage.static_labels {
+    values = { env = "{{ alloy_env_label }}" }
+  }
+  forward_to = [loki.write.loki.receiver, loki.relabel.o2route.receiver]
 }
 {% endif %}
 {% if alloy_source_caddy %}
@@ -58,6 +130,38 @@ local.file_match "caddy" {
 
 loki.source.file "caddy" {
   targets    = local.file_match.caddy.targets
+  forward_to = [loki.process.caddy_json.receiver]
+}
+
+// Caddy already writes JSON. Keep the line byte-identical (no stage.output);
+// copy a few low-cardinality HTTP fields into structured metadata.
+loki.process "caddy_json" {
+  // Drop empty / whitespace-only lines (OpenObserve rejects a whole
+  // Loki-push batch that contains one).
+  stage.drop {
+    expression          = "^\\s*$"
+    drop_counter_reason = "blank_line"
+  }
+
+  stage.json {
+    expressions = {
+      status    = "status",
+      method    = "request.method",
+      http_host = "request.host",
+    }
+  }
+
+  stage.structured_metadata {
+    values = {
+      status    = "status",
+      method    = "method",
+      http_host = "http_host",
+    }
+  }
+
+  stage.static_labels {
+    values = { env = "{{ alloy_env_label }}" }
+  }
   forward_to = [loki.write.loki.receiver, loki.relabel.o2route.receiver]
 }
 {% endif %}
@@ -81,7 +185,17 @@ loki.source.docker "arr" {
   targets       = discovery.docker.local.targets
   relabel_rules = discovery.relabel.docker.rules
   labels        = { job = "arr_docker" }
-  forward_to    = [loki.write.loki.receiver, loki.relabel.o2route.receiver]
+  forward_to    = [loki.process.arr_docker.receiver]
+}
+
+loki.process "arr_docker" {
+  // Drop empty / whitespace-only lines (OpenObserve rejects a whole
+  // Loki-push batch that contains one).
+  stage.drop {
+    expression          = "^\\s*$"
+    drop_counter_reason = "blank_line"
+  }
+  forward_to = [loki.write.loki.receiver, loki.relabel.o2route.receiver]
 }
 {% endif %}
 {% if alloy_source_adguard %}

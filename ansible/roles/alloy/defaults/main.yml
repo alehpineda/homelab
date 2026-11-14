@@ -15,6 +15,8 @@ alloy_o2_env_file: /etc/alloy/o2.env
 
 # Low-cardinality `host` label on every entry.
 alloy_host_label: "{{ inventory_hostname }}"
+# `env` stream label, added by the caddy and journal JSON pipelines.
+alloy_env_label: homelab
 
 # Sources. Set per host in the playbook (never all at once by default).
 alloy_source_journal: false     # BRL host journald -> job pve_journal
