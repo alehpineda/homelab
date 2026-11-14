@@ -5,6 +5,7 @@ Match monitors, tags, the status page, and the SMTP notification by name.
 Create or update only. Never delete.
 
   --dry-run   YAML parse + schema check. No login, no network.
+              Add --plan-fixture to diff a saved monitor list offline.
   (default)   Login and seed. Requires KUMA_PASSWORD (and KUMA_USERNAME).
   --status    After seed (or alone with --status-only), print counts by state.
 
@@ -15,6 +16,7 @@ is written to the repo, host /tmp, or stdout except names and counts.
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import sys
 from pathlib import Path
@@ -179,21 +181,71 @@ def _norm(value: Any) -> Any:
     return value
 
 
+# Checker output, or fields editMonitor does not persist. Never a reason to rewrite.
+RUNTIME_FIELDS = frozenset({
+    "dns_last_result",
+})
+
+# Ping, port, and DNS checks do not use HTTP status codes. The seeder does
+# not send the field for those types; Kuma keeps the library default
+# ["200-299"] while the YAML default also includes 300-399.
+STATUS_CODE_TYPES = frozenset({"http", "keyword"})
+
+COMPARE_KEYS = [
+    "type", "interval", "maxretries", "retryInterval", "resendInterval",
+    "timeout", "ignoreTls", "maxredirects", "expiryNotification",
+    "description", "accepted_statuscodes", "url", "hostname", "port",
+    "keyword", "invertKeyword", "method", "dns_resolve_server",
+    "dns_resolve_type", "dns_last_result",
+]
+
+
+def _type_name(desired: dict[str, Any]) -> str:
+    return str(_norm(desired.get("type") or "")).lower()
+
+
+def _status_codes(value: Any) -> list[str]:
+    """Normalize accepted_statuscodes to a list of code strings.
+
+    Kuma usually returns a list. The same value also arrives as JSON text
+    ('["200-299","300-399"]'), a comma-separated string, or one range
+    ('200-299'). Order does not matter.
+    """
+    if value is None:
+        return []
+    if isinstance(value, str):
+        text = value.strip()
+        if not text:
+            return []
+        if text[0] in "[{":
+            try:
+                parsed = json.loads(text)
+            except json.JSONDecodeError:
+                parsed = None
+            else:
+                return _status_codes(parsed)
+        if "," in text:
+            return [part.strip() for part in text.split(",") if part.strip()]
+        return [text]
+    if isinstance(value, (list, tuple)):
+        codes: list[str] = []
+        for item in value:
+            codes.extend(_status_codes(item))
+        return codes
+    return [str(value).strip()]
+
+
 def _needs_update(desired: dict[str, Any], existing: dict[str, Any]) -> list[str]:
-    keys = [
-        "type", "interval", "maxretries", "retryInterval", "resendInterval",
-        "timeout", "ignoreTls", "maxredirects", "expiryNotification",
-        "description", "accepted_statuscodes", "url", "hostname", "port",
-        "keyword", "invertKeyword", "method", "dns_resolve_server",
-        "dns_resolve_type", "dns_last_result",
-    ]
     changed = []
-    for key in keys:
-        if key not in desired:
+    uses_status_codes = _type_name(desired) in STATUS_CODE_TYPES
+    for key in COMPARE_KEYS:
+        if key in RUNTIME_FIELDS or key not in desired:
+            continue
+        if key == "accepted_statuscodes" and not uses_status_codes:
             continue
         left, right = _norm(desired[key]), _norm(existing.get(key))
         if key == "accepted_statuscodes":
-            if sorted(left or []) != sorted(right or []):
+            if sorted(_status_codes(desired[key])) != sorted(_status_codes(existing.get(key))):
                 changed.append(key)
             continue
         if key == "type":
@@ -203,6 +255,73 @@ def _needs_update(desired: dict[str, Any], existing: dict[str, Any]) -> list[str
         if left != right and not (left in ("", None) and right in ("", None)):
             changed.append(key)
     return changed
+
+
+def format_field_change(key: str, desired: dict[str, Any], existing: dict[str, Any]) -> str:
+    if key == "accepted_statuscodes":
+        before = _status_codes(existing.get(key))
+        after = _status_codes(desired.get(key))
+    else:
+        before = _norm(existing.get(key))
+        after = _norm(desired.get(key))
+    return f"{key}: {before!r} -> {after!r}"
+
+
+def load_monitor_fixture(path: Path) -> dict[str, dict[str, Any]]:
+    data = yaml.safe_load(path.read_text())
+    if isinstance(data, dict):
+        data = data.get("monitors")
+    if not isinstance(data, list) or not data:
+        raise SchemaError("plan fixture must be a non-empty list of monitors")
+    by_name: dict[str, dict[str, Any]] = {}
+    for item in data:
+        if not isinstance(item, dict) or not item.get("name"):
+            raise SchemaError("plan fixture entries need a name")
+        name = str(item["name"])
+        if name in by_name:
+            raise SchemaError(f"plan fixture duplicate name {name!r}")
+        by_name[name] = item
+    return by_name
+
+
+def plan_monitors(
+    desired: list[dict[str, Any]],
+    existing_by_name: dict[str, dict[str, Any]],
+) -> list[dict[str, Any]]:
+    rows = []
+    for mon in desired:
+        current = existing_by_name.get(mon["name"])
+        if current is None:
+            rows.append({"name": mon["name"], "action": "missing", "changes": []})
+            continue
+        changed = _needs_update(mon, current)
+        rows.append({
+            "name": mon["name"],
+            "action": "update" if changed else "unchanged",
+            "changes": [format_field_change(key, mon, current) for key in changed],
+        })
+    return rows
+
+
+def format_plan(rows: list[dict[str, Any]], *, inventory: int) -> str:
+    unchanged = sum(row["action"] == "unchanged" for row in rows)
+    updates = [row for row in rows if row["action"] == "update"]
+    missing = sum(row["action"] == "missing" for row in rows)
+    lines = [
+        f"plan: compared {unchanged + len(updates)} of {inventory} monitors",
+        f"plan: {unchanged} unchanged, {len(updates)} update, {missing} not in fixture",
+    ]
+    if not updates:
+        lines.append("plan: no monitor rewrites")
+    for row in rows:
+        if row["action"] == "missing":
+            continue
+        if row["action"] == "unchanged":
+            lines.append(f"  {row['name']}: unchanged")
+            continue
+        lines.append(f"  {row['name']}: update")
+        lines.extend(f"    {change}" for change in row["changes"])
+    return "\n".join(lines)
 
 
 def _monitor_kwargs(mon: dict[str, Any], notification_ids: list[int] | None) -> dict[str, Any]:
@@ -512,7 +631,8 @@ def seed(cfg: dict[str, Any], monitors: list[dict[str, Any]], include_placeholde
                 kwargs_edit = dict(kwargs)
                 if mon.get("dns_last_result"):
                     kwargs_edit["dns_last_result"] = mon["dns_last_result"]
-                changed = _needs_update({**mon, **kwargs_edit}, current)
+                merged = {**mon, **kwargs_edit}
+                changed = _needs_update(merged, current)
                 if notification_ids is not None:
                     have = current.get("notificationIDList") or []
                     if isinstance(have, dict):
@@ -521,7 +641,8 @@ def seed(cfg: dict[str, Any], monitors: list[dict[str, Any]], include_placeholde
                         changed.append("notificationIDList")
                 if changed:
                     api.edit_monitor(int(mid), **kwargs_edit)
-                    print(f"monitor updated: {mon['name']} ({', '.join(changed)})")
+                    detail = "; ".join(format_field_change(key, merged, current) for key in changed)
+                    print(f"monitor updated: {mon['name']} ({detail})")
                 else:
                     print(f"monitor unchanged: {mon['name']}")
 
@@ -589,6 +710,10 @@ def main() -> int:
         help="Path to monitors.yaml",
     )
     parser.add_argument("--dry-run", action="store_true", help="Parse and validate YAML only; no login")
+    parser.add_argument(
+        "--plan-fixture",
+        help="With --dry-run, diff this saved monitor list (JSON or YAML) and print the plan",
+    )
     parser.add_argument("--status-only", action="store_true", help="Login and print status counts; do not seed")
     parser.add_argument(
         "--include-placeholders",
@@ -630,6 +755,9 @@ def main() -> int:
     if args.include_placeholders:
         monitors = monitors + placeholders
         print(f"including placeholders: {len(monitors)} total")
+    if args.plan_fixture and not args.dry_run:
+        raise SystemExit("--plan-fixture is only valid with --dry-run")
+
     if args.dry_run:
         groups = (cfg.get("status_page") or {}).get("groups") or []
         print(f"status page: {(cfg.get('status_page') or {}).get('slug')} ({len(groups)} groups)")
@@ -639,6 +767,15 @@ def main() -> int:
             print("  is_default=", smtp["isDefault"], "apply_existing=", smtp["applyExisting"])
         else:
             print("notification: not fully defined (password is env-only and not required for dry-run)")
+        if args.plan_fixture:
+            existing = load_monitor_fixture(Path(args.plan_fixture))
+            print(format_plan(plan_monitors(monitors, existing), inventory=len(monitors)))
+        else:
+            print(f"plan: {len(monitors)} monitors validated")
+            print(
+                "plan: diffs not computed (dry-run does not log in; "
+                "pass --plan-fixture to compare a saved monitor list)"
+            )
         print("dry-run complete; no login attempted")
         return 0
 

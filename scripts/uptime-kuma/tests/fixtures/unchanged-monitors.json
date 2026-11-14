@@ -1,0 +1,52 @@
+[
+  {
+    "name": "Rewrite admin",
+    "type": "dns",
+    "interval": 60,
+    "maxretries": 3,
+    "retryInterval": 60,
+    "resendInterval": 60,
+    "timeout": 5,
+    "ignoreTls": false,
+    "maxredirects": 10,
+    "expiryNotification": false,
+    "description": "Expect A 10.10.0.250. dns_last_result is applied on edit if the add path drops it.",
+    "hostname": "uptime.alehpineda.com",
+    "dns_resolve_server": "10.10.0.53",
+    "dns_resolve_type": "A",
+    "port": 53,
+    "accepted_statuscodes": "[\"200-299\"]",
+    "dns_last_result": "198.41.0.4"
+  },
+  {
+    "name": "Flint ping",
+    "type": "ping",
+    "interval": 60,
+    "maxretries": 3,
+    "retryInterval": 60,
+    "resendInterval": 60,
+    "timeout": 15,
+    "ignoreTls": false,
+    "maxredirects": 10,
+    "expiryNotification": false,
+    "description": null,
+    "hostname": "10.10.0.1",
+    "accepted_statuscodes": ["200-299"]
+  },
+  {
+    "name": "AdGuard UI",
+    "type": "http",
+    "interval": 60,
+    "maxretries": 3,
+    "retryInterval": 60,
+    "resendInterval": 60,
+    "timeout": 15,
+    "ignoreTls": false,
+    "maxredirects": 10,
+    "expiryNotification": false,
+    "description": null,
+    "url": "https://adguard.alehpineda.com",
+    "method": "GET",
+    "accepted_statuscodes": "[\"300-399\", \"200-299\"]"
+  }
+]
