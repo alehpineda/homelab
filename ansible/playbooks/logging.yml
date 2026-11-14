@@ -8,6 +8,8 @@
 #   alloy_caddy   CT 250 access log  -> Loki + OpenObserve (Caddyfile log block first)
 #   alloy_arr     CT 182 Docker logs -> Loki + OpenObserve
 #   prom_rw       CT 172 Prometheus remote_write -> OpenObserve
+#   o2_node_exporter  CT 177 prometheus-node-exporter (mp0 disk metric)
+#   prom_scrape   CT 172 repo-managed scrape jobs (scrape.d + scrape_config_files)
 #   alloy_wave1   wave 1 journald on CT 171/172/173/174/177/184 (per-CT tags:
 #                 alloy_grafana, alloy_prometheus, alloy_pve_exporter,
 #                 alloy_kuma, alloy_loki, alloy_openobserve). Apply one CT at
@@ -60,6 +62,25 @@
         # qBittorrent and Dockge are not packed (separate item).
         alloy_docker_json_containers: [bazarr, jackett, flaresolverr, gluetun, recyclarr, watchtower, listenarr]
         alloy_docker_banner_containers: [prowlarr, sonarr, radarr, lidarr]
+
+- name: node_exporter on CT 177 (OpenObserve mp0 /opt/openobserve/data disk usage)
+  hosts: openobserve-blr-lxc
+  gather_facts: false
+  tags: [o2_node_exporter]
+  roles:
+    - role: node_exporter
+
+- name: Prometheus scrape jobs (repo-managed)
+  hosts: prometheus-blr-lxc
+  gather_facts: false
+  tags: [prom_scrape]
+  roles:
+    - role: prometheus_scrape
+      vars:
+        prometheus_scrape_jobs:
+          - job: openobserve_node
+            targets: ["10.10.0.77:9100"]
+            labels: {ct: "177", host: openobserve-blr-lxc}
 
 - name: Prometheus remote_write to OpenObserve
   hosts: prometheus-blr-lxc
