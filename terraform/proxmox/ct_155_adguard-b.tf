@@ -21,7 +21,7 @@ resource "proxmox_lxc" "ct_155" {
   rootfs {
     # Moved data2 -> local-lvm (nvme0) 2026-11-09, BRL storage plan B.
     storage = "local-lvm"
-    size    = "2G"
+    size    = "4G" # 2G -> 4G 2026-11-14: room for Alloy (~550 MB) next to the querylog
   }
 
   network {
