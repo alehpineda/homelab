@@ -95,7 +95,7 @@
       vars:
         # Metrics wave 1 (owner card t40s246, 2:45 PM CT Nov 14) plus wave 2
         # (Wolff 1:1 5:14 PM CT Nov 14): jellyfin, navidrome, searxng; wave 3
-        # (card t57s331, 5:41 PM CT Nov 14): exportarr x5, cadvisor, n8n.
+        # (card t57s331, 5:41 PM CT Nov 14): exportarr x5, qbittorrent, cadvisor, n8n.
         # One target at a time on apply (-e prometheus_scrape_jobs=<subset>);
         # this is the end state.
         prometheus_scrape_jobs:
@@ -188,6 +188,17 @@
             static_configs:
               - targets: ["10.10.0.82:9711"]
                 labels: {host: arr-blr-lxc, ct: "182", service: bazarr, env: homelab}
+          - job: qbittorrent
+            # No torrent names / save paths / trackers as labels: keep only the
+            # aggregate qbittorrent_torrent_states of the per-torrent families.
+            metric_relabel_configs:
+              - {source_labels: [__name__], regex: qbittorrent_torrent_states, target_label: __tmp_keep, replacement: "1"}
+              - {source_labels: [__name__, __tmp_keep], regex: "qbittorrent_torrent_.*;", action: drop}
+              - {source_labels: [__name__], regex: "qbittorrent_tracker.*", action: drop}
+              - {regex: __tmp_keep, action: labeldrop}
+            static_configs:
+              - targets: ["10.10.0.82:17871"]
+                labels: {host: arr-blr-lxc, ct: "182", service: qbittorrent, env: homelab}
           - job: cadvisor
             # docker_only on the cAdvisor side; drop any container_* series
             # that is not a named Docker container (cgroup noise).
@@ -444,6 +455,17 @@
         alloy_journal_job: n8n_journal
         alloy_service_label: n8n
         alloy_ct_label: "170"
+        # Wave 3 secret guard (journal scan 5:57 PM CT Nov 14: postiz/netbox
+        # install logs carry a literal SQL role password). Drop, never ship,
+        # any line with a SQL PASSWORD literal or a token/key shape. Same
+        # list on every wave 3 CT (YAML anchor).
+        alloy_journal_drop_rules: &w3_secret_drops
+          - reason: secret_sql_password
+            comment: "SQL role password literal (CREATE/ALTER ROLE ... PASSWORD '...')."
+            expression: "(?i)\\bPASSWORD\\s+'[^']+'"
+          - reason: secret_token_shape
+            comment: "OpenBao/Vault tokens, JWTs, private key headers."
+            expression: '(hvs\.[A-Za-z0-9_-]{20,}|\bs\.[A-Za-z0-9]{24}\b|eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}|-----BEGIN [A-Z ]*PRIVATE KEY)'
 
 - name: Alloy on CT 169 (postiz journal, wave 3)
   hosts: postiz-blr-lxc
@@ -456,6 +478,7 @@
         alloy_journal_job: postiz_journal
         alloy_service_label: postiz
         alloy_ct_label: "169"
+        alloy_journal_drop_rules: *w3_secret_drops
 
 - name: Alloy on CT 197 (semaphore journal, wave 3)
   hosts: semaphore-blr-lxc
@@ -468,6 +491,7 @@
         alloy_journal_job: semaphore_journal
         alloy_service_label: semaphore
         alloy_ct_label: "197"
+        alloy_journal_drop_rules: *w3_secret_drops
 
 - name: Alloy on CT 164 (firecrawl journal, wave 3)
   hosts: firecrawl-blr-lxc
@@ -480,6 +504,7 @@
         alloy_journal_job: firecrawl_journal
         alloy_service_label: firecrawl
         alloy_ct_label: "164"
+        alloy_journal_drop_rules: *w3_secret_drops
 
 - name: Alloy on CT 175 (ollama journal, wave 3)
   hosts: ollama-blr-lxc
@@ -492,6 +517,7 @@
         alloy_journal_job: ollama_journal
         alloy_service_label: ollama
         alloy_ct_label: "175"
+        alloy_journal_drop_rules: *w3_secret_drops
 
 - name: Alloy on CT 162 (openbao journal, wave 3)
   hosts: openbao
@@ -504,6 +530,7 @@
         alloy_journal_job: openbao_journal
         alloy_service_label: openbao
         alloy_ct_label: "162"
+        alloy_journal_drop_rules: *w3_secret_drops
 
 - name: Alloy on CT 189 (netbox journal, wave 3)
   hosts: netbox-blr-lxc
@@ -516,6 +543,7 @@
         alloy_journal_job: netbox_journal
         alloy_service_label: netbox
         alloy_ct_label: "189"
+        alloy_journal_drop_rules: *w3_secret_drops
 
 - name: Alloy on CT 194 (pricebuddy journal, wave 3)
   hosts: pricebuddy-blr-lxc
@@ -528,6 +556,7 @@
         alloy_journal_job: pricebuddy_journal
         alloy_service_label: pricebuddy
         alloy_ct_label: "194"
+        alloy_journal_drop_rules: *w3_secret_drops
 
 - name: Alloy on CT 195 (changedetection journal, wave 3)
   hosts: changedetection-blr-lxc
@@ -540,6 +569,7 @@
         alloy_journal_job: changedetection_journal
         alloy_service_label: changedetection
         alloy_ct_label: "195"
+        alloy_journal_drop_rules: *w3_secret_drops
 
 - name: Alloy on CT 199 (myip journal, wave 3)
   hosts: myip-blr-lxc
@@ -552,6 +582,7 @@
         alloy_journal_job: myip_journal
         alloy_service_label: myip
         alloy_ct_label: "199"
+        alloy_journal_drop_rules: *w3_secret_drops
 
 # AdGuard querylog (owner card t49s294, 3:42 PM CT Nov 14). Family DNS: one CT
 # at a time, CT155 (B) first; check DNS through the other one before each.

@@ -84,7 +84,7 @@ alloy_adguard_querylog: "{{ alloy_adguard_data_dir }}/querylog.json"
 alloy_adguard_acl_interval: 2min
 # qBittorrent log file (CT 182, linuxserver image, /config = /opt/arr/qbittorrent).
 # The file is 0600 uid 1000 under /opt/arr (0700 root) and qBittorrent
-# recreates it at every 64 KiB rotation, so with alloy_source_qbittorrent the
+# recreates it at every rotation, so with alloy_source_qbittorrent the
 # role installs `acl` and a root path unit + timer (alloy-qbittorrent-acl)
 # that grant the alloy user traverse (x) on the parent dirs and read on the
 # active log only. No qBittorrent setting or file content is changed.

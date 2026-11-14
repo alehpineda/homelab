@@ -9,11 +9,12 @@
 # Recyclarr 8.8.1 (2026-11-13) joins that network with no published port.
 # It syncs TRaSH custom formats to Sonarr and Radarr on localhost.
 # Jackett (2026-11-13) joins that network on 9117.
+# qbittorrent-exporter (2026-11-14, metrics wave 3) joins that network on 17871.
 # Recreate the VPN namespace without upgrading, from /opt/stacks/arr.
 # Watchtower is not on that network and stays up:
 #   docker compose up -d --force-recreate \
 #     gluetun qbittorrent prowlarr sonarr radarr lidarr bazarr flaresolverr listenarr recyclarr \
-#     jackett
+#     jackett qbittorrent-exporter
 # Do not run `docker compose config` against a populated .env.
 # FlareSolverr listens on 8191 inside the gluetun namespace. That port
 # is not published and is not in FIREWALL_INPUT_PORTS.
@@ -36,6 +37,8 @@ services:
       - "10.10.0.82:6767:6767/tcp"
       - "10.10.0.82:4545:4545/tcp"
       - "10.10.0.82:9117:9117/tcp"
+      # qBittorrent exporter (metrics wave 3; PVE fw: Prometheus .72 only).
+      - "10.10.0.82:17871:17871/tcp"
     env_file:
       - /opt/stacks/arr/.env
     environment:
@@ -43,9 +46,9 @@ services:
       VPN_TYPE: ${VPN_TYPE:?set VPN_TYPE in /opt/stacks/arr/.env}
       WIREGUARD_PRIVATE_KEY: ${WIREGUARD_PRIVATE_KEY:?set WIREGUARD_PRIVATE_KEY in /opt/stacks/arr/.env}
       # Overrides env_file. 8085 qBittorrent, 9696 Prowlarr, 8989 Sonarr,
-      # 7878 Radarr, 8686 Lidarr, 6767 Bazarr, 4545 Listenarr, 9117 Jackett.
-      # Not 8191.
-      FIREWALL_INPUT_PORTS: "8085,9696,8989,7878,8686,6767,4545,9117"
+      # 7878 Radarr, 8686 Lidarr, 6767 Bazarr, 4545 Listenarr, 9117 Jackett,
+      # 17871 qBittorrent exporter. Not 8191.
+      FIREWALL_INPUT_PORTS: "8085,9696,8989,7878,8686,6767,4545,9117,17871"
     volumes:
       - /opt/arr/gluetun:/gluetun
     sysctls:
@@ -446,6 +449,34 @@ services:
       - /opt/stacks/arr/secrets/bazarr.apikey:/run/secrets/apikey:ro
     ports:
       - "10.10.0.82:9711:9711/tcp"
+    read_only: true
+    cap_drop: [ALL]
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+
+  qbittorrent-exporter:
+    # martabal/qbittorrent-exporter v2.0.4 amd64. In gluetun's namespace so it
+    # reaches qBittorrent at 127.0.0.1:8085 with no credentials: owner card
+    # t58s340 (5:54 PM CT Nov 14) set qBittorrent [WebUI] LocalHostAuth=false;
+    # LAN and Caddy clients still authenticate. :17871 is published by
+    # gluetun above. Per-torrent and tracker series are off or dropped
+    # (no torrent names or tracker URLs as labels): ENABLE_TRACKER=false here,
+    # and the Prometheus job drops qbittorrent_torrent_* except _states.
+    image: ghcr.io/martabal/qbittorrent-exporter@sha256:9289fc5ad5cef7af6af5af5ab5ed7b8d609827490ba374df858905d66da7ec5f
+    pull_policy: missing
+    container_name: qbittorrent-exporter
+    network_mode: service:gluetun
+    depends_on:
+      gluetun:
+        condition: service_healthy
+    environment:
+      QBITTORRENT_BASE_URL: http://127.0.0.1:8085
+      EXPORTER_PORT: "17871"
+      ENABLE_TRACKER: "false"
+      ENABLE_HIGH_CARDINALITY: "false"
+      ENABLE_INCREASED_CARDINALITY: "false"
+      TZ: America/Chicago
     read_only: true
     cap_drop: [ALL]
     restart: unless-stopped

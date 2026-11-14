@@ -107,6 +107,7 @@ pve_fw_ct_rules:
     - {proto: tcp, dport: "12345", source: prometheus, comment: "alloy /metrics"}
     - {proto: tcp, dport: "9707,9708,9709,9710,9711", source: prometheus, comment: "exportarr /metrics"}
     - {proto: tcp, dport: "8080", source: prometheus, comment: "cadvisor /metrics"}
+    - {proto: tcp, dport: "17871", source: prometheus, comment: "qbittorrent-exporter /metrics"}
   183:  # seerr
     - {proto: tcp, dport: "5055", source: 10.10.0.0/24}
   184:  # uptime kuma

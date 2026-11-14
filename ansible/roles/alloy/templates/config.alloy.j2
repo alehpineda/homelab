@@ -401,7 +401,7 @@ loki.process "arr_docker" {
 // qBittorrent (CT 182) writes its log to a file, not container stdout:
 // "(N) 2026-11-14T17:32:58 - msg", local wall time ({{ alloy_docker_local_tz }}),
 // level N=normal, I=info, W=warning, C=critical. qBittorrent renames the file to
-// .bakN at 64 KiB and creates a new one (0600); a root path unit + timer
+// .bakN at FileLogger\MaxSizeBytes (10 MiB since 5:54 PM CT Nov 14) and creates a new one (0600); a root path unit + timer
 // (alloy-qbittorrent-acl) re-grants alloy read. Torrent names stay in msg.
 local.file_match "qbittorrent" {
   path_targets = [{ "__path__" = "{{ alloy_qbittorrent_log }}", "job" = "arr_qbittorrent" }]
