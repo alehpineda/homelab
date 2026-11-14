@@ -33,6 +33,9 @@ The owner keeps a copy of the root login in 1Password.
    CT 173 also has an in-guest `inet loki_filter` table (not in git): add
    `10.10.0.21, 10.10.0.250, 10.10.0.82` to its `app_allow` set for 3100
    (back up `/etc/nftables.conf` first; persist in that file).
+   Wave 1 (2026-11-14): `push_allow` (3100 only) is now `.21 .250 .82 .72 .74
+   .84 .77`; `.71` is already in `app_allow`. CT 177 has no in-guest filter
+   (accept policy), so only the PVE `log_shippers` ipset gates :5080.
 4. **OpenObserve install (CT 177).** `--tags openobserve`. Root is created
    from the env file on first start only. Verify `/healthz` 200, root login,
    ingest user listed. Unit fails with 226/NAMESPACE -> rerun with
