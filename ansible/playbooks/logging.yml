@@ -124,6 +124,13 @@
                 labels: {host: arr-blr-lxc, ct: "182", service: alloy, env: homelab}
               - targets: ["10.10.0.21:12345"]
                 labels: {host: barbatoslupusrex, ct: "host", service: alloy, env: homelab}
+          - job: kuma
+            # Basic auth: any username + a dedicated Kuma API key (owner-created
+            # 2026-11-14). The key file lives only on CT172 (0640 root:prometheus).
+            basic_auth: {username: prometheus, password_file: /etc/prometheus/kuma_api_key}
+            static_configs:
+              - targets: ["10.10.0.84:3001"]
+                labels: {host: uptimekuma-blr-lxc, ct: "184", service: uptime-kuma, env: homelab}
           - job: caddy
             static_configs:
               - targets: ["10.10.0.250:9180"]
