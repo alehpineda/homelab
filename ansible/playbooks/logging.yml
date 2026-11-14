@@ -55,6 +55,11 @@
     - role: alloy
       vars:
         alloy_source_docker: true
+        # Standard JSON body for the text-console containers; CLEF Servarr
+        # lines stay untouched, only their banner/NLog text lines are packed.
+        # qBittorrent and Dockge are not packed (separate item).
+        alloy_docker_json_containers: [bazarr, jackett, flaresolverr, gluetun, recyclarr, watchtower, listenarr]
+        alloy_docker_banner_containers: [prowlarr, sonarr, radarr, lidarr]
 
 - name: Prometheus remote_write to OpenObserve
   hosts: prometheus-blr-lxc

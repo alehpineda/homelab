@@ -216,6 +216,165 @@ loki.process "arr_docker" {
     expression          = "^\\s*$"
     drop_counter_reason = "blank_line"
   }
+{% macro arr_pack(name) %}
+    // Pack into the standard body {ts, level, service, host, env, [component], msg}.
+    // A line no regex matched keeps the whole line as msg (level unknown).
+    stage.template {
+      source   = "level_norm"
+{% raw %}      template = `{{ $l := lower (default "" .level_raw) }}{{ if or (eq $l "inf") (eq $l "info") (eq $l "information") }}info{{ else if or (eq $l "wrn") (eq $l "warn") (eq $l "warning") }}warning{{ else if or (eq $l "err") (eq $l "error") }}error{{ else if or (eq $l "dbg") (eq $l "debug") (eq $l "trc") (eq $l "trace") (eq $l "vrb") (eq $l "verbose") }}debug{{ else if or (eq $l "crit") (eq $l "critical") }}crit{{ else if or (eq $l "ftl") (eq $l "fatal") }}fatal{{ else if eq $l "notice" }}notice{{ else if eq $l "" }}{{ default "unknown" .level_default }}{{ else }}{{ $l }}{{ end }}`
+{% endraw %}
+    }
+    stage.template {
+      source   = "line_json"
+{% raw %}      template = `{"ts":{{ default "null" .ts_out }},"level":{{ toJson .level_norm }},"service":"{% endraw %}{{ name }}{% raw %}","host":"{% endraw %}{{ alloy_host_label }}{% raw %}","env":"{% endraw %}{{ alloy_env_label }}{% raw %}"{{ if .component }},"component":{{ toJson .component }}{{ end }},"msg":{{ toJson (default .raw .msg) }}}`
+{% endraw %}
+    }
+    stage.output {
+      source = "line_json"
+    }
+{% endmacro %}
+{% macro ts_local(frac) %}
+    // Local wall time without a zone: append the {{ alloy_docker_local_tz }} offset.
+    stage.template {
+      source   = "ts_out"
+{% raw %}      template = `{{ if .ts }}"{{ replace " " "T" .ts }}{% endraw %}{% if frac %}{% raw %}.{{ .frac }}{% endraw %}{% endif %}{% raw %}{{ dateInZone "-07:00" (toDate "2006-01-02 15:04:05" .ts) "{% endraw %}{{ alloy_docker_local_tz }}{% raw %}" }}"{{ end }}`
+{% endraw %}
+    }
+{% endmacro %}
+{% macro ts_rfc3339() %}
+    stage.template {
+      source   = "ts_out"
+{% raw %}      template = `{{ if .ts }}{{ toJson .ts }}{{ end }}`
+{% endraw %}
+    }
+{% endmacro %}
+{% if 'bazarr' in alloy_docker_json_containers %}
+
+  // Bazarr (Python logging): "2026-11-14 01:05:06,050 - logger (thread) :  INFO (file:line) - msg"
+  stage.match {
+    selector = `{container="bazarr"}`
+    stage.regex {
+      expression = `^(?P<raw>.*)$`
+    }
+    stage.regex {
+      expression = `^(?P<ts>\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}),(?P<frac>\d{3}) - (?P<component>\S+)\s+\([0-9a-fA-Fx]+\) :\s+(?P<level_raw>[A-Z]+) \([^)]*\) - (?P<msg>.*)$`
+    }
+{{ ts_local(true) }}{{ arr_pack('bazarr') }}  }
+{% endif %}
+{% if 'jackett' in alloy_docker_json_containers %}
+
+  // Jackett (NLog, no year/zone): "11-14 06:07:18 Info msg"
+  stage.match {
+    selector = `{container="jackett"}`
+    stage.regex {
+      expression = `^(?P<raw>.*)$`
+    }
+    stage.regex {
+      expression = `^(?P<md>\d{2}-\d{2}) (?P<hms>\d{2}:\d{2}:\d{2}) (?P<level_raw>Trace|Debug|Info|Warn|Error|Fatal) (?P<msg>.*)$`
+    }
+    // Year is not in the line: take the current {{ alloy_docker_local_tz }} year.
+    stage.template {
+      source   = "ts"
+{% raw %}      template = `{{ if .md }}{{ dateInZone "2006" now "{% endraw %}{{ alloy_docker_local_tz }}{% raw %}" }}-{{ .md }} {{ .hms }}{{ end }}`
+{% endraw %}
+    }
+{{ ts_local(false) }}{{ arr_pack('jackett') }}  }
+{% endif %}
+{% if 'flaresolverr' in alloy_docker_json_containers %}
+
+  // FlareSolverr (Python logging): "2026-11-14 10:40:29 INFO     msg"
+  stage.match {
+    selector = `{container="flaresolverr"}`
+    stage.regex {
+      expression = `^(?P<raw>.*)$`
+    }
+    stage.regex {
+      expression = `^(?P<ts>\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}) (?P<level_raw>[A-Z]+)\s+(?P<msg>.*)$`
+    }
+{{ ts_local(false) }}{{ arr_pack('flaresolverr') }}  }
+{% endif %}
+{% if 'gluetun' in alloy_docker_json_containers %}
+
+  // Gluetun: "2026-11-13T21:48:30-06:00 INFO [vpn] msg" (settings tree lines stay msg).
+  stage.match {
+    selector = `{container="gluetun"}`
+    stage.regex {
+      expression = `^(?P<raw>.*)$`
+    }
+    stage.regex {
+      expression = `^(?P<ts>\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})) (?P<level_raw>[A-Z]+) (?:\[(?P<component>[^\]]+)\] )?(?P<msg>.*)$`
+    }
+    // Unparsed lines are the startup banner / settings tree: level info.
+    stage.template {
+      source   = "level_default"
+      template = "info"
+    }
+{{ ts_rfc3339() }}{{ arr_pack('gluetun') }}  }
+{% endif %}
+{% for c in ['recyclarr', 'watchtower'] if c in alloy_docker_json_containers %}
+
+  // {{ c | capitalize }}: logfmt `time=... level=... msg=... k=v` (other keys stay in msg){% if c == 'recyclarr' %}, plus "[INF] msg"{% endif %}.
+  stage.match {
+    selector = `{container="{{ c }}"}`
+    stage.regex {
+      expression = `^(?P<raw>.*)$`
+    }
+    stage.regex {
+      expression = `^time="?(?P<ts>[^" ]+)"? level=(?P<level_raw>\w+) msg=(?:"(?P<msgq>(?:[^"\\]|\\.)*)"|(?P<msgu>\S+))(?:\s+(?P<extra>.+))?$`
+    }
+{% if c == 'recyclarr' %}
+    stage.regex {
+      expression = `^\[(?P<level_raw>VRB|DBG|INF|WRN|ERR|FTL)\] (?P<msg>.*)$`
+    }
+{% endif %}
+    stage.template {
+      source   = "msg"
+{% raw %}      template = `{{ if or .msgq .msgu }}{{ .msgq }}{{ .msgu }}{{ if .extra }} {{ .extra }}{{ end }}{{ else }}{{ default "" .msg }}{{ end }}`
+{% endraw %}
+    }
+    // Unparsed lines are the cron banner: level info.
+    stage.template {
+      source   = "level_default"
+      template = "info"
+    }
+{{ ts_rfc3339() }}{{ arr_pack(c) }}  }
+{% endfor %}
+{% if 'listenarr' in alloy_docker_json_containers %}
+
+  // Listenarr (Serilog text): "2026-11-14 13:59:27.292 -06:00 [INF] [Source] msg"
+  stage.match {
+    selector = `{container="listenarr"}`
+    stage.regex {
+      expression = `^(?P<raw>.*)$`
+    }
+    stage.regex {
+      expression = `^(?P<ts>\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}(?:\.\d+)?) (?P<off>[+-]\d{2}:\d{2}) \[(?P<level_raw>[A-Z]{3})\] (?:\[(?P<component>[^\]]+)\] )?(?P<msg>.*)$`
+    }
+    stage.template {
+      source   = "ts_out"
+{% raw %}      template = `{{ if .ts }}"{{ replace " " "T" .ts }}{{ .off }}"{{ end }}`
+{% endraw %}
+    }
+{{ arr_pack('listenarr') }}  }
+{% endif %}
+{% for c in alloy_docker_banner_containers %}
+
+  // {{ c }}: CLEF JSON lines pass through untouched; pack only the non-JSON
+  // lines (linuxserver/s6 banner, NLog text) as level info.
+  stage.match {
+    selector = `{container="{{ c }}"} !~ "^[{]"`
+    stage.regex {
+      expression = `^(?P<raw>.*)$`
+    }
+    stage.regex {
+      expression = `^\[(?P<level_raw>Trace|Debug|Info|Warn|Error|Fatal)\] (?P<component>[^:]+): (?P<msg>.*)$`
+    }
+    stage.template {
+      source   = "level_default"
+      template = "info"
+    }
+{{ arr_pack(c) }}  }
+{% endfor %}
   forward_to = [loki.write.loki.receiver, loki.relabel.o2route.receiver]
 }
 {% endif %}
