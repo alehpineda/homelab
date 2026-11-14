@@ -92,10 +92,10 @@
 
 # Live rules are a prefix of the wanted list (new rules appended at the end
 # of fw_allowlists.yml): add only the missing tail, in order, at the end.
-# PVE ignores pos on POST (a new rule always lands at position 0), so add the
-# new rules in reverse, then move positions n-1..0 to the end (moveto past the
-# last index appends). Result: live == wanted order, so the drift check holds.
-- name: "CT {{ pve_fw_vmid }}: add new rules (reverse; they land at the top)"
+# PVE ignores pos on POST (a new rule always lands at position 0), so posting
+# r1..rn in order leaves rn..r1 at the top; moving positions n-1..0 to the end
+# (moveto past the last index appends) yields r1..rn last. Live == wanted.
+- name: "CT {{ pve_fw_vmid }}: add new rules (each lands at the top)"
   ansible.builtin.uri:
     url: "{{ pve_api_url }}/nodes/{{ pve_node }}/lxc/{{ pve_fw_vmid }}/firewall/rules"
     method: POST
@@ -103,7 +103,7 @@
     body_format: form-urlencoded
     body: "{{ {'type': 'in', 'action': 'ACCEPT', 'enable': 1, 'comment': 'forge pve_guest_firewall'} | combine(item) }}"
     validate_certs: "{{ pve_api_validate_certs }}"
-  loop: "{{ _ct_rules[((_have | length) - 1):] | reverse | list }}"
+  loop: "{{ _ct_rules[((_have | length) - 1):] }}"
   when: _have | length > 0 and _have | length < _want | length
   changed_when: true
   no_log: true
