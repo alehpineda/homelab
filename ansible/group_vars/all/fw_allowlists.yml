@@ -104,6 +104,7 @@ pve_fw_ct_rules:
   184:  # uptime kuma
     - {proto: tcp, dport: "3001", source: +caddy}
     - {proto: tcp, dport: "12345", source: prometheus, comment: "alloy /metrics"}
+    - {proto: tcp, dport: "3001", source: prometheus, comment: "kuma /metrics"}
   185:  # romm
     - {proto: tcp, dport: "80", source: +caddy}
   186:  # navidrome
