@@ -86,7 +86,7 @@ pve_fw_ct_rules:
   181:  # metube
     - {proto: tcp, dport: "8081", source: +caddy}
   182:  # arr (docker DNAT inside the CT; bridge sees pre-DNAT dport)
-    - {proto: tcp, dport: "4545,5001,6767,7878,8085,8686,8989,9696", source: +caddy}
+    - {proto: tcp, dport: "4545,5001,6767,7878,8085,8686,8989,9117,9696", source: +caddy}
     - {proto: tcp, dport: "7878,8989", source: seerr}
   183:  # seerr
     - {proto: tcp, dport: "5055", source: 10.10.0.0/24}
