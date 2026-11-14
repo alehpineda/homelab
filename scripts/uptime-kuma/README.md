@@ -29,8 +29,12 @@ python3 -m venv ~/.local/share/forge/kuma-seeder-venv
 ~/.local/share/forge/kuma-seeder-venv/bin/pip install -r requirements.txt
 cd /path/to/homelab/scripts/uptime-kuma
 
-# No login:
+# No login. Says diffs were not computed:
 ~/.local/share/forge/kuma-seeder-venv/bin/python seed.py --dry-run
+
+# Diff a saved monitor list offline. Unchanged monitors print "unchanged":
+~/.local/share/forge/kuma-seeder-venv/bin/python seed.py --dry-run \
+  --plan-fixture tests/fixtures/unchanged-monitors.json
 
 # Seed (passwords already in the environment, not in argv):
 export KUMA_USERNAME=admin
