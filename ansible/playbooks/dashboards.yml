@@ -1,0 +1,11 @@
+---
+# CT 191 Homepage and CT 198 Homer: grokops editor access to the tile
+# config only. Not imported by site.yml. See docs/runbooks/dashboard-editor.md.
+# Authority: DeathScythe 2026-11-13 10:15 PM CT: "Yes, add the grokops key on
+# CT191 and CT198 via IaC".
+- name: Dashboard config editor access
+  hosts: homepage-blr-lxc:homer-blr-lxc
+  become: true
+  gather_facts: false
+  roles:
+    - role: dashboard_editor

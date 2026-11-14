@@ -1,0 +1,15 @@
+---
+# Non-root editor access to one dashboard config file (CT 191 Homepage,
+# CT 198 Homer). Wolff (observability bot) edits tiles as grokops from
+# CT 176. No sudo, no password login. See docs/runbooks/dashboard-editor.md.
+dashboard_editor_user: grokops
+dashboard_editor_group: dashcfg
+
+# Public keys only. Set them in the gitignored inventory/blr.yml (host or
+# group vars), same as pbs_grokops_pubkeys. The live key is the CT 176
+# forge key, fingerprint SHA256:B0BznGN4uG7ub8EpB9qyE62MzZfygeGqgZA6gWIgC1s.
+dashboard_editor_pubkeys: []
+
+# Set per host: the single config file the editor may change. Its parent
+# directory also gets group write (setgid) so atomic-rename editors work.
+# dashboard_editor_config_file: /opt/homepage/config/services.yaml

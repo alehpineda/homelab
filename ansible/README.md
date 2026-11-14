@@ -30,6 +30,8 @@ SSH port **4488**. Fresh LXCs often still listen on **22**. Set
 | `roles/ollama/` | Drop-in, mount check, and non-recursive ownership. |
 | `playbooks/grokbot-headless.yml` | Opt-in always-on Grok Bot on CT 176. Not run by `site.yml`. |
 | `roles/grokbot_headless/` | Xvfb `:99` + Grok Bot user units, linger, empty-password keyring. See `docs/runbooks/ct176-headless-grokbot.md`. |
+| `playbooks/dashboards.yml` | CT 191 Homepage / CT 198 Homer: `grokops` key, `dashcfg` group write on the tile config only. No sudo. Not run by `site.yml`. |
+| `roles/dashboard_editor/` | That playbook. See `docs/runbooks/dashboard-editor.md`. |
 | `roles/console_autologin/` | Getty drop-ins for that playbook. Default off. |
 | `playbooks/arr.yml` | CT 182 Docker, Dockge, and the phase-1 stack. Not run by `site.yml`. |
 | `roles/arr/` | That playbook. Skips gluetun, qBittorrent, and Watchtower when `.env` is missing. |
