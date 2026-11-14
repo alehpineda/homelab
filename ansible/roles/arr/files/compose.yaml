@@ -110,6 +110,7 @@ services:
       PUID: "1000"
       PGID: "1000"
       TZ: America/Chicago
+      SONARR__LOG__CONSOLEFORMAT: Clef
     volumes:
       - /opt/arr/sonarr:/config
       - /data/media/tv:/data/media/tv
@@ -135,6 +136,7 @@ services:
       PUID: "1000"
       PGID: "1000"
       TZ: America/Chicago
+      RADARR__LOG__CONSOLEFORMAT: Clef
     volumes:
       - /opt/arr/radarr:/config
       - /data/media/movies:/data/media/movies
@@ -160,6 +162,7 @@ services:
       PUID: "1000"
       PGID: "1000"
       TZ: America/Chicago
+      LIDARR__LOG__CONSOLEFORMAT: Clef
     volumes:
       - /opt/arr/lidarr:/config
       - /data/media/music:/data/media/music
