@@ -29,7 +29,7 @@ alloy_env_label: homelab
 alloy_source_journal: false     # journald -> job {{ alloy_journal_job }} (BRL: pve_journal)
 alloy_source_caddy: false       # CT 250 /var/log/caddy/access.log -> job caddy_access
 alloy_source_docker: false      # CT 182 Docker stdout -> job arr_docker
-alloy_source_adguard: false     # CT 153 querylog.json -> job adguard_query (phase 1b)
+alloy_source_adguard: false     # CT 153/155 querylog.json -> job adguard_querylog
 
 alloy_journal_max_age: 12h
 # Alloy HTTP server (UI + /metrics). Empty = package default 127.0.0.1:12345.
@@ -72,4 +72,12 @@ alloy_docker_json_containers: []
 alloy_docker_banner_containers: []
 # Zone of container wall-clock timestamps that carry no offset (TZ in compose).
 alloy_docker_local_tz: America/Chicago
-alloy_adguard_querylog: /opt/AdGuardHome/data/querylog.json
+# AdGuard querylog (CT 153/155). AdGuard keeps data/ 0700 and files 0600 and
+# its startup permcheck chmods them back, which zeroes any ACL mask. With
+# alloy_source_adguard the role installs `acl`, grants the alloy user read
+# (data dir: r-x + default ACL; querylog.json and .1: r--) and a root timer
+# (alloy-adguard-acl.timer) re-applies those ACL entries and masks every
+# alloy_adguard_acl_interval. Alloy itself never runs as root.
+alloy_adguard_data_dir: /opt/AdGuardHome/data
+alloy_adguard_querylog: "{{ alloy_adguard_data_dir }}/querylog.json"
+alloy_adguard_acl_interval: 2min

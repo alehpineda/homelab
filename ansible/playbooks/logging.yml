@@ -367,3 +367,26 @@
         alloy_journal_job: dispatcharr_journal
         alloy_service_label: dispatcharr
         alloy_ct_label: "188"
+
+# AdGuard querylog (owner card t49s294, 3:42 PM CT Nov 14). Family DNS: one CT
+# at a time, CT155 (B) first; check DNS through the other one before each.
+# No AdGuard config or unit change; anonymize_client_ip stays as is.
+- name: Alloy on CT 155 (AdGuard B querylog)
+  hosts: adguard-blr-lxc-b
+  gather_facts: false
+  tags: [alloy_adguard_b, alloy_adguard]
+  roles:
+    - role: alloy
+      vars:
+        alloy_source_adguard: true
+        alloy_ct_label: "155"
+
+- name: Alloy on CT 153 (AdGuard A querylog)
+  hosts: adguard-blr-lxc
+  gather_facts: false
+  tags: [alloy_adguard_a, alloy_adguard]
+  roles:
+    - role: alloy
+      vars:
+        alloy_source_adguard: true
+        alloy_ct_label: "153"

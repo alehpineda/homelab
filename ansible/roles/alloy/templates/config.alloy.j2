@@ -380,12 +380,41 @@ loki.process "arr_docker" {
 {% endif %}
 {% if alloy_source_adguard %}
 
+// AdGuard querylog: one JSON object per line, shipped byte-identical (client
+// IP and query name stay in the body, never in labels). Only the active file
+// is tailed: on rotation AdGuard renames it to querylog.json.1 and the tailer,
+// which follows the path, drains the old file and reopens the new one from
+// offset 0, so nothing is read twice. tail_from_end: no backfill on first start.
 local.file_match "adguard" {
-  path_targets = [{ "__path__" = "{{ alloy_adguard_querylog }}", "job" = "adguard_query" }]
+  path_targets = [{ "__path__" = "{{ alloy_adguard_querylog }}", "job" = "adguard_querylog" }]
 }
 
 loki.source.file "adguard" {
-  targets    = local.file_match.adguard.targets
+  targets       = local.file_match.adguard.targets
+  tail_from_end = true
+  forward_to    = [loki.process.adguard_querylog.receiver]
+}
+
+loki.process "adguard_querylog" {
+  // Drop empty / whitespace-only lines (OpenObserve rejects a whole
+  // Loki-push batch that contains one).
+  stage.drop {
+    expression          = "^\\s*$"
+    drop_counter_reason = "blank_line"
+  }
+
+  // Stream labels: job, host (external), ct, service, env only.
+  stage.label_drop {
+    values = ["filename"]
+  }
+
+  stage.static_labels {
+    values = {
+      ct      = "{{ alloy_ct_label }}",
+      service = "adguard",
+      env     = "{{ alloy_env_label }}",
+    }
+  }
   forward_to = [loki.write.loki.receiver, loki.relabel.o2route.receiver]
 }
 {% endif %}

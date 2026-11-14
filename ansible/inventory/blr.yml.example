@@ -114,6 +114,13 @@ all:
         dispatcharr-blr-lxc:  # CT 188
           ansible_host: 10.10.0.88
           ansible_port: 22
+        # AdGuard querylog (playbooks/logging.yml --tags alloy_adguard_b / _a). Alloy only.
+        adguard-blr-lxc-b:  # CT 155 (AdGuard B, vmbr1)
+          ansible_host: 10.10.0.55
+          ansible_port: 22
+        adguard-blr-lxc:  # CT 153 (AdGuard A)
+          ansible_host: 10.10.0.53
+          ansible_port: 22
         # CT 250. playbooks/caddy.yml targets this host. site.yml does not.
         # Port 22: Debian 13 Caddy guest, not an ansible-playbooks harden.
         caddy-blr-lxc:
