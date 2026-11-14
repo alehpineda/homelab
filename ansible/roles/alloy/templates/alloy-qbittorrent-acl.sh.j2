@@ -1,0 +1,27 @@
+#!/bin/sh
+# Managed by ansible role alloy (alehpineda/homelab). Do not edit live.
+# Grants the alloy user traverse (x) on the qBittorrent config dirs and read
+# on the active log, and re-applies the read after each rotation (qBittorrent
+# creates the new file 0600). Touches only ACL entries and masks; no-op when
+# they are already right. Never grants read on the config dir contents.
+set -eu
+TOP="{{ alloy_qbittorrent_config_dir | dirname }}"
+D="{{ alloy_qbittorrent_config_dir }}"
+F="{{ alloy_qbittorrent_log }}"
+
+fix() {
+  p="$1"; spec="$2"; shift 2
+  cur="$(getfacl -cpE "$p" 2>/dev/null)" || return 0
+  for want in "$@"; do
+    if printf '%s\n' "$cur" | grep -qx "$want"; then continue; fi
+    setfacl -m "$spec" "$p"
+    logger -t alloy-qbittorrent-acl "re-applied $spec on $p"
+    return 0
+  done
+}
+
+fix "$TOP" "u:alloy:x" "user:alloy:--x"
+fix "$D" "u:alloy:x" "user:alloy:--x"
+if [ -f "$F" ]; then
+  fix "$F" "u:alloy:r,m::r" "user:alloy:r--" "mask::r--"
+fi

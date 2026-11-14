@@ -1,5 +1,6 @@
 ---
-# Enable native Prometheus metrics on wave 2 apps (Jellyfin, Navidrome, SearXNG).
+# Enable native Prometheus metrics on wave 2 apps (Jellyfin, Navidrome, SearXNG)
+# and wave 3 (n8n, --tags metrics_n8n).
 # Owner yes: Wolff 1:1, 5:14 PM CT Nov 14 2026.
 #
 #   cd ansible && ansible-playbook -i <inv> playbooks/metrics.yml --tags metrics_jellyfin
@@ -169,4 +170,41 @@
     - name: Restart searxng
       ansible.builtin.systemd_service:
         name: searxng
+        state: restarted
+
+# Metrics wave 3 (owner card t57s331, 5:41 PM CT Nov 14 2026): n8n native
+# /metrics on 10.10.0.70:5678 (PVE fw: from Prometheus .72 only, plus the
+# existing Caddy/nb_routers UI rules). /opt/n8n.env holds secrets: the play
+# only adds one line and never prints the file.
+- name: Enable n8n Prometheus metrics
+  hosts: n8n-blr-lxc
+  gather_facts: false
+  tags: [metrics_n8n]
+  vars:
+    n8n_env_file: /opt/n8n.env
+  tasks:
+    - name: Backup n8n.env
+      ansible.builtin.copy:
+        src: "{{ n8n_env_file }}"
+        dest: "{{ n8n_env_file }}.bak-forge-metrics"
+        remote_src: true
+        owner: root
+        group: root
+        mode: "0640"
+        force: false
+      no_log: true
+
+    - name: Set N8N_METRICS=true
+      ansible.builtin.lineinfile:
+        path: "{{ n8n_env_file }}"
+        regexp: '^N8N_METRICS='
+        line: N8N_METRICS=true
+        owner: root
+        group: root
+        mode: "0640"
+      notify: Restart n8n
+  handlers:
+    - name: Restart n8n
+      ansible.builtin.systemd_service:
+        name: n8n
         state: restarted

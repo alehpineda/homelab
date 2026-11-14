@@ -30,6 +30,7 @@ alloy_source_journal: false     # journald -> job {{ alloy_journal_job }} (BRL: 
 alloy_source_caddy: false       # CT 250 /var/log/caddy/access.log -> job caddy_access
 alloy_source_docker: false      # CT 182 Docker stdout -> job arr_docker
 alloy_source_adguard: false     # CT 153/155 querylog.json -> job adguard_querylog
+alloy_source_qbittorrent: false # CT 182 qBittorrent log file -> job arr_qbittorrent
 
 alloy_journal_max_age: 12h
 # Alloy HTTP server (UI + /metrics). Empty = package default 127.0.0.1:12345.
@@ -81,3 +82,13 @@ alloy_docker_local_tz: America/Chicago
 alloy_adguard_data_dir: /opt/AdGuardHome/data
 alloy_adguard_querylog: "{{ alloy_adguard_data_dir }}/querylog.json"
 alloy_adguard_acl_interval: 2min
+# qBittorrent log file (CT 182, linuxserver image, /config = /opt/arr/qbittorrent).
+# The file is 0600 uid 1000 under /opt/arr (0700 root) and qBittorrent
+# recreates it at every 64 KiB rotation, so with alloy_source_qbittorrent the
+# role installs `acl` and a root path unit + timer (alloy-qbittorrent-acl)
+# that grant the alloy user traverse (x) on the parent dirs and read on the
+# active log only. No qBittorrent setting or file content is changed.
+alloy_qbittorrent_config_dir: /opt/arr/qbittorrent
+alloy_qbittorrent_log_dir: "{{ alloy_qbittorrent_config_dir }}/qBittorrent/logs"
+alloy_qbittorrent_log: "{{ alloy_qbittorrent_log_dir }}/qbittorrent.log"
+alloy_qbittorrent_acl_interval: 2min

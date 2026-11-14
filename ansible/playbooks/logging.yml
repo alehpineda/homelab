@@ -18,6 +18,10 @@
 #                 Wave 1 never runs --tags alloy_host (BRL is already live).
 #   alloy_wave2   wave 2 journald on CT 180/183/185/186/187/193/196/160/161/181/188
 #                 (per-CT tags alloy_<service>). One CT at a time; ipset first.
+#   alloy_wave3   wave 3 journald on CT 170/169/197/164/175/162/189/194/195/199
+#                 (per-CT tags alloy_<service>). One CT at a time; ipset first.
+#                 CT 182 (alloy_arr) adds the qBittorrent log file and the
+#                 Dockge JSON pack in the same wave.
 # See docs/runbooks/logging-loki-openobserve.md.
 - name: Loki config
   hosts: loki-blr-lxc
@@ -67,9 +71,13 @@
         alloy_source_docker: true
         # Standard JSON body for the text-console containers; CLEF Servarr
         # lines stay untouched, only their banner/NLog text lines are packed.
-        # qBittorrent and Dockge are not packed (separate item).
-        alloy_docker_json_containers: [bazarr, jackett, flaresolverr, gluetun, recyclarr, watchtower, listenarr]
+        # Dockge is packed too (wave 3); qBittorrent logs to a file (below).
+        alloy_docker_json_containers: [bazarr, jackett, flaresolverr, gluetun, recyclarr, watchtower, listenarr, dockge]
         alloy_docker_banner_containers: [prowlarr, sonarr, radarr, lidarr]
+        # Wave 3 (owner card t57s331, 5:41 PM CT Nov 14): qBittorrent log file
+        # -> job arr_qbittorrent (labels job/host/ct/service/env).
+        alloy_source_qbittorrent: true
+        alloy_ct_label: "182"
 
 - name: node_exporter on CT 177 (OpenObserve mp0 /opt/openobserve/data disk usage)
   hosts: openobserve-blr-lxc
@@ -86,7 +94,8 @@
     - role: prometheus_scrape
       vars:
         # Metrics wave 1 (owner card t40s246, 2:45 PM CT Nov 14) plus wave 2
-        # (Wolff 1:1 5:14 PM CT Nov 14): jellyfin, navidrome, searxng.
+        # (Wolff 1:1 5:14 PM CT Nov 14): jellyfin, navidrome, searxng; wave 3
+        # (card t57s331, 5:41 PM CT Nov 14): exportarr x5, cadvisor, n8n.
         # One target at a time on apply (-e prometheus_scrape_jobs=<subset>);
         # this is the end state.
         prometheus_scrape_jobs:
@@ -154,6 +163,43 @@
             static_configs:
               - targets: ["10.10.0.60:8888"]
                 labels: {host: searxng-blr-lxc, ct: "160", service: searxng, env: homelab}
+          # Metrics wave 3 (owner card t57s331, 5:41 PM CT Nov 14). exportarr
+          # containers on CT182 (keys: /opt/stacks/arr/secrets, 0600 root).
+          - job: exportarr-sonarr
+            static_configs:
+              - targets: ["10.10.0.82:9707"]
+                labels: {host: arr-blr-lxc, ct: "182", service: sonarr, env: homelab}
+          - job: exportarr-radarr
+            static_configs:
+              - targets: ["10.10.0.82:9708"]
+                labels: {host: arr-blr-lxc, ct: "182", service: radarr, env: homelab}
+          - job: exportarr-lidarr
+            static_configs:
+              - targets: ["10.10.0.82:9709"]
+                labels: {host: arr-blr-lxc, ct: "182", service: lidarr, env: homelab}
+          - job: exportarr-prowlarr
+            static_configs:
+              - targets: ["10.10.0.82:9710"]
+                labels: {host: arr-blr-lxc, ct: "182", service: prowlarr, env: homelab}
+          - job: exportarr-bazarr
+            # Bazarr's episode-subtitle walk takes tens of seconds.
+            scrape_interval: 120s
+            scrape_timeout: 90s
+            static_configs:
+              - targets: ["10.10.0.82:9711"]
+                labels: {host: arr-blr-lxc, ct: "182", service: bazarr, env: homelab}
+          - job: cadvisor
+            # docker_only on the cAdvisor side; drop any container_* series
+            # that is not a named Docker container (cgroup noise).
+            metric_relabel_configs:
+              - {source_labels: [__name__, name], regex: "container_.*;", action: drop}
+            static_configs:
+              - targets: ["10.10.0.82:8080"]
+                labels: {host: arr-blr-lxc, ct: "182", service: cadvisor, env: homelab}
+          - job: n8n
+            static_configs:
+              - targets: ["10.10.0.70:5678"]
+                labels: {host: n8n-blr-lxc, ct: "170", service: n8n, env: homelab}
 
 - name: Prometheus remote_write to OpenObserve
   hosts: prometheus-blr-lxc
@@ -386,6 +432,126 @@
         alloy_journal_job: dispatcharr_journal
         alloy_service_label: dispatcharr
         alloy_ct_label: "188"
+
+- name: Alloy on CT 170 (n8n journal, wave 3)
+  hosts: n8n-blr-lxc
+  gather_facts: false
+  tags: [alloy_n8n, alloy_wave3]
+  roles:
+    - role: alloy
+      vars:
+        alloy_source_journal: true
+        alloy_journal_job: n8n_journal
+        alloy_service_label: n8n
+        alloy_ct_label: "170"
+
+- name: Alloy on CT 169 (postiz journal, wave 3)
+  hosts: postiz-blr-lxc
+  gather_facts: false
+  tags: [alloy_postiz, alloy_wave3]
+  roles:
+    - role: alloy
+      vars:
+        alloy_source_journal: true
+        alloy_journal_job: postiz_journal
+        alloy_service_label: postiz
+        alloy_ct_label: "169"
+
+- name: Alloy on CT 197 (semaphore journal, wave 3)
+  hosts: semaphore-blr-lxc
+  gather_facts: false
+  tags: [alloy_semaphore, alloy_wave3]
+  roles:
+    - role: alloy
+      vars:
+        alloy_source_journal: true
+        alloy_journal_job: semaphore_journal
+        alloy_service_label: semaphore
+        alloy_ct_label: "197"
+
+- name: Alloy on CT 164 (firecrawl journal, wave 3)
+  hosts: firecrawl-blr-lxc
+  gather_facts: false
+  tags: [alloy_firecrawl, alloy_wave3]
+  roles:
+    - role: alloy
+      vars:
+        alloy_source_journal: true
+        alloy_journal_job: firecrawl_journal
+        alloy_service_label: firecrawl
+        alloy_ct_label: "164"
+
+- name: Alloy on CT 175 (ollama journal, wave 3)
+  hosts: ollama-blr-lxc
+  gather_facts: false
+  tags: [alloy_ollama, alloy_wave3]
+  roles:
+    - role: alloy
+      vars:
+        alloy_source_journal: true
+        alloy_journal_job: ollama_journal
+        alloy_service_label: ollama
+        alloy_ct_label: "175"
+
+- name: Alloy on CT 162 (openbao journal, wave 3)
+  hosts: openbao
+  gather_facts: false
+  tags: [alloy_openbao, alloy_wave3]
+  roles:
+    - role: alloy
+      vars:
+        alloy_source_journal: true
+        alloy_journal_job: openbao_journal
+        alloy_service_label: openbao
+        alloy_ct_label: "162"
+
+- name: Alloy on CT 189 (netbox journal, wave 3)
+  hosts: netbox-blr-lxc
+  gather_facts: false
+  tags: [alloy_netbox, alloy_wave3]
+  roles:
+    - role: alloy
+      vars:
+        alloy_source_journal: true
+        alloy_journal_job: netbox_journal
+        alloy_service_label: netbox
+        alloy_ct_label: "189"
+
+- name: Alloy on CT 194 (pricebuddy journal, wave 3)
+  hosts: pricebuddy-blr-lxc
+  gather_facts: false
+  tags: [alloy_pricebuddy, alloy_wave3]
+  roles:
+    - role: alloy
+      vars:
+        alloy_source_journal: true
+        alloy_journal_job: pricebuddy_journal
+        alloy_service_label: pricebuddy
+        alloy_ct_label: "194"
+
+- name: Alloy on CT 195 (changedetection journal, wave 3)
+  hosts: changedetection-blr-lxc
+  gather_facts: false
+  tags: [alloy_changedetection, alloy_wave3]
+  roles:
+    - role: alloy
+      vars:
+        alloy_source_journal: true
+        alloy_journal_job: changedetection_journal
+        alloy_service_label: changedetection
+        alloy_ct_label: "195"
+
+- name: Alloy on CT 199 (myip journal, wave 3)
+  hosts: myip-blr-lxc
+  gather_facts: false
+  tags: [alloy_myip, alloy_wave3]
+  roles:
+    - role: alloy
+      vars:
+        alloy_source_journal: true
+        alloy_journal_job: myip_journal
+        alloy_service_label: myip
+        alloy_ct_label: "199"
 
 # AdGuard querylog (owner card t49s294, 3:42 PM CT Nov 14). Family DNS: one CT
 # at a time, CT155 (B) first; check DNS through the other one before each.

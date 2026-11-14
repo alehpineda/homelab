@@ -167,6 +167,48 @@
     daemon_reload: true
   when: alloy_source_adguard
 
+- name: Ensure acl (setfacl) for the qBittorrent log read grant
+  ansible.builtin.apt:
+    name: acl
+    state: present
+  when: alloy_source_qbittorrent
+
+- name: Install the qBittorrent log ACL re-apply script
+  ansible.builtin.template:
+    src: alloy-qbittorrent-acl.sh.j2
+    dest: /usr/local/sbin/alloy-qbittorrent-acl
+    owner: root
+    group: root
+    mode: "0755"
+  when: alloy_source_qbittorrent
+
+- name: Install the qBittorrent log ACL service, path unit and timer
+  ansible.builtin.template:
+    src: "{{ item }}.j2"
+    dest: "/etc/systemd/system/{{ item }}"
+    owner: root
+    group: root
+    mode: "0644"
+  loop: [alloy-qbittorrent-acl.service, alloy-qbittorrent-acl.path, alloy-qbittorrent-acl.timer]
+  when: alloy_source_qbittorrent
+
+- name: Apply the qBittorrent log ACL now
+  ansible.builtin.systemd_service:
+    name: alloy-qbittorrent-acl.service
+    state: started
+    daemon_reload: true
+  changed_when: false
+  when: alloy_source_qbittorrent
+
+- name: Enable the qBittorrent log ACL path unit and timer
+  ansible.builtin.systemd_service:
+    name: "{{ item }}"
+    state: started
+    enabled: true
+    daemon_reload: true
+  loop: [alloy-qbittorrent-acl.path, alloy-qbittorrent-acl.timer]
+  when: alloy_source_qbittorrent
+
 - name: Write the OpenObserve ingest env file (0600)
   ansible.builtin.template:
     src: o2.env.j2

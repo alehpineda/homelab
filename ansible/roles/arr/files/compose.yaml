@@ -327,3 +327,152 @@ services:
     restart: unless-stopped
     security_opt:
       - no-new-privileges:true
+
+  # Metrics wave 3 (owner card t57s331, 5:41 PM CT Nov 14 2026). One exportarr
+  # per app on arr_default, NOT in gluetun's namespace: they reach each app on
+  # its published LAN port (arr_filter local_src admits 172.16.0.0/12), so
+  # gluetun, its ports and FIREWALL_INPUT_PORTS stay untouched and no VPN
+  # container is recreated. Exporter ports bind to 10.10.0.82 only; the PVE
+  # guest fw opens them to Prometheus 10.10.0.72 only (never via Caddy).
+  # Each API key is a 0600 root file in /opt/stacks/arr/secrets (not in git),
+  # mounted read-only and read through API_KEY_FILE. exportarr's image runs
+  # as 65532, which cannot read a 0600 root file, so it runs as 0 with every
+  # capability dropped and a read-only rootfs.
+  # Bring up only these, from /opt/stacks/arr:
+  #   docker compose up -d exportarr-sonarr exportarr-radarr exportarr-lidarr \
+  #     exportarr-prowlarr exportarr-bazarr cadvisor
+
+  exportarr-sonarr:
+    # onedr0p/exportarr v2.3.0 amd64
+    image: ghcr.io/onedr0p/exportarr@sha256:af535d94061cf97a52e1661945ffba78c03f9443eae7c0da1a80a5a4be56b520
+    pull_policy: missing
+    container_name: exportarr-sonarr
+    command: ["sonarr"]
+    user: "0:0"
+    environment:
+      PORT: "9707"
+      URL: http://10.10.0.82:8989
+      API_KEY_FILE: /run/secrets/apikey
+      TZ: America/Chicago
+    volumes:
+      - /opt/stacks/arr/secrets/sonarr.apikey:/run/secrets/apikey:ro
+    ports:
+      - "10.10.0.82:9707:9707/tcp"
+    read_only: true
+    cap_drop: [ALL]
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+
+  exportarr-radarr:
+    # onedr0p/exportarr v2.3.0 amd64
+    image: ghcr.io/onedr0p/exportarr@sha256:af535d94061cf97a52e1661945ffba78c03f9443eae7c0da1a80a5a4be56b520
+    pull_policy: missing
+    container_name: exportarr-radarr
+    command: ["radarr"]
+    user: "0:0"
+    environment:
+      PORT: "9708"
+      URL: http://10.10.0.82:7878
+      API_KEY_FILE: /run/secrets/apikey
+      TZ: America/Chicago
+    volumes:
+      - /opt/stacks/arr/secrets/radarr.apikey:/run/secrets/apikey:ro
+    ports:
+      - "10.10.0.82:9708:9708/tcp"
+    read_only: true
+    cap_drop: [ALL]
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+
+  exportarr-lidarr:
+    # onedr0p/exportarr v2.3.0 amd64
+    image: ghcr.io/onedr0p/exportarr@sha256:af535d94061cf97a52e1661945ffba78c03f9443eae7c0da1a80a5a4be56b520
+    pull_policy: missing
+    container_name: exportarr-lidarr
+    command: ["lidarr"]
+    user: "0:0"
+    environment:
+      PORT: "9709"
+      URL: http://10.10.0.82:8686
+      API_KEY_FILE: /run/secrets/apikey
+      TZ: America/Chicago
+    volumes:
+      - /opt/stacks/arr/secrets/lidarr.apikey:/run/secrets/apikey:ro
+    ports:
+      - "10.10.0.82:9709:9709/tcp"
+    read_only: true
+    cap_drop: [ALL]
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+
+  exportarr-prowlarr:
+    # onedr0p/exportarr v2.3.0 amd64
+    image: ghcr.io/onedr0p/exportarr@sha256:af535d94061cf97a52e1661945ffba78c03f9443eae7c0da1a80a5a4be56b520
+    pull_policy: missing
+    container_name: exportarr-prowlarr
+    command: ["prowlarr"]
+    user: "0:0"
+    environment:
+      PORT: "9710"
+      URL: http://10.10.0.82:9696
+      API_KEY_FILE: /run/secrets/apikey
+      TZ: America/Chicago
+    volumes:
+      - /opt/stacks/arr/secrets/prowlarr.apikey:/run/secrets/apikey:ro
+    ports:
+      - "10.10.0.82:9710:9710/tcp"
+    read_only: true
+    cap_drop: [ALL]
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+
+  exportarr-bazarr:
+    # onedr0p/exportarr v2.3.0 amd64
+    image: ghcr.io/onedr0p/exportarr@sha256:af535d94061cf97a52e1661945ffba78c03f9443eae7c0da1a80a5a4be56b520
+    pull_policy: missing
+    container_name: exportarr-bazarr
+    command: ["bazarr"]
+    user: "0:0"
+    environment:
+      PORT: "9711"
+      URL: http://10.10.0.82:6767
+      API_KEY_FILE: /run/secrets/apikey
+      TZ: America/Chicago
+    volumes:
+      - /opt/stacks/arr/secrets/bazarr.apikey:/run/secrets/apikey:ro
+    ports:
+      - "10.10.0.82:9711:9711/tcp"
+    read_only: true
+    cap_drop: [ALL]
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+
+  cadvisor:
+    # google/cadvisor v0.60.6 amd64. Docker containers only; heavy/per-CPU
+    # collectors off and no container labels exported (cardinality).
+    # Prometheus also drops container_* series without a container name.
+    image: ghcr.io/google/cadvisor@sha256:b8e7d1093144fd088f425ff003d75a4aa405de075db78dae3bc563730b1bd07a
+    pull_policy: missing
+    container_name: cadvisor
+    command:
+      - --port=8080
+      - --docker_only=true
+      - --housekeeping_interval=30s
+      - --store_container_labels=false
+      - --whitelisted_container_labels=com.docker.compose.service
+      - --disable_metrics=advtcp,cpu_topology,cpuset,disk,diskIO,hugetlb,memory_numa,percpu,perf_event,process,referenced_memory,resctrl,sched,tcp,udp
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker:/var/lib/docker:ro
+    ports:
+      - "10.10.0.82:8080:8080/tcp"
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true

@@ -10,4 +10,6 @@ prometheus_scrape_dir: /etc/prometheus/scrape.d
 #   static_configs: [{targets: ["ip:port"], labels: {k: v}}]
 #   metrics_path: /metrics             (optional)
 #   basic_auth: {username: "", password_file: /etc/prometheus/<job>.pass}  (optional)
+#   scrape_interval / scrape_timeout: "60s"                         (optional)
+#   metric_relabel_configs: [{...}]                                 (optional, Prometheus syntax)
 prometheus_scrape_jobs: []
