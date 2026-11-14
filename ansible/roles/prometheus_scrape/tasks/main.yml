@@ -1,0 +1,57 @@
+---
+- name: Scrape job directory
+  ansible.builtin.file:
+    path: "{{ prometheus_scrape_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Scrape job files
+  ansible.builtin.template:
+    src: job.yml.j2
+    dest: "{{ prometheus_scrape_dir }}/{{ item.job }}.yml"
+    owner: root
+    group: root
+    mode: "0644"
+  loop: "{{ prometheus_scrape_jobs }}"
+  loop_control:
+    label: "{{ item.job }}"
+  notify: Reload prometheus
+
+- name: Refuse an unmanaged scrape_config_files key
+  ansible.builtin.command:
+    argv: [grep, -c, -E, '^scrape_config_files:', "{{ prometheus_config_path }}"]
+  register: _ps_existing
+  changed_when: false
+  failed_when: false
+
+- name: Check for this role's marker
+  ansible.builtin.command:
+    argv: [grep, -c, "BEGIN FORGE scrape_config_files", "{{ prometheus_config_path }}"]
+  register: _ps_marker
+  changed_when: false
+  failed_when: false
+
+- name: Fail when an unmanaged scrape_config_files already exists
+  ansible.builtin.assert:
+    that:
+      - (_ps_existing.stdout | int) == 0 or (_ps_marker.stdout | int) > 0
+    fail_msg: prometheus.yml already has an unmanaged scrape_config_files key. Merge by hand.
+
+- name: Load the scrape job files from prometheus.yml
+  ansible.builtin.blockinfile:
+    path: "{{ prometheus_config_path }}"
+    marker: "# {mark} FORGE scrape_config_files"
+    block: |
+      scrape_config_files:
+        - {{ prometheus_scrape_dir }}/*.yml
+    insertafter: EOF
+    backup: true
+    validate: "{{ prometheus_promtool }} check config %s"
+  notify: Reload prometheus
+
+- name: Validate the live config with the job files
+  ansible.builtin.command:
+    argv: ["{{ prometheus_promtool }}", check, config, "{{ prometheus_config_path }}"]
+  changed_when: false

@@ -1,0 +1,4 @@
+---
+# Debian prometheus-node-exporter on a CT (listens :9100). Scraped by
+# Prometheus CT 172 (PVE guest firewall: tcp/9100 from alias prometheus).
+node_exporter_package: prometheus-node-exporter

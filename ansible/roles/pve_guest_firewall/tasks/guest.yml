@@ -74,7 +74,7 @@
 
 - name: "CT {{ pve_fw_vmid }}: refuse to overwrite drifted rules"
   ansible.builtin.assert:
-    that: _have | length == 0 or _have == _want
+    that: _have | length == 0 or _have == _want[:(_have | length)]
     fail_msg: "Live rules differ from fw_allowlists.yml. live={{ _have }} want={{ _want }}. Fix by hand, then re-run."
 
 - name: "CT {{ pve_fw_vmid }}: add rules (reverse; POST inserts at pos 0)"
@@ -87,6 +87,23 @@
     validate_certs: "{{ pve_api_validate_certs }}"
   loop: "{{ _ct_rules | reverse | list }}"
   when: _have | length == 0
+  changed_when: true
+  no_log: true
+
+# Live rules are a prefix of the wanted list (new rules appended at the end
+# of fw_allowlists.yml): add only the missing tail, in order, at the end.
+- name: "CT {{ pve_fw_vmid }}: append new rules at the end"
+  ansible.builtin.uri:
+    url: "{{ pve_api_url }}/nodes/{{ pve_node }}/lxc/{{ pve_fw_vmid }}/firewall/rules"
+    method: POST
+    headers: "{{ _pve_hdr }}"
+    body_format: form-urlencoded
+    body: "{{ {'type': 'in', 'action': 'ACCEPT', 'enable': 1, 'comment': 'forge pve_guest_firewall', 'pos': (_have | length) + _i} | combine(item) }}"
+    validate_certs: "{{ pve_api_validate_certs }}"
+  loop: "{{ _ct_rules[((_have | length) - 1):] }}"
+  loop_control:
+    index_var: _i
+  when: _have | length > 0 and _have | length < _want | length
   changed_when: true
   no_log: true
 

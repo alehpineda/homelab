@@ -1,0 +1,10 @@
+---
+# Repo-managed scrape jobs for Prometheus CT 172. Each job is one file in
+# prometheus_scrape_dir, loaded through a marked top-level
+# `scrape_config_files` block in prometheus.yml (validated with promtool).
+# The hand-written scrape_configs in prometheus.yml stay as they are.
+prometheus_config_path: /etc/prometheus/prometheus.yml
+prometheus_promtool: /usr/local/bin/promtool
+prometheus_scrape_dir: /etc/prometheus/scrape.d
+# - {job: name, targets: ["ip:port"], labels: {k: v}}
+prometheus_scrape_jobs: []
