@@ -19,7 +19,8 @@ Pinned library: `uptime-kuma-api2==2.10.0` (Socket.IO client; Kuma 2 has no REST
 | `KUMA_PASSWORD` | seed | Admin password. Pass via the environment or stdin, never on the command line |
 | `KUMA_TOTP` | seed if 2FA is on | Optional TOTP code. The seeder stops if 2FA blocks login |
 | `KUMA_CONNECT_IP` | optional | Pin the URL hostname to this IP (SNI/Host unchanged). Not needed on CT176: NetBird DNS already returns `10.10.0.250`. Set it only if a peer still gets the public CNAME |
-| `SMTP_PASSWORD` | notification | Gmail app password. Required to create, update, or test the notification. Never pass on the command line or write it to the repo |
+| `SMTP_PASSWORD` | notification | Gmail app password. Required to create, update, or test the notification. Not required with `--skip-notification` or `KUMA_SKIP_NOTIFICATION=1`. Never pass on the command line or write it to the repo |
+| `KUMA_SKIP_NOTIFICATION` | optional | Set to `1` to skip the SMTP notification upsert (same as `--skip-notification`). Existing monitor notification links are left unchanged. `SMTP_PASSWORD` is not required |
 | `SMTP_HOST`, `SMTP_PORT`, `SMTP_FROM`, `SMTP_TO`, `SMTP_USER` | notification override | Optional. Non-secret defaults live in `monitors.yaml` (Gmail, `ale.hpineda@gmail.com`, `deathscythe+kuma@mail.grokbot.com`). Env wins if set |
 
 ## Usage (from CT176)
@@ -42,6 +43,11 @@ export KUMA_PASSWORD     # set by the caller; do not echo
 export SMTP_PASSWORD     # Gmail app password; do not echo
 # KUMA_CONNECT_IP is optional; omit it on CT176.
 ~/.local/share/forge/kuma-seeder-venv/bin/python seed.py
+
+# Add or update monitors without SMTP credentials (forge-ws single-monitor
+# runs). Does not create, edit, or unlink the email notification:
+~/.local/share/forge/kuma-seeder-venv/bin/python seed.py --skip-notification
+# KUMA_SKIP_NOTIFICATION=1 is the same switch, including for --dry-run --plan-fixture.
 
 # Create the notification with Default and Apply-on-all off, then fire Kuma's Test:
 ~/.local/share/forge/kuma-seeder-venv/bin/python seed.py \

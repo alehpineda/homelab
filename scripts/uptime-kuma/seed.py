@@ -8,6 +8,11 @@ Create or update only. Never delete.
               Add --plan-fixture to diff a saved monitor list offline.
   (default)   Login and seed. Requires KUMA_PASSWORD (and KUMA_USERNAME).
   --status    After seed (or alone with --status-only), print counts by state.
+  --skip-notification
+              Do not upsert the SMTP notification. SMTP_PASSWORD is not
+              required. Existing monitor notification links are left
+              unchanged. KUMA_SKIP_NOTIFICATION=1 is the same switch.
+              Dry-run and --plan-fixture honor it.
 
 Credentials and SMTP come from the environment. Nothing from this script
 is written to the repo, host /tmp, or stdout except names and counts.
@@ -284,9 +289,26 @@ def load_monitor_fixture(path: Path) -> dict[str, dict[str, Any]]:
     return by_name
 
 
+def notification_link_changes(
+    existing: dict[str, Any],
+    notification_ids: list[int] | None,
+) -> list[str]:
+    """Notification-link diff. None leaves links untouched (no diff, no unlink)."""
+    if notification_ids is None:
+        return []
+    have = existing.get("notificationIDList") or []
+    if isinstance(have, dict):
+        have = [int(k) for k, v in have.items() if v] or [int(x) for x in have]
+    if sorted(int(x) for x in have) != sorted(notification_ids):
+        return ["notificationIDList"]
+    return []
+
+
 def plan_monitors(
     desired: list[dict[str, Any]],
     existing_by_name: dict[str, dict[str, Any]],
+    *,
+    notification_ids: list[int] | None = None,
 ) -> list[dict[str, Any]]:
     rows = []
     for mon in desired:
@@ -295,15 +317,32 @@ def plan_monitors(
             rows.append({"name": mon["name"], "action": "missing", "changes": []})
             continue
         changed = _needs_update(mon, current)
+        link_keys = notification_link_changes(current, notification_ids)
+        compared = mon
+        if link_keys:
+            compared = {**mon, "notificationIDList": list(notification_ids or [])}
+        changed = changed + link_keys
         rows.append({
             "name": mon["name"],
             "action": "update" if changed else "unchanged",
-            "changes": [format_field_change(key, mon, current) for key in changed],
+            "changes": [format_field_change(key, compared, current) for key in changed],
         })
     return rows
 
 
-def format_plan(rows: list[dict[str, Any]], *, inventory: int) -> str:
+def new_monitor_notification_warning(name: str) -> str:
+    """Apply and plan both print this when a create has no notification link."""
+    return (
+        f"WARNING: new monitor {name} created with no notification link (--skip-notification)"
+    )
+
+
+def format_plan(
+    rows: list[dict[str, Any]],
+    *,
+    inventory: int,
+    skip_notification: bool = False,
+) -> str:
     unchanged = sum(row["action"] == "unchanged" for row in rows)
     updates = [row for row in rows if row["action"] == "update"]
     missing = sum(row["action"] == "missing" for row in rows)
@@ -321,6 +360,11 @@ def format_plan(rows: list[dict[str, Any]], *, inventory: int) -> str:
             continue
         lines.append(f"  {row['name']}: update")
         lines.extend(f"    {change}" for change in row["changes"])
+    if skip_notification:
+        lines.append("plan: notification skipped; monitor notification links left unchanged")
+        for row in rows:
+            if row["action"] == "missing":
+                lines.append(new_monitor_notification_warning(row["name"]))
     return "\n".join(lines)
 
 
@@ -356,9 +400,15 @@ def _monitor_kwargs(mon: dict[str, Any], notification_ids: list[int] | None) -> 
         kwargs["dns_resolve_server"] = mon["dns_resolve_server"]
         kwargs["dns_resolve_type"] = mon["dns_resolve_type"]
         kwargs["port"] = mon["port"]
-    if notification_ids is not None:
-        kwargs["notificationIDList"] = notification_ids
+    kwargs.update(notification_payload(notification_ids))
     return kwargs
+
+
+def notification_payload(notification_ids: list[int] | None) -> dict[str, Any]:
+    """Fields that attach notifications. Empty when links must stay as they are."""
+    if notification_ids is None:
+        return {}
+    return {"notificationIDList": notification_ids}
 
 
 def _looks_like_totp_block(exc: BaseException | None, payload: Any = None) -> bool:
@@ -419,6 +469,48 @@ def smtp_settings(cfg: dict[str, Any]) -> dict[str, Any] | None:
         "smtpUsername": user or None,
         "smtpPassword": password or None,
     }
+
+
+_SKIP_NOTIFICATION_ON = {"1", "true", "yes", "on"}
+
+
+def skip_notification_enabled(flag: bool) -> bool:
+    """True for --skip-notification or KUMA_SKIP_NOTIFICATION=1 (also true/yes/on)."""
+    if flag:
+        return True
+    raw = os.environ.get("KUMA_SKIP_NOTIFICATION", "").strip().lower()
+    return raw in _SKIP_NOTIFICATION_ON
+
+
+def reject_skip_notification_conflict(
+    skip_notification: bool,
+    *,
+    notification_only: bool,
+    test_notification: bool,
+    notification_default_off: bool,
+) -> None:
+    if skip_notification and (notification_only or test_notification or notification_default_off):
+        raise SystemExit(
+            "--skip-notification cannot be combined with --notification-only, "
+            "--test-notification, or --notification-default-off"
+        )
+
+
+def notification_to_upsert(
+    smtp: dict[str, Any] | None,
+    *,
+    skip_notification: bool,
+) -> dict[str, Any] | None:
+    """SMTP settings to upsert, or None when the notification is left alone.
+
+    Skipping does not require SMTP_PASSWORD. Applying still does, with the
+    same error as before the flag existed.
+    """
+    if skip_notification or smtp is None:
+        return None
+    if not smtp.get("smtpPassword"):
+        raise SystemExit("SMTP_PASSWORD is required to apply or test the notification")
+    return smtp
 
 
 def _notification_payload(smtp: dict[str, Any], *, is_default: bool, apply_existing: bool) -> dict[str, Any]:
@@ -518,7 +610,7 @@ def _pin_hostname(hostname: str, ip: str) -> None:
     socket.getaddrinfo = patched  # type: ignore[method-assign]
 
 
-def seed(cfg: dict[str, Any], monitors: list[dict[str, Any]], include_placeholders: bool, *, notification_only: bool = False, test_notification: bool = False, notification_default_off: bool = False) -> None:
+def seed(cfg: dict[str, Any], monitors: list[dict[str, Any]], include_placeholders: bool, *, notification_only: bool = False, test_notification: bool = False, notification_default_off: bool = False, skip_notification: bool = False) -> None:
     from uptime_kuma_api import NotificationType, UptimeKumaApi
     from uptime_kuma_api.exceptions import UptimeKumaException
 
@@ -529,8 +621,14 @@ def seed(cfg: dict[str, Any], monitors: list[dict[str, Any]], include_placeholde
     if not url or not username or not password:
         raise SystemExit("KUMA_URL, KUMA_USERNAME, and KUMA_PASSWORD are required to seed")
 
+    reject_skip_notification_conflict(
+        skip_notification,
+        notification_only=notification_only,
+        test_notification=test_notification,
+        notification_default_off=notification_default_off,
+    )
     smtp = smtp_settings(cfg)
-    if smtp is None:
+    if not skip_notification and smtp is None:
         notify_name = (cfg.get("notification") or {}).get("name") or "notification"
         print(f"SMTP incomplete or absent: skipping {notify_name}")
 
@@ -573,9 +671,10 @@ def seed(cfg: dict[str, Any], monitors: list[dict[str, Any]], include_placeholde
 
         # Notification
         notification_ids: list[int] | None = None
-        if smtp is not None:
-            if not smtp.get("smtpPassword"):
-                raise SystemExit("SMTP_PASSWORD is required to apply or test the notification")
+        if skip_notification:
+            print("notification skipped; monitor notification links left unchanged")
+        elif smtp is not None:
+            notification_to_upsert(smtp, skip_notification=False)
             is_default = False if notification_default_off else bool(smtp["isDefault"])
             apply_existing = False if notification_default_off else bool(smtp["applyExisting"])
             existing_n = {n["name"]: n for n in api.get_notifications()}
@@ -620,6 +719,8 @@ def seed(cfg: dict[str, Any], monitors: list[dict[str, Any]], include_placeholde
                 mid = result.get("monitorID") or result.get("monitorId")
                 created_ids[mon["name"]] = mid
                 print(f"monitor created: {mon['name']} ({mid})")
+                if skip_notification:
+                    print(new_monitor_notification_warning(mon["name"]))
                 if mon.get("dns_last_result") and mid:
                     try:
                         api.edit_monitor(int(mid), dns_last_result=mon["dns_last_result"])
@@ -633,12 +734,7 @@ def seed(cfg: dict[str, Any], monitors: list[dict[str, Any]], include_placeholde
                     kwargs_edit["dns_last_result"] = mon["dns_last_result"]
                 merged = {**mon, **kwargs_edit}
                 changed = _needs_update(merged, current)
-                if notification_ids is not None:
-                    have = current.get("notificationIDList") or []
-                    if isinstance(have, dict):
-                        have = [int(k) for k, v in have.items() if v] or [int(x) for x in have]
-                    if sorted(int(x) for x in have) != sorted(notification_ids):
-                        changed.append("notificationIDList")
+                changed.extend(notification_link_changes(current, notification_ids))
                 if changed:
                     api.edit_monitor(int(mid), **kwargs_edit)
                     detail = "; ".join(format_field_change(key, merged, current) for key in changed)
@@ -735,6 +831,15 @@ def main() -> int:
         action="store_true",
         help="After upserting the notification, fire Kuma's Test (does not print secrets)",
     )
+    parser.add_argument(
+        "--skip-notification",
+        action="store_true",
+        help=(
+            "Do not create or update the SMTP notification and do not change "
+            "monitor notification links. SMTP_PASSWORD is not required. "
+            "KUMA_SKIP_NOTIFICATION=1 is equivalent."
+        ),
+    )
     args = parser.parse_args()
 
     try:
@@ -758,18 +863,33 @@ def main() -> int:
     if args.plan_fixture and not args.dry_run:
         raise SystemExit("--plan-fixture is only valid with --dry-run")
 
+    skip_notification = skip_notification_enabled(args.skip_notification)
+    reject_skip_notification_conflict(
+        skip_notification,
+        notification_only=args.notification_only,
+        test_notification=args.test_notification,
+        notification_default_off=args.notification_default_off,
+    )
+
     if args.dry_run:
         groups = (cfg.get("status_page") or {}).get("groups") or []
         print(f"status page: {(cfg.get('status_page') or {}).get('slug')} ({len(groups)} groups)")
-        smtp = smtp_settings(cfg)
-        if smtp:
-            print("notification:", describe_smtp(smtp))
-            print("  is_default=", smtp["isDefault"], "apply_existing=", smtp["applyExisting"])
+        if skip_notification:
+            print("notification skipped; monitor notification links left unchanged")
         else:
-            print("notification: not fully defined (password is env-only and not required for dry-run)")
+            smtp = smtp_settings(cfg)
+            if smtp:
+                print("notification:", describe_smtp(smtp))
+                print("  is_default=", smtp["isDefault"], "apply_existing=", smtp["applyExisting"])
+            else:
+                print("notification: not fully defined (password is env-only and not required for dry-run)")
         if args.plan_fixture:
             existing = load_monitor_fixture(Path(args.plan_fixture))
-            print(format_plan(plan_monitors(monitors, existing), inventory=len(monitors)))
+            print(format_plan(
+                plan_monitors(monitors, existing),
+                inventory=len(monitors),
+                skip_notification=skip_notification,
+            ))
         else:
             print(f"plan: {len(monitors)} monitors validated")
             print(
@@ -810,6 +930,7 @@ def main() -> int:
         notification_only=args.notification_only,
         test_notification=args.test_notification,
         notification_default_off=args.notification_default_off,
+        skip_notification=skip_notification,
     )
     return 0
 
