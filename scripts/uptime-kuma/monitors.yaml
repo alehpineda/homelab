@@ -7,10 +7,11 @@
 # current release with runtime version gating. Login against this instance
 # (2.5.9) is the live verification.
 #
-# 55 enabled monitors (44 v1 incl. CT185-190, plus 10 from the 2026-11-10
-# ten-service raise, plus OpenObserve CT177 on 2026-11-11; no LXC/router
-# pings). The former CT185-190 placeholders were moved into monitors after
-# the six services went live.
+# 56 enabled monitors (44 v1 incl. CT185-190, plus 10 from the 2026-11-10
+# ten-service raise, plus OpenObserve CT177 on 2026-11-11, plus CrowdSec
+# Web UI on gremory on 2026-11-14; no LXC/router pings). The former
+# CT185-190 placeholders were moved into monitors after the six services
+# went live.
 
 kuma:
   url: https://uptime.alehpineda.com
@@ -98,6 +99,7 @@ status_page:
         - Semaphore
         - MyIP
         - Listenarr
+        - CrowdSec Web UI
     - name: Family URLs
       monitors:
         - Jellyfin
@@ -542,6 +544,15 @@ monitors:
     interval: 180
     resend_interval: 120
     description: CT182 compose, Caddy .250.
+
+  # --- CrowdSec Web UI on gremory (NetBird reverse proxy), 2026-11-14 ---
+  - name: CrowdSec Web UI
+    type: http
+    url: https://crowdsec.alehpineda.com
+    tags: [admin]
+    interval: 180
+    resend_interval: 120
+    description: crowdsec-web-ui on gremory, NetBird reverse proxy. Healthy on 200-399.
 
 # No remaining after-build placeholders. CT185-190 monitors live above.
 placeholders: []
