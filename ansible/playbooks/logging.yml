@@ -72,6 +72,7 @@
       vars:
         alloy_source_journal: true
         alloy_journal_job: grafana_journal
+        alloy_apt_existing_grafana_repo: true  # keep the existing apt.grafana.com source/key
         alloy_service_label: grafana
         alloy_ct_label: "171"
 
@@ -120,6 +121,7 @@
       vars:
         alloy_source_journal: true
         alloy_journal_job: loki_journal
+        alloy_apt_existing_grafana_repo: true  # keep the existing apt.grafana.com source/key
         alloy_service_label: loki
         alloy_ct_label: "173"
 
