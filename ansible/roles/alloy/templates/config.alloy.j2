@@ -59,10 +59,21 @@ loki.source.journal "host" {
   max_age        = "{{ alloy_journal_max_age }}"
   format_as_json = true
   relabel_rules  = loki.relabel.journal.rules
-  labels         = { job = "pve_journal" }
+{% if alloy_ct_label | length > 0 %}
+  labels         = {
+    job     = "{{ alloy_journal_job }}",
+    ct      = "{{ alloy_ct_label }}",
+    service = "{{ alloy_service_label }}",
+  }
+{% else %}
+  labels         = { job = "{{ alloy_journal_job }}" }
+{% endif %}
   forward_to     = [loki.process.journal_json.receiver]
 }
 
+// One journal pipeline for every host, driven by host vars
+// (alloy_journal_job / alloy_service_label / alloy_ct_label). BRL keeps
+// job=pve_journal with no ct/service stream labels (alloy_ct_label empty).
 // Pack each journal entry into one JSON line:
 // {ts, level, service, host, env, unit, msg}. Never emits an empty line.
 loki.process "journal_json" {
@@ -105,7 +116,7 @@ loki.process "journal_json" {
 
   stage.template {
     source   = "line_json"
-{% raw %}    template = `{"ts":{{ .ts }},"level":{{ toJson .level_norm }},"service":"pve_journal","host":"{% endraw %}{{ alloy_host_label }}{% raw %}","env":"homelab","unit":{{ toJson (default "" .unit_raw) }},"msg":{{ toJson (default "" .msg) }}}`{% endraw %}
+{% raw %}    template = `{"ts":{{ .ts }},"level":{{ toJson .level_norm }},"service":"{% endraw %}{{ alloy_service_label }}{% raw %}","host":"{% endraw %}{{ alloy_host_label }}{% raw %}","env":"{% endraw %}{{ alloy_env_label }}{% raw %}","unit":{{ toJson (default "" .unit_raw) }},"msg":{{ toJson (default "" .msg) }}}`{% endraw %}
   }
 
   stage.output {
