@@ -244,10 +244,14 @@ handle @dockge {
 	}
 	@grafana host grafana.alehpineda.com
 	handle @grafana {
+		# /metrics is LAN-only (Prometheus CT172 scrapes 10.10.0.71:3000 direct). 2026-11-14.
+		respond /metrics* 404
 		reverse_proxy http://10.10.0.71:3000
 	}
 	@openobserve host openobserve.alehpineda.com
 	handle @openobserve {
+		# /metrics is LAN-only (Prometheus CT172 scrapes 10.10.0.77:5080 direct). 2026-11-14.
+		respond /metrics* 404
 		reverse_proxy http://10.10.0.77:5080
 	}
 	@uptime host uptime.alehpineda.com
@@ -395,4 +399,15 @@ http://*.alehpineda.com {
  redir https://{host}{uri} 308
  }
  }
+}
+# LAN-only Prometheus endpoint for CT172 (PVE guest fw: tcp/9180 from alias
+# prometheus only). Not on any public vhost; no global servers { metrics }.
+http://10.10.0.250:9180 {
+	bind 10.10.0.250
+	handle /metrics {
+		metrics
+	}
+	handle {
+		respond 404
+	}
 }
