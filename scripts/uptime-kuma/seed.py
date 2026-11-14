@@ -330,6 +330,13 @@ def plan_monitors(
     return rows
 
 
+def new_monitor_notification_warning(name: str) -> str:
+    """Apply and plan both print this when a create has no notification link."""
+    return (
+        f"WARNING: new monitor {name} created with no notification link (--skip-notification)"
+    )
+
+
 def format_plan(
     rows: list[dict[str, Any]],
     *,
@@ -355,6 +362,9 @@ def format_plan(
         lines.extend(f"    {change}" for change in row["changes"])
     if skip_notification:
         lines.append("plan: notification skipped; monitor notification links left unchanged")
+        for row in rows:
+            if row["action"] == "missing":
+                lines.append(new_monitor_notification_warning(row["name"]))
     return "\n".join(lines)
 
 
@@ -709,6 +719,8 @@ def seed(cfg: dict[str, Any], monitors: list[dict[str, Any]], include_placeholde
                 mid = result.get("monitorID") or result.get("monitorId")
                 created_ids[mon["name"]] = mid
                 print(f"monitor created: {mon['name']} ({mid})")
+                if skip_notification:
+                    print(new_monitor_notification_warning(mon["name"]))
                 if mon.get("dns_last_result") and mid:
                     try:
                         api.edit_monitor(int(mid), dns_last_result=mon["dns_last_result"])

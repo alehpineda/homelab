@@ -184,6 +184,26 @@ def check_skip_notification(desired: dict[str, dict], saved: dict[str, dict]) ->
     require("Forge email (Gmail):" not in flagged.stdout, flagged.stdout)
     require("SMTP_PASSWORD" not in flagged.stdout + flagged.stderr, flagged.stdout + flagged.stderr)
 
+    created_name = next(name for name in desired if name not in saved)
+    warning = (
+        f"WARNING: new monitor {created_name} created with no notification link (--skip-notification)"
+    )
+    missing_rows = seed.plan_monitors([desired[created_name]], {})
+    missing_plan = seed.format_plan(missing_rows, inventory=1, skip_notification=True)
+    require(warning in missing_plan, missing_plan)
+    require(
+        "WARNING:" not in seed.format_plan(missing_rows, inventory=1),
+        "plan warned about a new monitor without --skip-notification",
+    )
+    kept_rows = seed.plan_monitors(
+        [desired["AdGuard UI"]],
+        {"AdGuard UI": saved["AdGuard UI"]},
+    )
+    kept_plan = seed.format_plan(kept_rows, inventory=1, skip_notification=True)
+    require("WARNING:" not in kept_plan, kept_plan)
+    require(warning in flagged.stdout, f"dry-run plan omitted new-monitor warning:\n{flagged.stdout}")
+    require(seed.new_monitor_notification_warning(created_name) == warning, "warning text drifted")
+
     from_env = subprocess.run(
         [
             sys.executable,
@@ -285,6 +305,7 @@ def main() -> None:
     require(completed.returncode == 0, completed.stderr + completed.stdout)
     require(text in completed.stdout, f"dry-run plan did not match formatter:\n{completed.stdout}")
     require("notification skipped" not in completed.stdout, completed.stdout)
+    require("WARNING:" not in completed.stdout, completed.stdout)
     require("Forge email (Gmail):" in completed.stdout, completed.stdout)
 
     plain = subprocess.run(
