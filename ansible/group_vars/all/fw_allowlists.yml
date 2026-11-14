@@ -13,8 +13,12 @@ pve_fw_cluster_ipsets:
     comment: NetBird routing peers (masquerade)
     cidrs: [10.10.0.50, 10.10.0.51]
   log_shippers:
-    comment: Grafana Alloy agents (BRL host, Caddy CT250, arr CT182); AdGuard .53 joins in phase 1b
-    cidrs: [10.10.0.21, 10.10.0.250, 10.10.0.82]
+    # Wave 1 (2026-11-14): + Grafana .71, Prometheus .72, Loki .73, PVE exporter .74,
+    # OpenObserve .77, Uptime Kuma .84 (LAN IP, not NetBird). .73/.77 push to each
+    # other over eth0; self-push is loopback and never hits the PVE firewall.
+    # Used only by CT173 IN tcp/3100 and CT177 IN tcp/5080.
+    comment: Grafana Alloy agents (BRL host, Caddy CT250, arr CT182, wave 1 obs CTs); AdGuard .53 joins in phase 1b
+    cidrs: [10.10.0.21, 10.10.0.250, 10.10.0.82, 10.10.0.71, 10.10.0.72, 10.10.0.73, 10.10.0.74, 10.10.0.77, 10.10.0.84]
   # `management` already exists (10.10.0.0/24, 100.85.0.0/16) and is used by
   # node rules for 22/8006/3128. Not managed here; change it only with NetTit.
 
