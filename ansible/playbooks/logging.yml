@@ -8,6 +8,12 @@
 #   alloy_caddy   CT 250 access log  -> Loki + OpenObserve (Caddyfile log block first)
 #   alloy_arr     CT 182 Docker logs -> Loki + OpenObserve
 #   prom_rw       CT 172 Prometheus remote_write -> OpenObserve
+#   alloy_wave1   wave 1 journald on CT 171/172/173/174/177/184 (per-CT tags:
+#                 alloy_grafana, alloy_prometheus, alloy_pve_exporter,
+#                 alloy_kuma, alloy_loki, alloy_openobserve). Apply one CT at
+#                 a time in that order, never all six at once. Needs the
+#                 log_shippers ipset (PR #71) live first.
+#                 Wave 1 never runs --tags alloy_host (BRL is already live).
 # See docs/runbooks/logging-loki-openobserve.md.
 - name: Loki config
   hosts: loki-blr-lxc
@@ -56,3 +62,75 @@
   tags: [prom_rw]
   roles:
     - role: prometheus_remote_write
+
+- name: Alloy on CT 171 (Grafana journal, wave 1)
+  hosts: grafana-blr-lxc
+  gather_facts: false
+  tags: [alloy_grafana, alloy_wave1]
+  roles:
+    - role: alloy
+      vars:
+        alloy_source_journal: true
+        alloy_journal_job: grafana_journal
+        alloy_service_label: grafana
+        alloy_ct_label: "171"
+
+- name: Alloy on CT 172 (Prometheus journal, wave 1)
+  hosts: prometheus-blr-lxc
+  gather_facts: false
+  tags: [alloy_prometheus, alloy_wave1]
+  roles:
+    - role: alloy
+      vars:
+        alloy_source_journal: true
+        alloy_journal_job: prometheus_journal
+        alloy_service_label: prometheus
+        alloy_ct_label: "172"
+
+- name: Alloy on CT 174 (PVE exporter journal, wave 1)
+  hosts: pve-exporter-blr-lxc
+  gather_facts: false
+  tags: [alloy_pve_exporter, alloy_wave1]
+  roles:
+    - role: alloy
+      vars:
+        alloy_source_journal: true
+        alloy_journal_job: pve_exporter_journal
+        alloy_service_label: pve_exporter
+        alloy_ct_label: "174"
+
+- name: Alloy on CT 184 (Uptime Kuma journal, wave 1)
+  hosts: uptimekuma-blr-lxc
+  gather_facts: false
+  tags: [alloy_kuma, alloy_wave1]
+  roles:
+    - role: alloy
+      vars:
+        alloy_source_journal: true
+        alloy_journal_job: kuma_journal
+        alloy_service_label: kuma
+        alloy_ct_label: "184"
+
+- name: Alloy on CT 173 (Loki journal, wave 1)
+  hosts: loki-blr-lxc
+  gather_facts: false
+  tags: [alloy_loki, alloy_wave1]
+  roles:
+    - role: alloy
+      vars:
+        alloy_source_journal: true
+        alloy_journal_job: loki_journal
+        alloy_service_label: loki
+        alloy_ct_label: "173"
+
+- name: Alloy on CT 177 (OpenObserve journal, wave 1)
+  hosts: openobserve-blr-lxc
+  gather_facts: false
+  tags: [alloy_openobserve, alloy_wave1]
+  roles:
+    - role: alloy
+      vars:
+        alloy_source_journal: true
+        alloy_journal_job: openobserve_journal
+        alloy_service_label: openobserve
+        alloy_ct_label: "177"

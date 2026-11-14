@@ -25,13 +25,14 @@ all:
         ollama-blr-lxc:
           ansible_host: 10.10.0.63
           ansible_port: 22
-        # Uncomment in the local gitignored copy. Fresh monitoring/Postiz LXCs listen on 22.
+        # Uncomment postiz in the local gitignored copy. Fresh monitoring/Postiz LXCs listen on 22.
         # postiz-blr-lxc:            # CT 169
         #   ansible_host: 10.10.0.69
         #   ansible_port: 22
-        # grafana-blr-lxc:           # CT 171
-        #   ansible_host: 10.10.0.71
-        #   ansible_port: 22
+        # CT 171. playbooks/logging.yml (alloy_grafana) targets this host.
+        grafana-blr-lxc:
+          ansible_host: 10.10.0.71
+          ansible_port: 22
         # CT 172 / 173 / 177. playbooks/logging.yml targets these. site.yml does not.
         prometheus-blr-lxc:
           ansible_host: 10.10.0.72
@@ -42,9 +43,10 @@ all:
         openobserve-blr-lxc:
           ansible_host: 10.10.0.77
           ansible_port: 22
-        # pve-exporter-blr-lxc:      # CT 174
-        #   ansible_host: 10.10.0.74
-        #   ansible_port: 22
+        # CT 174. playbooks/logging.yml (alloy_pve_exporter) targets this host.
+        pve-exporter-blr-lxc:
+          ansible_host: 10.10.0.74
+          ansible_port: 22
         # CT 176. playbooks/grokbot-headless.yml targets this host. site.yml does not.
         forge-ws-blr-lxc:
           ansible_host: 10.10.0.76
