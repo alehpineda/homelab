@@ -19,7 +19,11 @@
 # Sizing is the approved bump over the script floor (1/1024/4G): 2
 # cores / 2048 MiB / 8G root, for Node 22 + Chromium monitors and
 # SQLite history. nesting=1 for community-scripts / systemd / Chromium.
-# No keyctl. No tun. No extra mounts.
+# No keyctl. No extra mounts.
+# 2026-11-13: dev0 /dev/net/tun added live (pct set, hotplugged, no restart)
+# for the NetBird client (group Monitoring-Kuma). Telmate rc10 does not model
+# devN; ansible playbooks/netbird-client.yml owns it, same as CT 176's dev0.
+# See docs/runbooks/netbird-client-ct184.md.
 #
 # Template is the Debian 13 vztmpl already on BRL local (same as CT183).
 # Confirm it is still on local before apply. nameserver omitted: DNS via

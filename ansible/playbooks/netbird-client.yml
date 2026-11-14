@@ -1,0 +1,26 @@
+---
+# CT 184 Uptime Kuma: NetBird client in group Monitoring-Kuma (auto-group on
+# NetTit's setup key) so Kuma can reach crowdsec.alehpineda.com over the mesh.
+# Not imported by site.yml. See docs/runbooks/netbird-client-ct184.md.
+# Authority: DeathScythe 2026-11-13 10:43 PM CT in Forge's chat: "Yes to 1"
+# (enroll CT184 in NetBird).
+- name: Pass /dev/net/tun into CT 184 (hotplug, no restart on PVE 9)
+  hosts: barbatoslupusrex
+  become: true
+  gather_facts: false
+  tasks:
+    - name: Read CT 184 config
+      ansible.builtin.command: pct config 184
+      register: ct184_cfg
+      changed_when: false
+    - name: Add dev0 /dev/net/tun (same pattern as CT 176)
+      ansible.builtin.command: pct set 184 --dev0 /dev/net/tun
+      when: "'/dev/net/tun' not in ct184_cfg.stdout"
+      changed_when: true
+
+- name: NetBird client
+  hosts: uptimekuma-blr-lxc
+  become: true
+  gather_facts: false
+  roles:
+    - role: netbird_client

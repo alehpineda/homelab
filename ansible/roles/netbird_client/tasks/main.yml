@@ -1,0 +1,128 @@
+---
+# Idempotent. Installs the pinned client, keeps it on hold, enrolls only when
+# the daemon reports NeedsLogin, and shreds the key copy in the guest.
+# /dev/net/tun comes from host pct config (dev0), see playbooks/netbird-client.yml.
+
+- name: Require /dev/net/tun in the guest
+  ansible.builtin.stat:
+    path: /dev/net/tun
+  register: netbird_client_tun
+
+- name: Fail without tun
+  ansible.builtin.assert:
+    that: [netbird_client_tun.stat.exists, netbird_client_tun.stat.ischr]
+    fail_msg: "/dev/net/tun missing. On the PVE host: pct set <vmid> --dev0 /dev/net/tun (hotplugs on PVE 9)."
+
+- name: Install apt prerequisites
+  ansible.builtin.apt:
+    name: [ca-certificates, curl, gnupg]
+    state: present
+
+- name: Install the NetBird archive keyring
+  ansible.builtin.shell: >-
+    set -o pipefail &&
+    curl -fsSL https://pkgs.netbird.io/debian/public.key
+    | gpg --dearmor --yes -o /usr/share/keyrings/netbird-archive-keyring.gpg
+  args:
+    executable: /bin/bash
+    creates: /usr/share/keyrings/netbird-archive-keyring.gpg
+
+- name: Add the NetBird apt repo (same line as CT 150/151)
+  ansible.builtin.copy:
+    dest: /etc/apt/sources.list.d/netbird.list
+    content: "deb [signed-by=/usr/share/keyrings/netbird-archive-keyring.gpg] https://pkgs.netbird.io/debian stable main\n"
+    mode: "0644"
+  register: netbird_client_repo
+
+- name: Read installed netbird version
+  ansible.builtin.command: dpkg-query -W -f=${Version} netbird
+  register: netbird_client_installed
+  changed_when: false
+  failed_when: false
+
+- name: Unhold netbird only when the pin changes
+  ansible.builtin.dpkg_selections:
+    name: netbird
+    selection: install
+  when: netbird_client_installed.stdout != netbird_client_version
+
+- name: Install the pinned netbird package
+  ansible.builtin.apt:
+    name: "netbird={{ netbird_client_version }}"
+    state: present
+    update_cache: "{{ netbird_client_repo.changed }}"
+    allow_downgrade: true
+
+- name: Hold netbird at the pin
+  ansible.builtin.dpkg_selections:
+    name: netbird
+    selection: hold
+
+- name: Enable and start the netbird service
+  ansible.builtin.systemd_service:
+    name: netbird
+    enabled: true
+    state: started
+
+# pct exec / sudo leak SUDO_USER; 0.82 refuses to fall back to root, so unset it.
+- name: Read daemon status
+  ansible.builtin.command: env -u SUDO_USER -u SUDO_UID -u SUDO_GID netbird status
+  register: netbird_client_status
+  changed_when: false
+  failed_when: false
+
+- name: Enroll with the one-use setup key
+  when: "'NeedsLogin' in netbird_client_status.stdout"
+  block:
+    - name: Require a setup key path
+      ansible.builtin.assert:
+        that: netbird_client_setup_key_file | length > 0
+        fail_msg: Peer needs login. Set netbird_client_setup_key_file (controller path, never committed).
+
+    - name: Copy the setup key into the guest
+      ansible.builtin.copy:
+        src: "{{ netbird_client_setup_key_file }}"
+        dest: /root/nbkey
+        owner: root
+        group: root
+        mode: "0600"
+      no_log: true
+
+    - name: netbird up
+      ansible.builtin.command: >-
+        env -u SUDO_USER -u SUDO_UID -u SUDO_GID netbird up
+        --management-url {{ netbird_client_management_url }}
+        --setup-key-file /root/nbkey
+        --hostname {{ netbird_client_hostname }}
+        {{ '--disable-dns' if netbird_client_disable_dns else '' }}
+        {{ '--disable-client-routes' if netbird_client_disable_client_routes else '' }}
+        {{ '--disable-server-routes' if netbird_client_disable_server_routes else '' }}
+      changed_when: true
+  always:
+    - name: Shred the setup key copy
+      ansible.builtin.command: shred -u /root/nbkey
+      args:
+        removes: /root/nbkey
+
+- name: Check persisted client flags
+  ansible.builtin.slurp:
+    src: /var/lib/netbird/default.json
+  register: netbird_client_cfg
+  no_log: true
+
+- name: Assert DNS and route flags
+  ansible.builtin.assert:
+    that:
+      - (netbird_client_cfg.content | b64decode | from_json).DisableDNS == netbird_client_disable_dns
+      - (netbird_client_cfg.content | b64decode | from_json).DisableClientRoutes == netbird_client_disable_client_routes
+      - (netbird_client_cfg.content | b64decode | from_json).DisableServerRoutes == netbird_client_disable_server_routes
+    fail_msg: Flags drifted. Re-run netbird up with the flags (no key needed once enrolled).
+  no_log: true
+
+- name: Pin hostnames outside the PVE block
+  ansible.builtin.lineinfile:
+    path: /etc/hosts
+    regexp: '^\S+\s+{{ item.name | regex_escape }}$'
+    line: "{{ item.ip }} {{ item.name }}"
+    backup: true
+  loop: "{{ netbird_client_hosts_pins }}"
