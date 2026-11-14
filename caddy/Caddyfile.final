@@ -359,6 +359,16 @@ handle @dockge {
 			}
 		}
 	}
+	# Jackett (CT182 gluetun netns, 2026-11-13): admin .250 only; .251 falls into @family_ingress abort.
+	@jackett host jackett.alehpineda.com
+	handle @jackett {
+		reverse_proxy http://10.10.0.82:9117 {
+			transport http {
+				local_address 10.10.0.250
+				network_proxy none
+			}
+		}
+	}
 	handle {
 		abort
 	}

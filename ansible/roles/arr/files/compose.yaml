@@ -8,10 +8,12 @@
 # audiobooks by COPY into /data/media/audiobooks (CT182 mp21 leaf bind).
 # Recyclarr 8.8.1 (2026-11-13) joins that network with no published port.
 # It syncs TRaSH custom formats to Sonarr and Radarr on localhost.
+# Jackett (2026-11-13) joins that network on 9117.
 # Recreate the VPN namespace without upgrading, from /opt/stacks/arr.
 # Watchtower is not on that network and stays up:
 #   docker compose up -d --force-recreate \
-#     gluetun qbittorrent prowlarr sonarr radarr lidarr bazarr flaresolverr listenarr recyclarr
+#     gluetun qbittorrent prowlarr sonarr radarr lidarr bazarr flaresolverr listenarr recyclarr \
+#     jackett
 # Do not run `docker compose config` against a populated .env.
 # FlareSolverr listens on 8191 inside the gluetun namespace. That port
 # is not published and is not in FIREWALL_INPUT_PORTS.
@@ -33,6 +35,7 @@ services:
       - "10.10.0.82:8686:8686/tcp"
       - "10.10.0.82:6767:6767/tcp"
       - "10.10.0.82:4545:4545/tcp"
+      - "10.10.0.82:9117:9117/tcp"
     env_file:
       - /opt/stacks/arr/.env
     environment:
@@ -40,8 +43,9 @@ services:
       VPN_TYPE: ${VPN_TYPE:?set VPN_TYPE in /opt/stacks/arr/.env}
       WIREGUARD_PRIVATE_KEY: ${WIREGUARD_PRIVATE_KEY:?set WIREGUARD_PRIVATE_KEY in /opt/stacks/arr/.env}
       # Overrides env_file. 8085 qBittorrent, 9696 Prowlarr, 8989 Sonarr,
-      # 7878 Radarr, 8686 Lidarr, 6767 Bazarr, 4545 Listenarr. Not 8191.
-      FIREWALL_INPUT_PORTS: "8085,9696,8989,7878,8686,6767,4545"
+      # 7878 Radarr, 8686 Lidarr, 6767 Bazarr, 4545 Listenarr, 9117 Jackett.
+      # Not 8191.
+      FIREWALL_INPUT_PORTS: "8085,9696,8989,7878,8686,6767,4545,9117"
     volumes:
       - /opt/arr/gluetun:/gluetun
     sysctls:
@@ -240,6 +244,31 @@ services:
       CRON_SCHEDULE: "0 4 * * *"
     volumes:
       - /opt/arr/recyclarr:/config
+    restart: unless-stopped
+    labels:
+      com.centurylinklabs.watchtower.enable: "true"
+      com.centurylinklabs.watchtower.monitor-only: "true"
+    security_opt:
+      - no-new-privileges:true
+
+  jackett:
+    # lscr.io/linuxserver/jackett v0.24.3055-ls35 linux/amd64.
+    # Index digest sha256:19802345fcc60a536802d29f36db073a77193fcd2f8fe3d067f604fc60a77352
+    # UI and Torznab on 9117. FlareSolverr is localhost:8191 in this namespace.
+    image: lscr.io/linuxserver/jackett@sha256:97cfc479a4f6fe54787651bb496e76cb40c5b139d70e36b5999b4e0fccdcf60e
+    pull_policy: missing
+    container_name: jackett
+    network_mode: service:gluetun
+    depends_on:
+      gluetun:
+        condition: service_healthy
+    environment:
+      PUID: "1000"
+      PGID: "1000"
+      TZ: America/Chicago
+      AUTO_UPDATE: "false"
+    volumes:
+      - /opt/arr/jackett:/config
     restart: unless-stopped
     labels:
       com.centurylinklabs.watchtower.enable: "true"

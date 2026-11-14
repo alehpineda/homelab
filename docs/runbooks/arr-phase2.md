@@ -142,6 +142,26 @@ live sync:
 docker exec recyclarr recyclarr sync --preview
 ```
 
+## Jackett
+
+Jackett (`lscr.io/linuxserver/jackett` v0.24.3055-ls35, amd64 digest)
+shares gluetun's network. Its UI and Torznab API are on 9117, published
+on gluetun at `10.10.0.82:9117` and listed in `FIREWALL_INPUT_PORTS`.
+Adding that port recreates gluetun, so include `jackett` when recreating
+the namespace. `AUTO_UPDATE` is `false` so the pinned digest stays put.
+The role creates `/opt/arr/jackett` (container `/config`), owner
+`1000:1000`, mode `0750`. The API key lives in
+`/opt/arr/jackett/Jackett/ServerConfig.json`. Do not commit it.
+FlareSolverr is `http://127.0.0.1:8191` from Jackett.
+
+Admin ingress is `https://jackett.alehpineda.com` on Caddy `.250` only
+(`caddy/Caddyfile.final`, same pattern as Listenarr); `.251` aborts it.
+TCP 9117 is allowed from `+caddy` in the CT182 guest firewall
+(`fw_allowlists.yml`) and in the live-only in-guest gate
+`/etc/nftables.d/arr_filter.nft`, so direct LAN access to `:9117` stays
+blocked. The AdGuard rewrite points the name at `10.10.0.250`. Mesh
+clients also need the name on NetTit's Admin-Arr-DNS match.
+
 ## Apply
 
 Same play as phase 1, only after the child mounts are present and a
