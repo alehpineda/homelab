@@ -61,6 +61,16 @@ The owner keeps a copy of the root login in 1Password.
     (`sum(count_over_time({job="pve_journal"}[1h]))`) and OpenObserve
     (`SELECT count(*) FROM pve_journal WHERE ...`) agree within 1%.
 
+## Standard for new services (JSON logs by default)
+
+Owner, 2026-11-14 1:54 PM CT: "The json for the rest of the existing logs is a yes. That will be the standard for all old and new services we spin up in the homelab."
+
+1. Turn on the app's native JSON console/journal format at deploy when it has one (Servarr: `<APP>__LOG__CONSOLEFORMAT: Clef`).
+2. Otherwise ship through the alloy role, which packs lines into `{ts, level, service, host, env, [component], msg}`: journald via `alloy_source_journal`, Docker text consoles via `alloy_docker_json_containers` (add a parse block to `config.alloy.j2` for a new format).
+3. Play vars for a new CT: `alloy_journal_job: <service>_journal`, `alloy_service_label: <service>`, `alloy_ct_label: "<ctid>"`. Labels stay job/host/ct/service/env=homelab; never put client IPs, query names, URIs or ids in labels.
+4. Add the CT IP to the `log_shippers` ipset (`fw_allowlists.yml`) and to CT173's in-guest `push_allow` before the first push.
+5. Verify both sinks get valid JSON with 0 drops, then hand the service to Wolff.
+
 ## Rollback
 
 - Alloy: `systemctl disable --now alloy`; `apt-mark unhold alloy && apt purge alloy`;

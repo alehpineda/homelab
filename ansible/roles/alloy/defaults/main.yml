@@ -32,6 +32,16 @@ alloy_source_docker: false      # CT 182 Docker stdout -> job arr_docker
 alloy_source_adguard: false     # CT 153 querylog.json -> job adguard_query (phase 1b)
 
 alloy_journal_max_age: 12h
+# Standard for every old and new service (owner, 2026-11-14 1:54 PM CT):
+# JSON logs by default. Each entry ships as one JSON object
+#   {ts, level, service, host, env, [component], msg}
+# (journal: + unit; Caddy and Servarr CLEF keep their native JSON), with
+# stream labels limited to job, host, env=homelab and, on CTs, ct + service.
+# A new host's play sets alloy_journal_job (<service>_journal),
+# alloy_service_label (<service>) and alloy_ct_label ("<ctid>"); a Docker
+# host lists its text-console containers in alloy_docker_json_containers.
+# Prefer the app's native JSON console when it has one. High-cardinality
+# values (client IP, query name, URI, user/trace ids) stay in the body.
 # Journal pipeline identity (one template for BRL and every CT).
 # Job name for loki.source.journal (and the OpenObserve o2_stream_name).
 alloy_journal_job: pve_journal
