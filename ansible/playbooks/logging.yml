@@ -49,6 +49,7 @@
   roles:
     - role: alloy
       vars:
+        alloy_http_listen_addr: "{{ ansible_host }}:12345"  # metrics wave 1
         alloy_source_caddy: true
 
 - name: Alloy on CT 182 (Docker)
@@ -58,6 +59,7 @@
   roles:
     - role: alloy
       vars:
+        alloy_http_listen_addr: "{{ ansible_host }}:12345"  # metrics wave 1
         alloy_source_docker: true
         # Standard JSON body for the text-console containers; CLEF Servarr
         # lines stay untouched, only their banner/NLog text lines are packed.
@@ -79,10 +81,47 @@
   roles:
     - role: prometheus_scrape
       vars:
+        # Metrics wave 1 (owner card t40s246, 2:45 PM CT Nov 14). One target at
+        # a time on apply (-e prometheus_scrape_jobs=<subset>); this is the end state.
         prometheus_scrape_jobs:
           - job: openobserve_node
-            targets: ["10.10.0.77:9100"]
-            labels: {ct: "177", host: openobserve-blr-lxc}
+            static_configs:
+              - targets: ["10.10.0.77:9100"]
+                labels: {host: openobserve-blr-lxc, ct: "177", service: node_exporter, env: homelab}
+          - job: openobserve
+            static_configs:
+              - targets: ["10.10.0.77:5080"]
+                labels: {host: openobserve-blr-lxc, ct: "177", service: openobserve, env: homelab}
+          - job: loki
+            static_configs:
+              - targets: ["10.10.0.73:3100"]
+                labels: {host: loki-blr-lxc, ct: "173", service: loki, env: homelab}
+          - job: grafana
+            static_configs:
+              - targets: ["10.10.0.71:3000"]
+                labels: {host: grafana-blr-lxc, ct: "171", service: grafana, env: homelab}
+          - job: alloy
+            static_configs:
+              - targets: ["10.10.0.71:12345"]
+                labels: {host: grafana-blr-lxc, ct: "171", service: alloy, env: homelab}
+              - targets: ["10.10.0.72:12345"]
+                labels: {host: prometheus-blr-lxc, ct: "172", service: alloy, env: homelab}
+              - targets: ["10.10.0.73:12345"]
+                labels: {host: loki-blr-lxc, ct: "173", service: alloy, env: homelab}
+              - targets: ["10.10.0.74:12345"]
+                labels: {host: pve-exporter-blr-lxc, ct: "174", service: alloy, env: homelab}
+              - targets: ["10.10.0.77:12345"]
+                labels: {host: openobserve-blr-lxc, ct: "177", service: alloy, env: homelab}
+              - targets: ["10.10.0.84:12345"]
+                labels: {host: uptimekuma-blr-lxc, ct: "184", service: alloy, env: homelab}
+              - targets: ["10.10.0.250:12345"]
+                labels: {host: caddy-blr-lxc, ct: "250", service: alloy, env: homelab}
+              - targets: ["10.10.0.82:12345"]
+                labels: {host: arr-blr-lxc, ct: "182", service: alloy, env: homelab}
+          - job: caddy
+            static_configs:
+              - targets: ["10.10.0.250:9180"]
+                labels: {host: caddy-blr-lxc, ct: "250", service: caddy, env: homelab}
 
 - name: Prometheus remote_write to OpenObserve
   hosts: prometheus-blr-lxc
@@ -98,6 +137,7 @@
   roles:
     - role: alloy
       vars:
+        alloy_http_listen_addr: "{{ ansible_host }}:12345"  # metrics wave 1
         alloy_source_journal: true
         alloy_journal_job: grafana_journal
         alloy_apt_existing_grafana_repo: true  # keep the existing apt.grafana.com source/key
@@ -111,6 +151,7 @@
   roles:
     - role: alloy
       vars:
+        alloy_http_listen_addr: "{{ ansible_host }}:12345"  # metrics wave 1
         alloy_source_journal: true
         alloy_journal_job: prometheus_journal
         alloy_service_label: prometheus
@@ -123,6 +164,7 @@
   roles:
     - role: alloy
       vars:
+        alloy_http_listen_addr: "{{ ansible_host }}:12345"  # metrics wave 1
         alloy_source_journal: true
         alloy_journal_job: pve_exporter_journal
         alloy_service_label: pve_exporter
@@ -135,6 +177,7 @@
   roles:
     - role: alloy
       vars:
+        alloy_http_listen_addr: "{{ ansible_host }}:12345"  # metrics wave 1
         alloy_source_journal: true
         alloy_journal_job: kuma_journal
         alloy_service_label: kuma
@@ -160,6 +203,7 @@
   roles:
     - role: alloy
       vars:
+        alloy_http_listen_addr: "{{ ansible_host }}:12345"  # metrics wave 1
         alloy_source_journal: true
         alloy_journal_job: loki_journal
         alloy_apt_existing_grafana_repo: true  # keep the existing apt.grafana.com source/key
@@ -173,6 +217,7 @@
   roles:
     - role: alloy
       vars:
+        alloy_http_listen_addr: "{{ ansible_host }}:12345"  # metrics wave 1
         alloy_source_journal: true
         alloy_journal_job: openobserve_journal
         alloy_service_label: openobserve
