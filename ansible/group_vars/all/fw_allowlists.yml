@@ -91,6 +91,8 @@ pve_fw_ct_rules:
     - {proto: tcp, dport: "9221", source: prometheus}
     - {proto: tcp, dport: "12345", source: prometheus, comment: "alloy /metrics"}
   180:  # jellyfin (NetBird peer; LAN stays open until a guest VLAN exists)
+    # 8096 already includes prometheus .72 via 10.10.0.0/24. Do not tighten
+    # to .72 only: LAN clients and Caddy .250/.251 would lose the UI.
     - {proto: tcp, dport: "8096", source: 10.10.0.0/24}
     - {proto: udp, dport: "7359", source: 10.10.0.0/24}
     - {proto: udp, dport: "1900", source: 10.10.0.0/24}
@@ -111,6 +113,7 @@ pve_fw_ct_rules:
     - {proto: tcp, dport: "80", source: +caddy}
   186:  # navidrome
     - {proto: tcp, dport: "4533", source: +caddy}
+    - {proto: tcp, dport: "4533", source: prometheus, comment: "navidrome /metrics"}
   187:  # audiobookshelf
     - {proto: tcp, dport: "13378", source: +caddy}
   188:  # dispatcharr (UI via Caddy; streams/EPG/HDHR from Jellyfin CT180)
@@ -165,6 +168,8 @@ pve_fw_ct_rules:
   160:  # searxng (NetBird peer)
     - {proto: tcp, dport: "8888", source: +caddy}
     - {proto: udp, dport: "51820"}
+    # Appended after the existing live prefix so the fw role can add it at the end.
+    - {proto: tcp, dport: "8888", source: prometheus, comment: "searxng /metrics"}
   161:  # vaultwarden (NetBird peer); Caddy terminates TLS → https://.61:8000
     - {proto: tcp, dport: "8000", source: +caddy}
     - {proto: udp, dport: "51820"}
