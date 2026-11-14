@@ -141,3 +141,13 @@ Runbook: [runbooks/logging-loki-openobserve.md](runbooks/logging-loki-openobserv
 Flint DHCP reservations for `10.10.0.71`–`10.10.0.74` (MACs on CTs
 171–174) and `10.10.0.77` (`02:46:4F:52:01:77`, CT 177) are still pending. Until those exist, the static addresses in
 the LXC configs are what Terraform records.
+
+## Alloy /metrics on the BRL host (2026-11-14)
+
+BRL Alloy listens on `10.10.0.21:12345` (CUSTOM_ARGS in `/etc/default/alloy`,
+role var `alloy_http_listen_addr` on the alloy_host play). The PVE host
+firewall (`host.fw`, not managed by IaC) has
+`IN ACCEPT -source 10.10.0.72 -p tcp -dport 12345` (comment
+"prometheus CT172 alloy /metrics (forge 2026-11-14)"). Prometheus job `alloy`,
+target `10.10.0.21:12345`, labels host=barbatoslupusrex ct=host. Applied by the
+owner-run root script `brl-alloy-lan-listener-20261114.sh` (has `--rollback`).

@@ -40,6 +40,10 @@
   roles:
     - role: alloy
       vars:
+        # Metrics wave 1. Applied by the owner-run root script
+        # plans/brl-alloy-lan-listener-20261114.sh (grokops has no sudo; never
+        # run --tags alloy_host for this). Host fw: tcp/12345 from 10.10.0.72.
+        alloy_http_listen_addr: "10.10.0.21:12345"
         alloy_source_journal: true
 
 - name: Alloy on CT 250 (Caddy access log)
@@ -118,6 +122,8 @@
                 labels: {host: caddy-blr-lxc, ct: "250", service: alloy, env: homelab}
               - targets: ["10.10.0.82:12345"]
                 labels: {host: arr-blr-lxc, ct: "182", service: alloy, env: homelab}
+              - targets: ["10.10.0.21:12345"]
+                labels: {host: barbatoslupusrex, ct: "host", service: alloy, env: homelab}
           - job: caddy
             static_configs:
               - targets: ["10.10.0.250:9180"]
