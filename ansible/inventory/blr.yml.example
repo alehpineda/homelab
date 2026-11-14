@@ -56,6 +56,16 @@ all:
         arr-blr-lxc:
           ansible_host: 10.10.0.82
           ansible_port: 22
+        # CT 184. playbooks/netbird-client.yml targets this host. site.yml does not.
+        # Set netbird_client_setup_key_file only for a fresh enroll (key never committed).
+        uptimekuma-blr-lxc:
+          ansible_host: 10.10.0.84
+          ansible_port: 22
+          netbird_client_hostname: ct184-uptime-kuma
+          # netbird_client_setup_key_file: /home/box/secrets/netbird-setupkey-ct184-kuma
+          netbird_client_hosts_pins:
+            - {ip: 10.10.0.250, name: jackett.alehpineda.com}
+            - {ip: 100.85.100.247, name: crowdsec.alehpineda.com}
         # CT 191 / 198. playbooks/dashboards.yml targets these. site.yml does not.
         # Set dashboard_editor_pubkeys here in the local copy (public keys only).
         homepage-blr-lxc:

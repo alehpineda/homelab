@@ -1,0 +1,20 @@
+---
+# NetBird client on a plain Debian LXC (first user: CT 184 Uptime Kuma).
+# See docs/runbooks/netbird-client-ct184.md.
+netbird_client_version: "0.82.0"        # match the routers CT 150/151
+netbird_client_management_url: https://netbird.alehpineda.com
+netbird_client_hostname: "{{ inventory_hostname }}"
+
+# Keep the guest's resolver (AdGuard .53/.55) and LAN routes untouched.
+netbird_client_disable_dns: true
+netbird_client_disable_client_routes: true
+netbird_client_disable_server_routes: true
+
+# Controller-side path to a one-use setup key (NetTit owns it). Only read
+# when the peer still needs login. Never commit the key or its value.
+# e.g. /home/box/secrets/netbird-setupkey-ct184-kuma
+netbird_client_setup_key_file: ""
+
+# Optional /etc/hosts pins, appended outside the PVE-managed block.
+# [{ip: 100.85.100.247, name: crowdsec.alehpineda.com}]
+netbird_client_hosts_pins: []
