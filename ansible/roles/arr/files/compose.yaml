@@ -88,6 +88,7 @@ services:
       PUID: "1000"
       PGID: "1000"
       TZ: America/Chicago
+      PROWLARR__LOG__CONSOLEFORMAT: Clef
     volumes:
       - /opt/arr/prowlarr:/config
     restart: unless-stopped
