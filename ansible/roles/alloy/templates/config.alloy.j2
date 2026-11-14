@@ -304,6 +304,11 @@ loki.process "arr_docker" {
     stage.regex {
       expression = `^(?P<ts>\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})) (?P<level_raw>[A-Z]+) (?:\[(?P<component>[^\]]+)\] )?(?P<msg>.*)$`
     }
+    // Unparsed lines are the startup banner / settings tree: level info.
+    stage.template {
+      source   = "level_default"
+      template = "info"
+    }
 {{ ts_rfc3339() }}{{ arr_pack('gluetun') }}  }
 {% endif %}
 {% for c in ['recyclarr', 'watchtower'] if c in alloy_docker_json_containers %}
@@ -324,8 +329,13 @@ loki.process "arr_docker" {
 {% endif %}
     stage.template {
       source   = "msg"
-{% raw %}      template = `{{ if or .msgq .msgu }}{{ .msgq }}{{ .msgu }}{{ if .extra }} {{ .extra }}{{ end }}{{ else }}{{ .msg }}{{ end }}`
+{% raw %}      template = `{{ if or .msgq .msgu }}{{ .msgq }}{{ .msgu }}{{ if .extra }} {{ .extra }}{{ end }}{{ else }}{{ default "" .msg }}{{ end }}`
 {% endraw %}
+    }
+    // Unparsed lines are the cron banner: level info.
+    stage.template {
+      source   = "level_default"
+      template = "info"
     }
 {{ ts_rfc3339() }}{{ arr_pack(c) }}  }
 {% endfor %}
