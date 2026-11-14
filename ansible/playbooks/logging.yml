@@ -16,6 +16,8 @@
 #                 a time in that order, never all six at once. Needs the
 #                 log_shippers ipset (PR #71) live first.
 #                 Wave 1 never runs --tags alloy_host (BRL is already live).
+#   alloy_wave2   wave 2 journald on CT 180/183/185/186/187/193/196/160/161/181/188
+#                 (per-CT tags alloy_<service>). One CT at a time; ipset first.
 # See docs/runbooks/logging-loki-openobserve.md.
 - name: Loki config
   hosts: loki-blr-lxc
@@ -175,3 +177,135 @@
         alloy_journal_job: openobserve_journal
         alloy_service_label: openobserve
         alloy_ct_label: "177"
+
+- name: Alloy on CT 180 (jellyfin journal, wave 2)
+  hosts: jellyfin-blr-lxc
+  gather_facts: false
+  tags: [alloy_jellyfin, alloy_wave2]
+  roles:
+    - role: alloy
+      vars:
+        alloy_source_journal: true
+        alloy_journal_job: jellyfin_journal
+        alloy_service_label: jellyfin
+        alloy_ct_label: "180"
+
+- name: Alloy on CT 183 (seerr journal, wave 2)
+  hosts: seerr-blr-lxc
+  gather_facts: false
+  tags: [alloy_seerr, alloy_wave2]
+  roles:
+    - role: alloy
+      vars:
+        alloy_source_journal: true
+        alloy_journal_job: seerr_journal
+        alloy_service_label: seerr
+        alloy_ct_label: "183"
+
+- name: Alloy on CT 185 (romm journal, wave 2)
+  hosts: romm-blr-lxc
+  gather_facts: false
+  tags: [alloy_romm, alloy_wave2]
+  roles:
+    - role: alloy
+      vars:
+        alloy_source_journal: true
+        alloy_journal_job: romm_journal
+        alloy_service_label: romm
+        alloy_ct_label: "185"
+
+- name: Alloy on CT 186 (navidrome journal, wave 2)
+  hosts: navidrome-blr-lxc
+  gather_facts: false
+  tags: [alloy_navidrome, alloy_wave2]
+  roles:
+    - role: alloy
+      vars:
+        alloy_source_journal: true
+        alloy_journal_job: navidrome_journal
+        alloy_service_label: navidrome
+        alloy_ct_label: "186"
+
+- name: Alloy on CT 187 (audiobookshelf journal, wave 2)
+  hosts: audiobookshelf-blr-lxc
+  gather_facts: false
+  tags: [alloy_audiobookshelf, alloy_wave2]
+  roles:
+    - role: alloy
+      vars:
+        alloy_source_journal: true
+        alloy_journal_job: audiobookshelf_journal
+        alloy_service_label: audiobookshelf
+        alloy_ct_label: "187"
+
+- name: Alloy on CT 193 (bentopdf journal, wave 2)
+  hosts: bentopdf-blr-lxc
+  gather_facts: false
+  tags: [alloy_bentopdf, alloy_wave2]
+  roles:
+    - role: alloy
+      vars:
+        alloy_source_journal: true
+        alloy_journal_job: bentopdf_journal
+        alloy_service_label: bentopdf
+        alloy_ct_label: "193"
+
+- name: Alloy on CT 196 (linkwarden journal, wave 2)
+  hosts: linkwarden-blr-lxc
+  gather_facts: false
+  tags: [alloy_linkwarden, alloy_wave2]
+  roles:
+    - role: alloy
+      vars:
+        alloy_source_journal: true
+        alloy_journal_job: linkwarden_journal
+        alloy_service_label: linkwarden
+        alloy_ct_label: "196"
+
+- name: Alloy on CT 160 (searxng journal, wave 2)
+  hosts: searxng-blr-lxc
+  gather_facts: false
+  tags: [alloy_searxng, alloy_wave2]
+  roles:
+    - role: alloy
+      vars:
+        alloy_source_journal: true
+        alloy_journal_job: searxng_journal
+        alloy_service_label: searxng
+        alloy_ct_label: "160"
+
+- name: Alloy on CT 161 (vaultwarden journal, wave 2)
+  hosts: vaultwarden-blr-lxc
+  gather_facts: false
+  tags: [alloy_vaultwarden, alloy_wave2]
+  roles:
+    - role: alloy
+      vars:
+        alloy_source_journal: true
+        alloy_journal_job: vaultwarden_journal
+        alloy_service_label: vaultwarden
+        alloy_ct_label: "161"
+
+- name: Alloy on CT 181 (metube journal, wave 2)
+  hosts: metube-blr-lxc
+  gather_facts: false
+  tags: [alloy_metube, alloy_wave2]
+  roles:
+    - role: alloy
+      vars:
+        alloy_source_journal: true
+        alloy_journal_job: metube_journal
+        alloy_service_label: metube
+        alloy_ct_label: "181"
+
+- name: Alloy on CT 188 (dispatcharr journal, wave 2)
+  hosts: dispatcharr-blr-lxc
+  gather_facts: false
+  tags: [alloy_dispatcharr, alloy_wave2]
+  roles:
+    - role: alloy
+      vars:
+        alloy_source_journal: true
+        alloy_journal_job: dispatcharr_journal
+        alloy_service_label: dispatcharr
+        alloy_ct_label: "188"

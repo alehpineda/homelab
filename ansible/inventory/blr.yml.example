@@ -80,6 +80,40 @@ all:
           ansible_port: 22
           dashboard_editor_config_file: /opt/homer/assets/config.yml
           # dashboard_editor_pubkeys: ["ssh-ed25519 AAAA... forge-ct176"]
+        # Wave 2 log shipping (playbooks/logging.yml --tags alloy_wave2). Alloy only.
+        jellyfin-blr-lxc:  # CT 180
+          ansible_host: 10.10.0.80
+          ansible_port: 22
+        seerr-blr-lxc:  # CT 183
+          ansible_host: 10.10.0.83
+          ansible_port: 22
+        romm-blr-lxc:  # CT 185
+          ansible_host: 10.10.0.85
+          ansible_port: 22
+        navidrome-blr-lxc:  # CT 186
+          ansible_host: 10.10.0.86
+          ansible_port: 22
+        audiobookshelf-blr-lxc:  # CT 187
+          ansible_host: 10.10.0.87
+          ansible_port: 22
+        bentopdf-blr-lxc:  # CT 193
+          ansible_host: 10.10.0.93
+          ansible_port: 22
+        linkwarden-blr-lxc:  # CT 196
+          ansible_host: 10.10.0.96
+          ansible_port: 22
+        searxng-blr-lxc:  # CT 160
+          ansible_host: 10.10.0.60
+          ansible_port: 22
+        vaultwarden-blr-lxc:  # CT 161
+          ansible_host: 10.10.0.61
+          ansible_port: 22
+        metube-blr-lxc:  # CT 181
+          ansible_host: 10.10.0.81
+          ansible_port: 22
+        dispatcharr-blr-lxc:  # CT 188
+          ansible_host: 10.10.0.88
+          ansible_port: 22
         # CT 250. playbooks/caddy.yml targets this host. site.yml does not.
         # Port 22: Debian 13 Caddy guest, not an ansible-playbooks harden.
         caddy-blr-lxc:
