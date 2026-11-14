@@ -59,7 +59,7 @@
   when: not alloy_apt_existing_grafana_repo
   register: _alloy_src
 
-- name: Pin only alloy from apt.grafana.com
+- name: Pin alloy to alloy_version (first matching pin wins, so it must be a version pin)
   ansible.builtin.copy:
     dest: /etc/apt/preferences.d/grafana-alloy-only
     owner: root
@@ -67,8 +67,8 @@
     mode: "0644"
     content: |
       Package: alloy
-      Pin: origin "apt.grafana.com"
-      Pin-Priority: 500
+      Pin: version {{ alloy_version }}
+      Pin-Priority: 1001
       {% if not alloy_apt_existing_grafana_repo %}
 
       Package: *
