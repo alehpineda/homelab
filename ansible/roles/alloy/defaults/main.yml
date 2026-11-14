@@ -32,6 +32,10 @@ alloy_source_docker: false      # CT 182 Docker stdout -> job arr_docker
 alloy_source_adguard: false     # CT 153 querylog.json -> job adguard_query (phase 1b)
 
 alloy_journal_max_age: 12h
+# Alloy HTTP server (UI + /metrics). Empty = package default 127.0.0.1:12345.
+# Metrics wave 1 sets "<LAN IP>:12345" per host so Prometheus CT172 can scrape
+# it (PVE guest fw allows tcp/12345 from alias prometheus only).
+alloy_http_listen_addr: ""
 # Standard for every old and new service (owner, 2026-11-14 1:54 PM CT):
 # JSON logs by default. Each entry ships as one JSON object
 #   {ts, level, service, host, env, [component], msg}

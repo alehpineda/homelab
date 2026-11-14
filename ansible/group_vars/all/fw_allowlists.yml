@@ -78,13 +78,16 @@ pve_fw_ct_rules:
     - {proto: tcp, dport: "3100", source: grafana}
     - {proto: tcp, dport: "9095", source: grafana}
     - {proto: tcp, dport: "3100", source: +log_shippers, comment: "Alloy push"}
+    - {proto: tcp, dport: "12345", source: prometheus, comment: "alloy /metrics"}
   177:  # openobserve — UI via Caddy; Loki push from Alloy; remote_write from Prometheus; 5081 closed; node_exporter 9100 for Prometheus
     - {proto: tcp, dport: "5080", source: +caddy}
     - {proto: tcp, dport: "5080", source: +log_shippers, comment: "Alloy loki push"}
     - {proto: tcp, dport: "5080", source: prometheus, comment: "remote_write"}
     - {proto: tcp, dport: "9100", source: prometheus, comment: "node_exporter scrape"}
+    - {proto: tcp, dport: "12345", source: prometheus, comment: "alloy /metrics"}
   174:  # pve-exporter
     - {proto: tcp, dport: "9221", source: prometheus}
+    - {proto: tcp, dport: "12345", source: prometheus, comment: "alloy /metrics"}
   180:  # jellyfin (NetBird peer; LAN stays open until a guest VLAN exists)
     - {proto: tcp, dport: "8096", source: 10.10.0.0/24}
     - {proto: udp, dport: "7359", source: 10.10.0.0/24}
@@ -95,10 +98,12 @@ pve_fw_ct_rules:
   182:  # arr (docker DNAT inside the CT; bridge sees pre-DNAT dport)
     - {proto: tcp, dport: "4545,5001,6767,7878,8085,8686,8989,9117,9696", source: +caddy}
     - {proto: tcp, dport: "7878,8989", source: seerr}
+    - {proto: tcp, dport: "12345", source: prometheus, comment: "alloy /metrics"}
   183:  # seerr
     - {proto: tcp, dport: "5055", source: 10.10.0.0/24}
   184:  # uptime kuma
     - {proto: tcp, dport: "3001", source: +caddy}
+    - {proto: tcp, dport: "12345", source: prometheus, comment: "alloy /metrics"}
   185:  # romm
     - {proto: tcp, dport: "80", source: +caddy}
   186:  # navidrome
@@ -171,6 +176,8 @@ pve_fw_ct_rules:
     - {proto: tcp, dport: "5678", source: +nb_routers}
   171:  # grafana
     - {proto: tcp, dport: "3000", source: +caddy}
+    - {proto: tcp, dport: "3000", source: prometheus, comment: "grafana /metrics"}
+    - {proto: tcp, dport: "12345", source: prometheus, comment: "alloy /metrics"}
   176:  # forge-ws (NetBird peer) — RDP from management; SSH via ct_base
     - {proto: tcp, dport: "3389", source: +management, comment: "xrdp"}
     - {proto: udp, dport: "51820"}
@@ -178,3 +185,5 @@ pve_fw_ct_rules:
     - {proto: tcp, dport: "80", source: +management}
     - {proto: tcp, dport: "443", source: +management}
     - {proto: udp, dport: "443", source: +management, comment: "HTTP/3"}
+    - {proto: tcp, dport: "9180", source: prometheus, comment: "caddy LAN /metrics"}
+    - {proto: tcp, dport: "12345", source: prometheus, comment: "alloy /metrics"}

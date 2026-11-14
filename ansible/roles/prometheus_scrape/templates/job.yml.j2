@@ -1,8 +1,18 @@
 # Managed by ansible role prometheus_scrape (alehpineda/homelab). Do not edit live.
 scrape_configs:
   - job_name: {{ item.job | to_json }}
-    static_configs:
-      - targets: {{ item.targets | to_json }}
-{% if item.labels | default({}) %}
-        labels: {{ item.labels | to_json }}
+{% if item.metrics_path is defined %}
+    metrics_path: {{ item.metrics_path | to_json }}
 {% endif %}
+{% if item.basic_auth is defined %}
+    basic_auth:
+      username: {{ item.basic_auth.username | default('') | to_json }}
+      password_file: {{ item.basic_auth.password_file | to_json }}
+{% endif %}
+    static_configs:
+{% for sc in item.static_configs | default([{'targets': item.targets, 'labels': item.labels | default({})}]) %}
+      - targets: {{ sc.targets | to_json }}
+{% if sc.labels | default({}) %}
+        labels: {{ sc.labels | to_json }}
+{% endif %}
+{% endfor %}

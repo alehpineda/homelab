@@ -6,5 +6,8 @@
 prometheus_config_path: /etc/prometheus/prometheus.yml
 prometheus_promtool: /usr/local/bin/promtool
 prometheus_scrape_dir: /etc/prometheus/scrape.d
-# - {job: name, targets: ["ip:port"], labels: {k: v}}
+# - job: name
+#   static_configs: [{targets: ["ip:port"], labels: {k: v}}]
+#   metrics_path: /metrics             (optional)
+#   basic_auth: {username: "", password_file: /etc/prometheus/<job>.pass}  (optional)
 prometheus_scrape_jobs: []
