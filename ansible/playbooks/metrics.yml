@@ -1,0 +1,172 @@
+---
+# Enable native Prometheus metrics on wave 2 apps (Jellyfin, Navidrome, SearXNG).
+# Owner yes: Wolff 1:1, 5:14 PM CT Nov 14 2026.
+#
+#   cd ansible && ansible-playbook -i <inv> playbooks/metrics.yml --tags metrics_jellyfin
+#   ... --tags metrics_navidrome
+#   ... --tags metrics_searxng -e searxng_metrics_pass_file=/path/to/pass
+#
+# Each play backs up the guest config (once, *.bak-forge-metrics) and restarts
+# the app only if the setting changed. Apply one CT at a time. The SearXNG
+# password is never committed and is not logged.
+
+- name: Enable Jellyfin Prometheus metrics
+  hosts: jellyfin-blr-lxc
+  gather_facts: false
+  tags: [metrics_jellyfin]
+  vars:
+    jellyfin_system_xml: /etc/jellyfin/system.xml
+  tasks:
+    - name: Confirm EnableMetrics exists once
+      ansible.builtin.command:
+        argv: [grep, -c, -E, "<EnableMetrics>(true|false)</EnableMetrics>", "{{ jellyfin_system_xml }}"]
+      register: _jf_tag
+      changed_when: false
+      failed_when: (_jf_tag.stdout | int) != 1
+
+    - name: Read EnableMetrics
+      ansible.builtin.command:
+        argv: [grep, -oE, "<EnableMetrics>(true|false)</EnableMetrics>", "{{ jellyfin_system_xml }}"]
+      register: _jf_cur
+      changed_when: false
+
+    - name: Backup system.xml
+      ansible.builtin.copy:
+        src: "{{ jellyfin_system_xml }}"
+        dest: "{{ jellyfin_system_xml }}.bak-forge-metrics"
+        remote_src: true
+        owner: jellyfin
+        group: adm
+        mode: "0644"
+        force: false
+      when: _jf_cur.stdout == '<EnableMetrics>false</EnableMetrics>'
+
+    - name: Set EnableMetrics to true
+      ansible.builtin.replace:
+        path: "{{ jellyfin_system_xml }}"
+        regexp: '<EnableMetrics>false</EnableMetrics>'
+        replace: '<EnableMetrics>true</EnableMetrics>'
+      notify: Restart jellyfin
+  handlers:
+    - name: Restart jellyfin
+      ansible.builtin.systemd_service:
+        name: jellyfin
+        state: restarted
+
+- name: Enable Navidrome Prometheus metrics
+  hosts: navidrome-blr-lxc
+  gather_facts: false
+  tags: [metrics_navidrome]
+  vars:
+    navidrome_toml: /etc/navidrome/navidrome.toml
+  tasks:
+    - name: Backup navidrome.toml
+      ansible.builtin.copy:
+        src: "{{ navidrome_toml }}"
+        dest: "{{ navidrome_toml }}.bak-forge-metrics"
+        remote_src: true
+        owner: navidrome
+        group: navidrome
+        mode: "0644"
+        force: false
+
+    - name: Ensure Prometheus.Enabled = true
+      ansible.builtin.blockinfile:
+        path: "{{ navidrome_toml }}"
+        marker: "# {mark} FORGE Prometheus metrics"
+        block: |
+          [Prometheus]
+          Enabled = true
+        insertafter: EOF
+        owner: navidrome
+        group: navidrome
+        mode: "0644"
+      notify: Restart navidrome
+  handlers:
+    - name: Restart navidrome
+      ansible.builtin.systemd_service:
+        name: navidrome
+        state: restarted
+
+- name: Enable SearXNG open metrics
+  hosts: searxng-blr-lxc
+  gather_facts: false
+  tags: [metrics_searxng]
+  vars:
+    searxng_settings: /etc/searxng/settings.yml
+    # Controller path to the open_metrics password (0600). Never commit it.
+    searxng_metrics_pass_file: ""
+  tasks:
+    - name: Require searxng_metrics_pass_file
+      ansible.builtin.assert:
+        that:
+          - searxng_metrics_pass_file | length > 0
+        fail_msg: "Set -e searxng_metrics_pass_file=/path (0600, not in git)."
+
+    - name: Password file must exist on the controller
+      ansible.builtin.stat:
+        path: "{{ searxng_metrics_pass_file }}"
+      delegate_to: localhost
+      become: false
+      register: _sx_pass
+
+    - name: Fail if the password file is missing
+      ansible.builtin.assert:
+        that:
+          - _sx_pass.stat.exists
+          - _sx_pass.stat.size > 0
+        fail_msg: "searxng_metrics_pass_file is missing or empty on the controller."
+
+    - name: Backup settings.yml
+      ansible.builtin.copy:
+        src: "{{ searxng_settings }}"
+        dest: "{{ searxng_settings }}.bak-forge-metrics"
+        remote_src: true
+        owner: searxng
+        group: searxng
+        mode: "0640"
+        force: false
+
+    - name: Install the settings editor
+      ansible.builtin.copy:
+        src: set_searxng_open_metrics.py
+        dest: /root/forge-set-searxng-open-metrics.py
+        owner: root
+        group: root
+        mode: "0700"
+
+    - name: Stage the password on the guest (0600 root)
+      ansible.builtin.copy:
+        src: "{{ searxng_metrics_pass_file }}"
+        dest: /root/forge-searxng-metrics.pass
+        owner: root
+        group: root
+        mode: "0600"
+      no_log: true
+
+    - name: Apply open metrics settings
+      ansible.builtin.command:
+        argv:
+          - python3
+          - /root/forge-set-searxng-open-metrics.py
+          - "{{ searxng_settings }}"
+          - /root/forge-searxng-metrics.pass
+      register: _sx_edit
+      no_log: true
+      changed_when: _sx_edit.rc == 0 and (_sx_edit.stdout | default('') | trim) == 'changed'
+      failed_when: _sx_edit.rc != 0
+      notify: Restart searxng
+
+    - name: Shred the staged password and editor
+      ansible.builtin.command:
+        argv:
+          - shred
+          - -u
+          - /root/forge-searxng-metrics.pass
+          - /root/forge-set-searxng-open-metrics.py
+      changed_when: false
+  handlers:
+    - name: Restart searxng
+      ansible.builtin.systemd_service:
+        name: searxng
+        state: restarted

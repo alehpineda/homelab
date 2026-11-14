@@ -151,3 +151,28 @@ firewall (`host.fw`, not managed by IaC) has
 "prometheus CT172 alloy /metrics (forge 2026-11-14)"). Prometheus job `alloy`,
 target `10.10.0.21:12345`, labels host=barbatoslupusrex ct=host. Applied by the
 owner-run root script `brl-alloy-lan-listener-20261114.sh` (has `--rollback`).
+
+## Metrics wave 2: Jellyfin, Navidrome, SearXNG (2026-11-14)
+
+Owner yes in Wolff 1:1 at 5:14 PM CT. Prometheus CT172 scrapes LAN
+`/metrics` with labels `job`/`instance`/`host`/`ct`/`service`/`env`.
+
+- Jellyfin CT180: `EnableMetrics` in `/etc/jellyfin/system.xml` (needs a
+  Jellyfin restart). Port 8096 is already open to `10.10.0.0/24`, which
+  includes Prometheus; do not tighten that to `.72` only. Job `jellyfin`.
+- Navidrome CT186: `Prometheus.Enabled` in `/etc/navidrome/navidrome.toml`
+  (equivalent to `ND_PROMETHEUS_ENABLED`). Guest fw tcp/4533 from alias
+  `prometheus`. Job `navidrome`.
+- SearXNG CT160: `general.enable_metrics: true` plus `general.open_metrics`
+  (HTTP basic-auth password). The password file lives only on CT172 at
+  `/etc/prometheus/searxng_metrics_pass` (0600 root:root); it is not in
+  git. Guest fw tcp/8888 from `prometheus`. Job `searxng`.
+- Caddy CT250 family ingress (`.251`): `respond /metrics* 404` on the
+  jellyfin, navidrome, and searxng vhosts, same pattern as Grafana and
+  OpenObserve. The `.250` listener already `abort`s those hostnames.
+
+Enable the app flags with `ansible/playbooks/metrics.yml` (tags
+`metrics_jellyfin`, `metrics_navidrome`, `metrics_searxng`). Apply one
+CT at a time. The SearXNG play reads the password from
+`searxng_metrics_pass_file` on the controller and never logs it.
+

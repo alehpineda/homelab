@@ -26,6 +26,8 @@ handle @family_ingress {
  route {
 	@fam_jellyfin host jellyfin.alehpineda.com
 	handle @fam_jellyfin {
+		# /metrics is LAN-only (Prometheus CT172 scrapes 10.10.0.80:8096 direct). 2026-11-14.
+		respond /metrics* 404
 		reverse_proxy http://10.10.0.80:8096
 	}
 	@fam_seerr host seerr.alehpineda.com
@@ -34,6 +36,8 @@ handle @family_ingress {
 	}
 	@fam_searxng host searxng.alehpineda.com
 	handle @fam_searxng {
+		# /metrics is LAN-only (Prometheus CT172 scrapes 10.10.0.60:8888 direct). 2026-11-14.
+		respond /metrics* 404
 		reverse_proxy http://10.10.0.60:8888
 	}
 	@fam_romm host romm.alehpineda.com
@@ -47,6 +51,8 @@ handle @family_ingress {
 	}
 	@fam_navidrome host navidrome.alehpineda.com
 	handle @fam_navidrome {
+		# /metrics is LAN-only (Prometheus CT172 scrapes 10.10.0.86:4533 direct). 2026-11-14.
+		respond /metrics* 404
 		reverse_proxy http://10.10.0.86:4533 {
 			transport http {
 				local_address 10.10.0.251

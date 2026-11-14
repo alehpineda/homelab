@@ -85,8 +85,10 @@
   roles:
     - role: prometheus_scrape
       vars:
-        # Metrics wave 1 (owner card t40s246, 2:45 PM CT Nov 14). One target at
-        # a time on apply (-e prometheus_scrape_jobs=<subset>); this is the end state.
+        # Metrics wave 1 (owner card t40s246, 2:45 PM CT Nov 14) plus wave 2
+        # (Wolff 1:1 5:14 PM CT Nov 14): jellyfin, navidrome, searxng.
+        # One target at a time on apply (-e prometheus_scrape_jobs=<subset>);
+        # this is the end state.
         prometheus_scrape_jobs:
           - job: openobserve_node
             static_configs:
@@ -126,7 +128,8 @@
                 labels: {host: barbatoslupusrex, ct: "host", service: alloy, env: homelab}
           - job: kuma
             # Basic auth: any username + a dedicated Kuma API key (owner-created
-            # 2026-11-14). The key file lives only on CT172 (0640 root:prometheus).
+            # 2026-11-14). The key file lives only on CT172 (0600 root:root).
+            # Prometheus itself runs as root; there is no prometheus user on CT172.
             basic_auth: {username: prometheus, password_file: /etc/prometheus/kuma_api_key}
             static_configs:
               - targets: ["10.10.0.84:3001"]
@@ -135,6 +138,22 @@
             static_configs:
               - targets: ["10.10.0.250:9180"]
                 labels: {host: caddy-blr-lxc, ct: "250", service: caddy, env: homelab}
+          # Metrics wave 2 (owner yes in Wolff 1:1, 5:14 PM CT Nov 14).
+          - job: jellyfin
+            static_configs:
+              - targets: ["10.10.0.80:8096"]
+                labels: {host: jellyfin-blr-lxc, ct: "180", service: jellyfin, env: homelab}
+          - job: navidrome
+            static_configs:
+              - targets: ["10.10.0.86:4533"]
+                labels: {host: navidrome-blr-lxc, ct: "186", service: navidrome, env: homelab}
+          - job: searxng
+            # Basic auth: any username + general.open_metrics (password file
+            # lives only on CT172, 0600 root:root; not in git).
+            basic_auth: {username: prometheus, password_file: /etc/prometheus/searxng_metrics_pass}
+            static_configs:
+              - targets: ["10.10.0.60:8888"]
+                labels: {host: searxng-blr-lxc, ct: "160", service: searxng, env: homelab}
 
 - name: Prometheus remote_write to OpenObserve
   hosts: prometheus-blr-lxc
