@@ -357,7 +357,7 @@ services:
       URL: http://10.10.0.82:8989
       API_KEY_FILE: /run/secrets/apikey
       # INFO logs one line per API call on every scrape (arr_docker noise).
-      LOG_LEVEL: WARN
+      LOG_LEVEL: warn
       TZ: America/Chicago
     volumes:
       - /opt/stacks/arr/secrets/sonarr.apikey:/run/secrets/apikey:ro
@@ -381,7 +381,7 @@ services:
       URL: http://10.10.0.82:7878
       API_KEY_FILE: /run/secrets/apikey
       # INFO logs one line per API call on every scrape (arr_docker noise).
-      LOG_LEVEL: WARN
+      LOG_LEVEL: warn
       TZ: America/Chicago
     volumes:
       - /opt/stacks/arr/secrets/radarr.apikey:/run/secrets/apikey:ro
@@ -405,7 +405,7 @@ services:
       URL: http://10.10.0.82:8686
       API_KEY_FILE: /run/secrets/apikey
       # INFO logs one line per API call on every scrape (arr_docker noise).
-      LOG_LEVEL: WARN
+      LOG_LEVEL: warn
       TZ: America/Chicago
     volumes:
       - /opt/stacks/arr/secrets/lidarr.apikey:/run/secrets/apikey:ro
@@ -429,7 +429,7 @@ services:
       URL: http://10.10.0.82:9696
       API_KEY_FILE: /run/secrets/apikey
       # INFO logs one line per API call on every scrape (arr_docker noise).
-      LOG_LEVEL: WARN
+      LOG_LEVEL: warn
       TZ: America/Chicago
     volumes:
       - /opt/stacks/arr/secrets/prowlarr.apikey:/run/secrets/apikey:ro
@@ -453,7 +453,7 @@ services:
       URL: http://10.10.0.82:6767
       API_KEY_FILE: /run/secrets/apikey
       # INFO logs one line per API call on every scrape (arr_docker noise).
-      LOG_LEVEL: WARN
+      LOG_LEVEL: warn
       TZ: America/Chicago
     volumes:
       - /opt/stacks/arr/secrets/bazarr.apikey:/run/secrets/apikey:ro
