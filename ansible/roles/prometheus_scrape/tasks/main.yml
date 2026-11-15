@@ -55,3 +55,39 @@
   ansible.builtin.command:
     argv: ["{{ prometheus_promtool }}", check, config, "{{ prometheus_config_path }}"]
   changed_when: false
+
+- name: OpenBao metrics token auto-renew
+  when: prometheus_openbao_token_renew | bool
+  block:
+    - name: Install the OpenBao token renew script
+      ansible.builtin.template:
+        src: openbao-token-renew.sh.j2
+        dest: "{{ prometheus_openbao_renew_script }}"
+        owner: root
+        group: root
+        mode: "0700"
+
+    - name: Install the OpenBao token renew service
+      ansible.builtin.template:
+        src: openbao-token-renew.service.j2
+        dest: /etc/systemd/system/openbao-token-renew.service
+        owner: root
+        group: root
+        mode: "0644"
+      notify: Reload systemd
+
+    - name: Install the OpenBao token renew timer
+      ansible.builtin.template:
+        src: openbao-token-renew.timer.j2
+        dest: /etc/systemd/system/openbao-token-renew.timer
+        owner: root
+        group: root
+        mode: "0644"
+      notify: Reload systemd
+
+    - name: Enable and start the OpenBao token renew timer
+      ansible.builtin.systemd_service:
+        name: openbao-token-renew.timer
+        enabled: true
+        state: started
+        daemon_reload: true

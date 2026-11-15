@@ -17,3 +17,10 @@ prometheus_scrape_dir: /etc/prometheus/scrape.d
 #   scrape_interval / scrape_timeout: "60s"                         (optional)
 #   metric_relabel_configs: [{...}]                                 (optional, Prometheus syntax)
 prometheus_scrape_jobs: []
+# Monthly auto-renew of the OpenBao metrics token on CT172. Off by default;
+# enable from the prom_scrape play (prometheus_openbao_token_renew: true).
+prometheus_openbao_token_renew: false
+prometheus_openbao_token_file: /etc/prometheus/openbao_token
+prometheus_openbao_renew_url: https://10.10.0.62:8200/v1/auth/token/renew-self
+prometheus_openbao_renew_script: /usr/local/sbin/openbao-token-renew
+prometheus_openbao_renew_randomized_delay: 30min
