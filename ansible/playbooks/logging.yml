@@ -25,6 +25,11 @@
 #   alloy_wave4   wave 4 journald on CT 191/192/198/176/165 (per-CT tags
 #                 alloy_<service>). Logs only: no exporters, no node_exporter,
 #                 no alloy_http_listen_addr. One CT at a time; ipset first.
+#   alloy_wave5   wave 5 journald on CT 151/150 (NetBird routers), 154 (Unbound),
+#                 156 (AdGuardSync), and the AdGuard journal on 153/155 next to
+#                 the querylog (same Alloy, plays alloy_adguard_a/_b). Per-CT
+#                 tags alloy_<service>. One CT at a time, CT151 before CT150;
+#                 ipset first. Never touch NetBird or forge_arr_router config.
 # See docs/runbooks/logging-loki-openobserve.md.
 - name: Loki config
   hosts: loki-blr-lxc
@@ -100,6 +105,7 @@
         # (Wolff 1:1 5:14 PM CT Nov 14): jellyfin, navidrome, searxng; wave 3
         # (card t57s331, 5:41 PM CT Nov 14): exportarr x5, qbittorrent, cadvisor, n8n;
         # OpenBao scrape (card t872s4598, 7:31 PM CT Nov 14).
+        # Wave 5 (card t67s400, 9:48 PM CT Nov 14): adguard x2, unbound.
         # One target at a time on apply (-e prometheus_scrape_jobs=<subset>);
         # this is the end state. The OpenBao token renew timer is independent
         # of that subset (card t874u, 7:44 PM CT Nov 14).
@@ -228,6 +234,31 @@
             static_configs:
               - targets: ["10.10.0.62:8200"]
                 labels: {host: openbao, ct: "162", service: openbao, env: homelab}
+          # Metrics wave 5 (owner card t67s400, 9:48 PM CT Nov 14).
+          - job: adguard
+            # henrywhitaker3/adguard-exporter on each AdGuard CT (localhost
+            # API, creds in a root-only env file there). Never keep client IP,
+            # client name, user or queried domain as labels: drop every
+            # family that carries them, then drop any series that still has
+            # one of those labels (guard for new exporter versions).
+            metric_relabel_configs:
+              - {source_labels: [__name__], regex: "adguard_(top_queried_domains|top_blocked_domains|top_clients|query_types|queries_details.*|processing_time_.*|dhcp_leases)", action: drop}
+              - {source_labels: [client], regex: ".+", action: drop}
+              - {source_labels: [client_name], regex: ".+", action: drop}
+              - {source_labels: [domain], regex: ".+", action: drop}
+              - {source_labels: [user], regex: ".+", action: drop}
+              - {source_labels: [name], regex: ".+", action: drop}
+            static_configs:
+              - targets: ["10.10.0.53:9618"]
+                labels: {host: adguard-blr-lxc, ct: "153", service: adguard, env: homelab}
+              - targets: ["10.10.0.55:9618"]
+                labels: {host: adguard-blr-lxc-b, ct: "155", service: adguard, env: homelab}
+          - job: unbound
+            # letsencrypt/unbound_exporter via the existing unbound-control
+            # unix socket /run/unbound.ctl (no Unbound config change).
+            static_configs:
+              - targets: ["10.10.0.54:9167"]
+                labels: {host: unbound-blr-lxc, ct: "154", service: unbound, env: homelab}
 
 - name: Prometheus remote_write to OpenObserve
   hosts: prometheus-blr-lxc
@@ -672,25 +703,91 @@
         alloy_ct_label: "165"
         alloy_journal_drop_rules: *w3_secret_drops
 
+# Wave 5 (owner card t67s400, 9:48 PM CT Nov 14, Wolff 1:1): network and DNS.
+# NetBird routing peers CT151/CT150 are NetTit's: Alloy only, no NetBird or
+# forge_arr_router change; CT151 first, check the router guard before/after.
+- name: Alloy on CT 151 (NetBird router B journal, wave 5)
+  hosts: blr-nb-lxc-b
+  gather_facts: false
+  tags: [alloy_netbird_router_b, alloy_wave5]
+  roles:
+    - role: alloy
+      vars:
+        alloy_source_journal: true
+        alloy_journal_job: netbird_router_journal
+        alloy_service_label: netbird_router
+        alloy_ct_label: "151"
+        alloy_journal_drop_rules: *w3_secret_drops
+
+- name: Alloy on CT 150 (NetBird router A journal, wave 5)
+  hosts: blr-nb-lxc
+  gather_facts: false
+  tags: [alloy_netbird_router_a, alloy_wave5]
+  roles:
+    - role: alloy
+      vars:
+        alloy_source_journal: true
+        alloy_journal_job: netbird_router_journal
+        alloy_service_label: netbird_router
+        alloy_ct_label: "150"
+        alloy_journal_drop_rules: *w3_secret_drops
+
+- name: Alloy on CT 154 (Unbound journal, wave 5)
+  hosts: unbound-blr-lxc
+  gather_facts: false
+  tags: [alloy_unbound, alloy_wave5]
+  roles:
+    - role: alloy
+      vars:
+        alloy_source_journal: true
+        alloy_journal_job: unbound_journal
+        alloy_service_label: unbound
+        alloy_ct_label: "154"
+        alloy_journal_drop_rules: *w3_secret_drops
+
+- name: Alloy on CT 156 (AdGuardSync journal, wave 5)
+  hosts: adguardsync-blr-lxc
+  gather_facts: false
+  tags: [alloy_adguardsync, alloy_wave5]
+  roles:
+    - role: alloy
+      vars:
+        alloy_source_journal: true
+        alloy_journal_job: adguardsync_journal
+        alloy_service_label: adguardsync
+        alloy_ct_label: "156"
+        alloy_journal_drop_rules: *w3_secret_drops
+
 # AdGuard querylog (owner card t49s294, 3:42 PM CT Nov 14). Family DNS: one CT
 # at a time, CT155 (B) first; check DNS through the other one before each.
 # No AdGuard config or unit change; anonymize_client_ip stays as is.
-- name: Alloy on CT 155 (AdGuard B querylog)
+# Wave 5 adds job adguard_journal to the same Alloy (querylog untouched).
+- name: Alloy on CT 155 (AdGuard B querylog + journal)
   hosts: adguard-blr-lxc-b
   gather_facts: false
-  tags: [alloy_adguard_b, alloy_adguard]
+  tags: [alloy_adguard_b, alloy_adguard, alloy_wave5]
   roles:
     - role: alloy
       vars:
         alloy_source_adguard: true
         alloy_ct_label: "155"
+        # Wave 5 (card t67s400): + AdGuard journal in the same Alloy.
+        alloy_source_journal: true
+        alloy_journal_job: adguard_journal
+        alloy_service_label: adguard
+        alloy_journal_drop_rules: *w3_secret_drops
 
-- name: Alloy on CT 153 (AdGuard A querylog)
+- name: Alloy on CT 153 (AdGuard A querylog + journal)
   hosts: adguard-blr-lxc
   gather_facts: false
-  tags: [alloy_adguard_a, alloy_adguard]
+  tags: [alloy_adguard_a, alloy_adguard, alloy_wave5]
   roles:
     - role: alloy
       vars:
         alloy_source_adguard: true
         alloy_ct_label: "153"
+        # Wave 5 (card t67s400): + AdGuard journal in the same Alloy.
+        alloy_source_journal: true
+        alloy_journal_job: adguard_journal
+        alloy_service_label: adguard
+        alloy_journal_drop_rules: *w3_secret_drops

@@ -1,0 +1,67 @@
+---
+- name: Control socket must already exist (remote-control enabled)
+  ansible.builtin.stat:
+    path: "{{ unbound_exporter_socket }}"
+  register: unbound_exporter_sock
+
+- name: Refuse to change Unbound config
+  ansible.builtin.assert:
+    that: unbound_exporter_sock.stat.exists and unbound_exporter_sock.stat.issock
+    fail_msg: "{{ unbound_exporter_socket }} missing; enabling remote-control is a separate, approved change"
+
+- name: System user in the socket group
+  ansible.builtin.user:
+    name: "{{ unbound_exporter_user }}"
+    system: true
+    groups: ["{{ unbound_exporter_socket_group }}"]
+    append: true
+    shell: /usr/sbin/nologin
+    create_home: false
+    home: /nonexistent
+
+- name: Download pinned .deb (sha256 checked)
+  ansible.builtin.get_url:
+    url: "{{ unbound_exporter_url }}"
+    dest: "/root/unbound_exporter-v{{ unbound_exporter_version }}.x86_64.deb"
+    checksum: "sha256:{{ unbound_exporter_sha256 }}"
+    owner: root
+    group: root
+    mode: "0600"
+
+- name: Install .deb
+  ansible.builtin.apt:
+    deb: "/root/unbound_exporter-v{{ unbound_exporter_version }}.x86_64.deb"
+  notify: Restart unbound-exporter
+
+- name: Systemd unit
+  ansible.builtin.template:
+    src: unbound-exporter.service.j2
+    dest: /etc/systemd/system/unbound-exporter.service
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Restart unbound-exporter
+
+- name: Enable and start
+  ansible.builtin.systemd_service:
+    name: unbound-exporter
+    enabled: true
+    state: started
+    daemon_reload: true
+
+- name: Flush handlers
+  ansible.builtin.meta: flush_handlers
+
+- name: Wait for /metrics
+  ansible.builtin.uri:
+    url: "http://{{ unbound_exporter_listen }}/metrics"
+    return_content: false
+  register: unbound_exporter_probe
+  retries: 10
+  delay: 3
+  until: unbound_exporter_probe.status == 200
+
+- name: Remove the downloaded .deb
+  ansible.builtin.file:
+    path: "/root/unbound_exporter-v{{ unbound_exporter_version }}.x86_64.deb"
+    state: absent

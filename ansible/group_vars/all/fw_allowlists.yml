@@ -17,16 +17,18 @@ pve_fw_cluster_ipsets:
     # OpenObserve .77, Uptime Kuma .84 (LAN IP, not NetBird). .73/.77 push to each
     # other over eth0; self-push is loopback and never hits the PVE firewall.
     # Used only by CT173 IN tcp/3100 and CT177 IN tcp/5080.
-    comment: Grafana Alloy agents (BRL host, Caddy CT250, arr CT182, wave 1-4 CTs); AdGuard .53/.55 querylog
+    comment: Grafana Alloy agents (BRL host, Caddy CT250, arr CT182, wave 1-5 CTs); AdGuard .53/.55 querylog
     # Wave 2 (2026-11-14): + journald on 180,183,185,186,187,193,196,160,161,181,188.
     # AdGuard querylog (2026-11-14): + .55 (B), .53 (A).
     # Wave 3 (2026-11-14, card t57s331): + journald on 170,169,197,164,175(.63),162,189,194,195,199.
     # Wave 4 (2026-11-14, card t64s378): + journald on 191,192,198,176,165. Logs only.
+    # Wave 5 (2026-11-14, card t67s400): + journald on 151,150,154,156 (.53/.55 already in).
     cidrs: [10.10.0.21, 10.10.0.250, 10.10.0.82, 10.10.0.71, 10.10.0.72, 10.10.0.73, 10.10.0.74, 10.10.0.77, 10.10.0.84,
             10.10.0.80, 10.10.0.83, 10.10.0.85, 10.10.0.86, 10.10.0.87, 10.10.0.93, 10.10.0.96, 10.10.0.60, 10.10.0.61, 10.10.0.81, 10.10.0.88,
             10.10.0.55, 10.10.0.53,
             10.10.0.70, 10.10.0.69, 10.10.0.97, 10.10.0.64, 10.10.0.63, 10.10.0.62, 10.10.0.89, 10.10.0.94, 10.10.0.95, 10.10.0.99,
-            10.10.0.91, 10.10.0.92, 10.10.0.98, 10.10.0.76, 10.10.0.65]
+            10.10.0.91, 10.10.0.92, 10.10.0.98, 10.10.0.76, 10.10.0.65,
+            10.10.0.51, 10.10.0.50, 10.10.0.54, 10.10.0.56]
   # `management` already exists (10.10.0.0/24, 100.85.0.0/16) and is used by
   # node rules for 22/8006/3128. Not managed here; change it only with NetTit.
 
@@ -157,6 +159,7 @@ pve_fw_ct_rules:
     - {proto: tcp, dport: "443", source: +management, comment: "DoH + HTTPS (incl. sync from .56)"}
     - {proto: tcp, dport: "853", source: +management, comment: "DoT"}
     - {proto: udp, dport: "853", source: +management, comment: "DoQ"}
+    - {proto: tcp, dport: "9618", source: prometheus, comment: "adguard-exporter /metrics (wave 5)"}
   154:  # unbound — AdGuard A/B + Flint AGH (10.10.0.1/32) on 5335
     - {proto: udp, dport: "5335", source: adguard_a}
     - {proto: tcp, dport: "5335", source: adguard_a}
@@ -164,12 +167,14 @@ pve_fw_ct_rules:
     - {proto: tcp, dport: "5335", source: adguard_b}
     - {proto: udp, dport: "5335", source: flint, comment: "Flint AGH upstream 10.10.0.1/32"}
     - {proto: tcp, dport: "5335", source: flint, comment: "Flint AGH upstream 10.10.0.1/32"}
+    - {proto: tcp, dport: "9167", source: prometheus, comment: "unbound_exporter /metrics (wave 5)"}
   155:  # adguard B — LAN+mesh DNS; HTTPS UI for Caddy failover; sync A->B over HTTPS; on vmbr1
     - {proto: udp, dport: "53", source: +management, comment: "DNS UDP LAN+mesh"}
     - {proto: tcp, dport: "53", source: +management, comment: "DNS TCP LAN+mesh"}
     - {proto: tcp, dport: "80", source: adguardsync, comment: "HTTP leftover / force_https redirect"}
     - {proto: tcp, dport: "443", source: +caddy, comment: "admin UI failover via Caddy"}
     - {proto: tcp, dport: "443", source: adguardsync, comment: "AdGuardSync A->B over HTTPS"}
+    - {proto: tcp, dport: "9618", source: prometheus, comment: "adguard-exporter /metrics (wave 5)"}
   156:  # adguardsync — outbound only (cron A->B); no app listen
     []
   160:  # searxng (NetBird peer)

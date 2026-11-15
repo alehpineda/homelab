@@ -1,0 +1,26 @@
+# Managed by ansible role adguard_exporter (alehpineda/homelab).
+[Unit]
+Description=AdGuard Home Prometheus exporter {{ adguard_exporter_version }}
+After=network-online.target AdGuardHome.service
+Wants=network-online.target
+
+[Service]
+User={{ adguard_exporter_user }}
+Group={{ adguard_exporter_user }}
+EnvironmentFile={{ adguard_exporter_env_file }}
+ExecStart={{ adguard_exporter_bin }}
+BindReadOnlyPaths=/etc/adguard-exporter/hosts:/etc/hosts
+Restart=on-failure
+RestartSec=10
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectKernelTunables=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+LockPersonality=true
+
+[Install]
+WantedBy=multi-user.target

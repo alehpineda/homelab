@@ -129,6 +129,20 @@ all:
         adguard-blr-lxc:  # CT 153 (AdGuard A)
           ansible_host: 10.10.0.53
           ansible_port: 22
+        # Wave 5 (logging.yml --tags alloy_wave5; metrics.yml --tags
+        # metrics_wave5). NetBird routers 151/150 are NetTit's: Alloy only.
+        blr-nb-lxc-b:  # CT 151 (NetBird router B, vmbr1)
+          ansible_host: 10.10.0.51
+          ansible_port: 22
+        blr-nb-lxc:  # CT 150 (NetBird router A)
+          ansible_host: 10.10.0.50
+          ansible_port: 22
+        unbound-blr-lxc:  # CT 154
+          ansible_host: 10.10.0.54
+          ansible_port: 22
+        adguardsync-blr-lxc:  # CT 156
+          ansible_host: 10.10.0.56
+          ansible_port: 22
         # CT 250. playbooks/caddy.yml targets this host. site.yml does not.
         # Port 22: Debian 13 Caddy guest, not an ansible-playbooks harden.
         caddy-blr-lxc:

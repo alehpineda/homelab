@@ -1,6 +1,11 @@
 ---
 # Enable native Prometheus metrics on wave 2 apps (Jellyfin, Navidrome, SearXNG)
 # and wave 3 (n8n, --tags metrics_n8n; OpenBao telemetry, --tags metrics_openbao).
+# Wave 5 (owner card t67s400, 9:48 PM CT Nov 14): AdGuard exporters on CT153/155
+# (--tags metrics_adguard_a / metrics_adguard_b, needs
+#  -e adguard_exporter_username_file=... -e adguard_exporter_password_file=...)
+# and the Unbound exporter on CT154 (--tags metrics_unbound). Exporters only:
+# no AdGuardHome.yaml or Unbound config change.
 # Owner yes: Wolff 1:1, 5:14 PM CT Nov 14 2026.
 #
 #   cd ansible && ansible-playbook -i <inv> playbooks/metrics.yml --tags metrics_jellyfin
@@ -275,3 +280,26 @@
       ansible.builtin.systemd_service:
         name: openbao
         state: restarted
+
+# Wave 5 exporters (owner card t67s400, 9:48 PM CT Nov 14). One CT at a time,
+# B (155) before A (153); check DNS through the other AdGuard first.
+- name: AdGuard exporter on CT 155 (AdGuard B)
+  hosts: adguard-blr-lxc-b
+  gather_facts: false
+  tags: [metrics_adguard_b, metrics_adguard, metrics_wave5]
+  roles:
+    - role: adguard_exporter
+
+- name: AdGuard exporter on CT 153 (AdGuard A)
+  hosts: adguard-blr-lxc
+  gather_facts: false
+  tags: [metrics_adguard_a, metrics_adguard, metrics_wave5]
+  roles:
+    - role: adguard_exporter
+
+- name: Unbound exporter on CT 154
+  hosts: unbound-blr-lxc
+  gather_facts: false
+  tags: [metrics_unbound, metrics_wave5]
+  roles:
+    - role: unbound_exporter
