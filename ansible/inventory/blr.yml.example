@@ -68,18 +68,26 @@ all:
           netbird_client_hosts_pins:
             - {ip: 10.10.0.250, name: jackett.alehpineda.com}
             - {ip: 100.85.100.247, name: crowdsec.alehpineda.com}
-        # CT 191 / 198. playbooks/dashboards.yml targets these. site.yml does not.
-        # Set dashboard_editor_pubkeys here in the local copy (public keys only).
+        # CT 191 / 192 / 198. playbooks/dashboards.yml targets 191 and 198.
+        # site.yml does not. Set dashboard_editor_pubkeys here in the local
+        # copy (public keys only). Wave 4 log shipping (logging.yml
+        # --tags alloy_wave4) also targets these plus CT 176 and CT 165.
         homepage-blr-lxc:
           ansible_host: 10.10.0.91
           ansible_port: 22
           dashboard_editor_config_file: /opt/homepage/config/services.yaml
           # dashboard_editor_pubkeys: ["ssh-ed25519 AAAA... forge-ct176"]
+        homarr-blr-lxc:  # CT 192
+          ansible_host: 10.10.0.92
+          ansible_port: 22
         homer-blr-lxc:
           ansible_host: 10.10.0.98
           ansible_port: 22
           dashboard_editor_config_file: /opt/homer/assets/config.yml
           # dashboard_editor_pubkeys: ["ssh-ed25519 AAAA... forge-ct176"]
+        honcho-blr-lxc:  # CT 165
+          ansible_host: 10.10.0.65
+          ansible_port: 22
         # Wave 2 log shipping (playbooks/logging.yml --tags alloy_wave2). Alloy only.
         jellyfin-blr-lxc:  # CT 180
           ansible_host: 10.10.0.80

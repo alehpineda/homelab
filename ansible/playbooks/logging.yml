@@ -22,6 +22,9 @@
 #                 (per-CT tags alloy_<service>). One CT at a time; ipset first.
 #                 CT 182 (alloy_arr) adds the qBittorrent log file and the
 #                 Dockge JSON pack in the same wave.
+#   alloy_wave4   wave 4 journald on CT 191/192/198/176/165 (per-CT tags
+#                 alloy_<service>). Logs only: no exporters, no node_exporter,
+#                 no alloy_http_listen_addr. One CT at a time; ipset first.
 # See docs/runbooks/logging-loki-openobserve.md.
 - name: Loki config
   hosts: loki-blr-lxc
@@ -596,6 +599,77 @@
         alloy_journal_job: myip_journal
         alloy_service_label: myip
         alloy_ct_label: "199"
+        alloy_journal_drop_rules: *w3_secret_drops
+
+
+# Wave 4 (owner card t64s378, 8:31 PM CT Nov 14, Wolff 1:1): logs only.
+# Homepage, Homarr, Homer, Forge workstation CT176, Honcho. Same JSON pack
+# and secret-drop guards as wave 3. Homer is a static python http.server
+# (thin journal is fine). Honcho's API may not be up yet; ship whatever
+# journald has. Do not disturb xrdp or Grok Bot on CT176.
+- name: Alloy on CT 191 (homepage journal, wave 4)
+  hosts: homepage-blr-lxc
+  gather_facts: false
+  tags: [alloy_homepage, alloy_wave4]
+  roles:
+    - role: alloy
+      vars:
+        alloy_source_journal: true
+        alloy_journal_job: homepage_journal
+        alloy_service_label: homepage
+        alloy_ct_label: "191"
+        alloy_journal_drop_rules: *w3_secret_drops
+
+- name: Alloy on CT 192 (homarr journal, wave 4)
+  hosts: homarr-blr-lxc
+  gather_facts: false
+  tags: [alloy_homarr, alloy_wave4]
+  roles:
+    - role: alloy
+      vars:
+        alloy_source_journal: true
+        alloy_journal_job: homarr_journal
+        alloy_service_label: homarr
+        alloy_ct_label: "192"
+        alloy_journal_drop_rules: *w3_secret_drops
+
+- name: Alloy on CT 198 (homer journal, wave 4)
+  hosts: homer-blr-lxc
+  gather_facts: false
+  tags: [alloy_homer, alloy_wave4]
+  roles:
+    - role: alloy
+      vars:
+        alloy_source_journal: true
+        alloy_journal_job: homer_journal
+        alloy_service_label: homer
+        alloy_ct_label: "198"
+        alloy_journal_drop_rules: *w3_secret_drops
+
+- name: Alloy on CT 176 (forge-ws journal, wave 4)
+  hosts: forge-ws-blr-lxc
+  gather_facts: false
+  tags: [alloy_forge_ws, alloy_wave4]
+  roles:
+    - role: alloy
+      vars:
+        alloy_source_journal: true
+        alloy_journal_job: forge_ws_journal
+        alloy_service_label: forge_ws
+        alloy_ct_label: "176"
+        alloy_journal_drop_rules: *w3_secret_drops
+
+- name: Alloy on CT 165 (honcho journal, wave 4)
+  hosts: honcho-blr-lxc
+  gather_facts: false
+  tags: [alloy_honcho, alloy_wave4]
+  roles:
+    - role: alloy
+      vars:
+        alloy_source_journal: true
+        alloy_journal_job: honcho_journal
+        alloy_service_label: honcho
+        alloy_ct_label: "165"
         alloy_journal_drop_rules: *w3_secret_drops
 
 # AdGuard querylog (owner card t49s294, 3:42 PM CT Nov 14). Family DNS: one CT
