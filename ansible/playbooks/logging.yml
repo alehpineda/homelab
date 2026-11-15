@@ -95,7 +95,8 @@
       vars:
         # Metrics wave 1 (owner card t40s246, 2:45 PM CT Nov 14) plus wave 2
         # (Wolff 1:1 5:14 PM CT Nov 14): jellyfin, navidrome, searxng; wave 3
-        # (card t57s331, 5:41 PM CT Nov 14): exportarr x5, qbittorrent, cadvisor, n8n.
+        # (card t57s331, 5:41 PM CT Nov 14): exportarr x5, qbittorrent, cadvisor, n8n;
+        # OpenBao scrape (card t872s4598, 7:31 PM CT Nov 14).
         # One target at a time on apply (-e prometheus_scrape_jobs=<subset>);
         # this is the end state.
         prometheus_scrape_jobs:
@@ -211,6 +212,17 @@
             static_configs:
               - targets: ["10.10.0.70:5678"]
                 labels: {host: n8n-blr-lxc, ct: "170", service: n8n, env: homelab}
+          - job: openbao
+            # Bearer token file lives only on CT172 (0600 root:root; not in git).
+            # Listener is HTTPS with the community-script self-signed cert (no SAN).
+            scheme: https
+            metrics_path: /v1/sys/metrics
+            params: {format: [prometheus]}
+            bearer_token_file: /etc/prometheus/openbao_token
+            tls_config: {insecure_skip_verify: true}
+            static_configs:
+              - targets: ["10.10.0.62:8200"]
+                labels: {host: openbao, ct: "162", service: openbao, env: homelab}
 
 - name: Prometheus remote_write to OpenObserve
   hosts: prometheus-blr-lxc

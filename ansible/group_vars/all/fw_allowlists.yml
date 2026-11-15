@@ -180,6 +180,7 @@ pve_fw_ct_rules:
     - {proto: udp, dport: "51820"}
   162:  # openbao — API via Caddy; 8201 cluster not exposed
     - {proto: tcp, dport: "8200", source: +caddy}
+    - {proto: tcp, dport: "8200", source: prometheus, comment: "openbao /v1/sys/metrics"}
   165:  # honcho placeholder — SSH only today
     []
   169:  # postiz — nginx :80 fronts 3000/4200; leave 3000/3002/4200 closed at PVE

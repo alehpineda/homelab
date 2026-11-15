@@ -1,6 +1,6 @@
 ---
 # Enable native Prometheus metrics on wave 2 apps (Jellyfin, Navidrome, SearXNG)
-# and wave 3 (n8n, --tags metrics_n8n).
+# and wave 3 (n8n, --tags metrics_n8n; OpenBao telemetry, --tags metrics_openbao).
 # Owner yes: Wolff 1:1, 5:14 PM CT Nov 14 2026.
 #
 #   cd ansible && ansible-playbook -i <inv> playbooks/metrics.yml --tags metrics_jellyfin
@@ -207,4 +207,71 @@
     - name: Restart n8n
       ansible.builtin.systemd_service:
         name: n8n
+        state: restarted
+
+# Metrics wave 3 (owner card t872s4598, 7:31 PM CT Nov 14 2026): OpenBao
+# telemetry retention so /v1/sys/metrics?format=prometheus has samples.
+# Does not enable unauthenticated_metrics_access; Prometheus scrapes with
+# a read-only token (policy prometheus-metrics, issued once with the root
+# token). Restart only if the block is added or changed. Auto-unseal is
+# ExecStartPost in the unit drop-in.
+- name: Enable OpenBao Prometheus telemetry
+  hosts: openbao
+  gather_facts: false
+  tags: [metrics_openbao]
+  vars:
+    openbao_hcl: /etc/openbao/openbao.hcl
+  tasks:
+    - name: Backup openbao.hcl
+      ansible.builtin.copy:
+        src: "{{ openbao_hcl }}"
+        dest: "{{ openbao_hcl }}.bak-forge-metrics"
+        remote_src: true
+        owner: openbao
+        group: openbao
+        mode: "0644"
+        force: false
+
+    - name: Stage a copy for the telemetry edit
+      ansible.builtin.copy:
+        src: "{{ openbao_hcl }}"
+        dest: /root/openbao.hcl.forge-metrics
+        remote_src: true
+        owner: root
+        group: root
+        mode: "0644"
+
+    - name: Ensure telemetry prometheus_retention_time on the staging copy
+      ansible.builtin.blockinfile:
+        path: /root/openbao.hcl.forge-metrics
+        marker: "# {mark} FORGE Prometheus telemetry"
+        block: |
+          telemetry {
+            prometheus_retention_time = "24h"
+          }
+        insertafter: EOF
+
+    - name: Validate the staging copy
+      ansible.builtin.command:
+        argv: [bao, operator, validate-config, "-config=/root/openbao.hcl.forge-metrics"]
+      changed_when: false
+
+    - name: Install openbao.hcl if the staging copy differs
+      ansible.builtin.copy:
+        src: /root/openbao.hcl.forge-metrics
+        dest: "{{ openbao_hcl }}"
+        remote_src: true
+        owner: openbao
+        group: openbao
+        mode: "0644"
+      notify: Restart openbao
+
+    - name: Remove the staging copy
+      ansible.builtin.file:
+        path: /root/openbao.hcl.forge-metrics
+        state: absent
+  handlers:
+    - name: Restart openbao
+      ansible.builtin.systemd_service:
+        name: openbao
         state: restarted
