@@ -186,36 +186,6 @@ loki.process "caddy_json" {
   forward_to = [loki.write.loki.receiver, loki.relabel.o2route.receiver]
 }
 {% endif %}
-{% if alloy_source_docker %}
-
-discovery.docker "local" {
-  host = "{{ alloy_docker_socket }}"
-}
-
-discovery.relabel "docker" {
-  targets = []
-  rule {
-    source_labels = ["__meta_docker_container_name"]
-    regex         = "/(.*)"
-    target_label  = "container"
-  }
-}
-
-loki.source.docker "arr" {
-  host          = "{{ alloy_docker_socket }}"
-  targets       = discovery.docker.local.targets
-  relabel_rules = discovery.relabel.docker.rules
-  labels        = { job = "arr_docker" }
-  forward_to    = [loki.process.arr_docker.receiver]
-}
-
-loki.process "arr_docker" {
-  // Drop empty / whitespace-only lines (OpenObserve rejects a whole
-  // Loki-push batch that contains one).
-  stage.drop {
-    expression          = "^\\s*$"
-    drop_counter_reason = "blank_line"
-  }
 {% macro arr_pack(name) %}
     // Pack into the standard body {ts, level, service, host, env, [component], msg}.
     // A line no regex matched keeps the whole line as msg (level unknown).
@@ -248,6 +218,36 @@ loki.process "arr_docker" {
 {% endraw %}
     }
 {% endmacro %}
+{% if alloy_source_docker %}
+
+discovery.docker "local" {
+  host = "{{ alloy_docker_socket }}"
+}
+
+discovery.relabel "docker" {
+  targets = []
+  rule {
+    source_labels = ["__meta_docker_container_name"]
+    regex         = "/(.*)"
+    target_label  = "container"
+  }
+}
+
+loki.source.docker "arr" {
+  host          = "{{ alloy_docker_socket }}"
+  targets       = discovery.docker.local.targets
+  relabel_rules = discovery.relabel.docker.rules
+  labels        = { job = "arr_docker" }
+  forward_to    = [loki.process.arr_docker.receiver]
+}
+
+loki.process "arr_docker" {
+  // Drop empty / whitespace-only lines (OpenObserve rejects a whole
+  // Loki-push batch that contains one).
+  stage.drop {
+    expression          = "^\\s*$"
+    drop_counter_reason = "blank_line"
+  }
 {% if 'bazarr' in alloy_docker_json_containers %}
 
   // Bazarr (Python logging): "2026-11-14 01:05:06,050 - logger (thread) :  INFO (file:line) - msg"
@@ -357,6 +357,24 @@ loki.process "arr_docker" {
     }
 {{ arr_pack('listenarr') }}  }
 {% endif %}
+{% if 'dockge' in alloy_docker_json_containers %}
+
+  // Dockge (management UI): ANSI-coloured "2026-11-12T18:16:12Z [AUTH] INFO: msg".
+  // Strip the colour codes, then pack.
+  stage.match {
+    selector = `{container="dockge"}`
+    stage.replace {
+      expression = `(\x1b\[[0-9;]*m)`
+      replace    = ""
+    }
+    stage.regex {
+      expression = `^(?P<raw>.*)$`
+    }
+    stage.regex {
+      expression = `^(?P<ts>\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z) \[(?P<component>[^\]]+)\] (?P<level_raw>[A-Za-z]+): (?P<msg>.*)$`
+    }
+{{ ts_rfc3339() }}{{ arr_pack('dockge') }}  }
+{% endif %}
 {% for c in alloy_docker_banner_containers %}
 
   // {{ c }}: CLEF JSON lines pass through untouched; pack only the non-JSON
@@ -375,6 +393,59 @@ loki.process "arr_docker" {
     }
 {{ arr_pack(c) }}  }
 {% endfor %}
+  forward_to = [loki.write.loki.receiver, loki.relabel.o2route.receiver]
+}
+{% endif %}
+{% if alloy_source_qbittorrent %}
+
+// qBittorrent (CT 182) writes its log to a file, not container stdout:
+// "(N) 2026-11-14T17:32:58 - msg", local wall time ({{ alloy_docker_local_tz }}),
+// level N=normal, I=info, W=warning, C=critical. qBittorrent renames the file to
+// .bakN at FileLogger\MaxSizeBytes (10 MiB since 5:54 PM CT Nov 14) and creates a new one (0600); a root path unit + timer
+// (alloy-qbittorrent-acl) re-grants alloy read. Torrent names stay in msg.
+local.file_match "qbittorrent" {
+  path_targets = [{ "__path__" = "{{ alloy_qbittorrent_log }}", "job" = "arr_qbittorrent" }]
+}
+
+loki.source.file "qbittorrent" {
+  targets       = local.file_match.qbittorrent.targets
+  tail_from_end = true
+  forward_to    = [loki.process.arr_qbittorrent.receiver]
+}
+
+loki.process "arr_qbittorrent" {
+  stage.drop {
+    expression          = "^\\s*$"
+    drop_counter_reason = "blank_line"
+  }
+  stage.regex {
+    expression = `^(?P<raw>.*)$`
+  }
+  stage.regex {
+    expression = `^\((?P<lvl>[NIWC])\) (?P<d>\d{4}-\d{2}-\d{2})T(?P<t>\d{2}:\d{2}:\d{2}) - (?P<msg>.*)$`
+  }
+  stage.template {
+    source   = "level_raw"
+{% raw %}    template = `{{ $l := default "" .lvl }}{{ if eq $l "W" }}warning{{ else if eq $l "C" }}crit{{ else if $l }}info{{ end }}`
+{% endraw %}
+  }
+  stage.template {
+    source   = "ts"
+{% raw %}    template = `{{ if .d }}{{ .d }} {{ .t }}{{ end }}`
+{% endraw %}
+  }
+{{ ts_local(false) }}{{ arr_pack('qbittorrent') }}
+  // Stream labels: job, host (external), ct, service, env only.
+  stage.label_drop {
+    values = ["filename"]
+  }
+  stage.static_labels {
+    values = {
+      ct      = "{{ alloy_ct_label }}",
+      service = "qbittorrent",
+      env     = "{{ alloy_env_label }}",
+    }
+  }
   forward_to = [loki.write.loki.receiver, loki.relabel.o2route.receiver]
 }
 {% endif %}

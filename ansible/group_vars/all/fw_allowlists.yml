@@ -17,12 +17,14 @@ pve_fw_cluster_ipsets:
     # OpenObserve .77, Uptime Kuma .84 (LAN IP, not NetBird). .73/.77 push to each
     # other over eth0; self-push is loopback and never hits the PVE firewall.
     # Used only by CT173 IN tcp/3100 and CT177 IN tcp/5080.
-    comment: Grafana Alloy agents (BRL host, Caddy CT250, arr CT182, wave 1 obs CTs); AdGuard .53/.55 querylog
+    comment: Grafana Alloy agents (BRL host, Caddy CT250, arr CT182, wave 1-3 CTs); AdGuard .53/.55 querylog
     # Wave 2 (2026-11-14): + journald on 180,183,185,186,187,193,196,160,161,181,188.
     # AdGuard querylog (2026-11-14): + .55 (B), .53 (A).
+    # Wave 3 (2026-11-14, card t57s331): + journald on 170,169,197,164,175(.63),162,189,194,195,199.
     cidrs: [10.10.0.21, 10.10.0.250, 10.10.0.82, 10.10.0.71, 10.10.0.72, 10.10.0.73, 10.10.0.74, 10.10.0.77, 10.10.0.84,
             10.10.0.80, 10.10.0.83, 10.10.0.85, 10.10.0.86, 10.10.0.87, 10.10.0.93, 10.10.0.96, 10.10.0.60, 10.10.0.61, 10.10.0.81, 10.10.0.88,
-            10.10.0.55, 10.10.0.53]
+            10.10.0.55, 10.10.0.53,
+            10.10.0.70, 10.10.0.69, 10.10.0.97, 10.10.0.64, 10.10.0.63, 10.10.0.62, 10.10.0.89, 10.10.0.94, 10.10.0.95, 10.10.0.99]
   # `management` already exists (10.10.0.0/24, 100.85.0.0/16) and is used by
   # node rules for 22/8006/3128. Not managed here; change it only with NetTit.
 
@@ -103,6 +105,9 @@ pve_fw_ct_rules:
     - {proto: tcp, dport: "4545,5001,6767,7878,8085,8686,8989,9117,9696", source: +caddy}
     - {proto: tcp, dport: "7878,8989", source: seerr}
     - {proto: tcp, dport: "12345", source: prometheus, comment: "alloy /metrics"}
+    - {proto: tcp, dport: "9707,9708,9709,9710,9711", source: prometheus, comment: "exportarr /metrics"}
+    - {proto: tcp, dport: "8080", source: prometheus, comment: "cadvisor /metrics"}
+    - {proto: tcp, dport: "17871", source: prometheus, comment: "qbittorrent-exporter /metrics"}
   183:  # seerr
     - {proto: tcp, dport: "5055", source: 10.10.0.0/24}
   184:  # uptime kuma
@@ -175,6 +180,7 @@ pve_fw_ct_rules:
     - {proto: udp, dport: "51820"}
   162:  # openbao — API via Caddy; 8201 cluster not exposed
     - {proto: tcp, dport: "8200", source: +caddy}
+    - {proto: tcp, dport: "8200", source: prometheus, comment: "openbao /v1/sys/metrics"}
   165:  # honcho placeholder — SSH only today
     []
   169:  # postiz — nginx :80 fronts 3000/4200; leave 3000/3002/4200 closed at PVE
@@ -182,6 +188,7 @@ pve_fw_ct_rules:
   170:  # n8n — Caddy UI; +nb_routers for possible gremory MCP RP (verify before apply)
     - {proto: tcp, dport: "5678", source: +caddy}
     - {proto: tcp, dport: "5678", source: +nb_routers}
+    - {proto: tcp, dport: "5678", source: prometheus, comment: "n8n /metrics"}
   171:  # grafana
     - {proto: tcp, dport: "3000", source: +caddy}
     - {proto: tcp, dport: "3000", source: prometheus, comment: "grafana /metrics"}

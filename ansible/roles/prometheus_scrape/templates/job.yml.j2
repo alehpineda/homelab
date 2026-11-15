@@ -1,13 +1,31 @@
 # Managed by ansible role prometheus_scrape (alehpineda/homelab). Do not edit live.
 scrape_configs:
   - job_name: {{ item.job | to_json }}
+{% if item.scrape_interval is defined %}
+    scrape_interval: {{ item.scrape_interval | to_json }}
+{% endif %}
+{% if item.scrape_timeout is defined %}
+    scrape_timeout: {{ item.scrape_timeout | to_json }}
+{% endif %}
+{% if item.scheme is defined %}
+    scheme: {{ item.scheme | to_json }}
+{% endif %}
 {% if item.metrics_path is defined %}
     metrics_path: {{ item.metrics_path | to_json }}
+{% endif %}
+{% if item.params is defined %}
+    params: {{ item.params | to_json }}
 {% endif %}
 {% if item.basic_auth is defined %}
     basic_auth:
       username: {{ item.basic_auth.username | default('') | to_json }}
       password_file: {{ item.basic_auth.password_file | to_json }}
+{% endif %}
+{% if item.bearer_token_file is defined %}
+    bearer_token_file: {{ item.bearer_token_file | to_json }}
+{% endif %}
+{% if item.tls_config is defined %}
+    tls_config: {{ item.tls_config | to_json }}
 {% endif %}
     static_configs:
 {% for sc in item.static_configs | default([{'targets': item.targets, 'labels': item.labels | default({})}]) %}
@@ -16,3 +34,6 @@ scrape_configs:
         labels: {{ sc.labels | to_json }}
 {% endif %}
 {% endfor %}
+{% if item.metric_relabel_configs is defined %}
+    metric_relabel_configs: {{ item.metric_relabel_configs | to_json }}
+{% endif %}

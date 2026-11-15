@@ -1,0 +1,7 @@
+# Managed by ansible role alloy (alehpineda/homelab). Do not edit live.
+[Unit]
+Description=Re-apply alloy read ACL on the qBittorrent log
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/alloy-qbittorrent-acl

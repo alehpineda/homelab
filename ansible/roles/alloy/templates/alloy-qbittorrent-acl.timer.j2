@@ -1,0 +1,12 @@
+# Managed by ansible role alloy (alehpineda/homelab). Do not edit live.
+# Fallback for the path unit.
+[Unit]
+Description=Re-apply alloy read ACL on the qBittorrent log every {{ alloy_qbittorrent_acl_interval }}
+
+[Timer]
+OnBootSec=30s
+OnUnitActiveSec={{ alloy_qbittorrent_acl_interval }}
+AccuracySec=5s
+
+[Install]
+WantedBy=timers.target

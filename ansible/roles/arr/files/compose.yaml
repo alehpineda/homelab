@@ -9,11 +9,12 @@
 # Recyclarr 8.8.1 (2026-11-13) joins that network with no published port.
 # It syncs TRaSH custom formats to Sonarr and Radarr on localhost.
 # Jackett (2026-11-13) joins that network on 9117.
+# qbittorrent-exporter (2026-11-14, metrics wave 3) joins that network on 17871.
 # Recreate the VPN namespace without upgrading, from /opt/stacks/arr.
 # Watchtower is not on that network and stays up:
 #   docker compose up -d --force-recreate \
 #     gluetun qbittorrent prowlarr sonarr radarr lidarr bazarr flaresolverr listenarr recyclarr \
-#     jackett
+#     jackett qbittorrent-exporter
 # Do not run `docker compose config` against a populated .env.
 # FlareSolverr listens on 8191 inside the gluetun namespace. That port
 # is not published and is not in FIREWALL_INPUT_PORTS.
@@ -36,6 +37,8 @@ services:
       - "10.10.0.82:6767:6767/tcp"
       - "10.10.0.82:4545:4545/tcp"
       - "10.10.0.82:9117:9117/tcp"
+      # qBittorrent exporter (metrics wave 3; PVE fw: Prometheus .72 only).
+      - "10.10.0.82:17871:17871/tcp"
     env_file:
       - /opt/stacks/arr/.env
     environment:
@@ -43,9 +46,9 @@ services:
       VPN_TYPE: ${VPN_TYPE:?set VPN_TYPE in /opt/stacks/arr/.env}
       WIREGUARD_PRIVATE_KEY: ${WIREGUARD_PRIVATE_KEY:?set WIREGUARD_PRIVATE_KEY in /opt/stacks/arr/.env}
       # Overrides env_file. 8085 qBittorrent, 9696 Prowlarr, 8989 Sonarr,
-      # 7878 Radarr, 8686 Lidarr, 6767 Bazarr, 4545 Listenarr, 9117 Jackett.
-      # Not 8191.
-      FIREWALL_INPUT_PORTS: "8085,9696,8989,7878,8686,6767,4545,9117"
+      # 7878 Radarr, 8686 Lidarr, 6767 Bazarr, 4545 Listenarr, 9117 Jackett,
+      # 17871 qBittorrent exporter. Not 8191.
+      FIREWALL_INPUT_PORTS: "8085,9696,8989,7878,8686,6767,4545,9117,17871"
     volumes:
       - /opt/arr/gluetun:/gluetun
     sysctls:
@@ -324,6 +327,193 @@ services:
       WATCHTOWER_NOTIFICATION_URL: ${WATCHTOWER_NOTIFICATION_URL:?set WATCHTOWER_NOTIFICATION_URL in /opt/stacks/arr/.env}
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+
+  # Metrics wave 3 (owner card t57s331, 5:41 PM CT Nov 14 2026). One exportarr
+  # per app on arr_default, NOT in gluetun's namespace: they reach each app on
+  # its published LAN port (arr_filter local_src admits 172.16.0.0/12), so
+  # gluetun, its ports and FIREWALL_INPUT_PORTS stay untouched and no VPN
+  # container is recreated. Exporter ports bind to 10.10.0.82 only; the PVE
+  # guest fw opens them to Prometheus 10.10.0.72 only (never via Caddy).
+  # Each API key is a 0600 root file in /opt/stacks/arr/secrets (not in git),
+  # mounted read-only and read through API_KEY_FILE. exportarr's image runs
+  # as 65532, which cannot read a 0600 root file, so it runs as 0 with every
+  # capability dropped and a read-only rootfs.
+  # Bring up only these, from /opt/stacks/arr:
+  #   docker compose up -d exportarr-sonarr exportarr-radarr exportarr-lidarr \
+  #     exportarr-prowlarr exportarr-bazarr cadvisor
+
+  exportarr-sonarr:
+    # onedr0p/exportarr v2.3.0 amd64
+    image: ghcr.io/onedr0p/exportarr@sha256:af535d94061cf97a52e1661945ffba78c03f9443eae7c0da1a80a5a4be56b520
+    pull_policy: missing
+    container_name: exportarr-sonarr
+    command: ["sonarr"]
+    user: "0:0"
+    environment:
+      PORT: "9707"
+      URL: http://10.10.0.82:8989
+      API_KEY_FILE: /run/secrets/apikey
+      # INFO logs one line per API call on every scrape (arr_docker noise).
+      LOG_LEVEL: warn
+      TZ: America/Chicago
+    volumes:
+      - /opt/stacks/arr/secrets/sonarr.apikey:/run/secrets/apikey:ro
+    ports:
+      - "10.10.0.82:9707:9707/tcp"
+    read_only: true
+    cap_drop: [ALL]
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+
+  exportarr-radarr:
+    # onedr0p/exportarr v2.3.0 amd64
+    image: ghcr.io/onedr0p/exportarr@sha256:af535d94061cf97a52e1661945ffba78c03f9443eae7c0da1a80a5a4be56b520
+    pull_policy: missing
+    container_name: exportarr-radarr
+    command: ["radarr"]
+    user: "0:0"
+    environment:
+      PORT: "9708"
+      URL: http://10.10.0.82:7878
+      API_KEY_FILE: /run/secrets/apikey
+      # INFO logs one line per API call on every scrape (arr_docker noise).
+      LOG_LEVEL: warn
+      TZ: America/Chicago
+    volumes:
+      - /opt/stacks/arr/secrets/radarr.apikey:/run/secrets/apikey:ro
+    ports:
+      - "10.10.0.82:9708:9708/tcp"
+    read_only: true
+    cap_drop: [ALL]
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+
+  exportarr-lidarr:
+    # onedr0p/exportarr v2.3.0 amd64
+    image: ghcr.io/onedr0p/exportarr@sha256:af535d94061cf97a52e1661945ffba78c03f9443eae7c0da1a80a5a4be56b520
+    pull_policy: missing
+    container_name: exportarr-lidarr
+    command: ["lidarr"]
+    user: "0:0"
+    environment:
+      PORT: "9709"
+      URL: http://10.10.0.82:8686
+      API_KEY_FILE: /run/secrets/apikey
+      # INFO logs one line per API call on every scrape (arr_docker noise).
+      LOG_LEVEL: warn
+      TZ: America/Chicago
+    volumes:
+      - /opt/stacks/arr/secrets/lidarr.apikey:/run/secrets/apikey:ro
+    ports:
+      - "10.10.0.82:9709:9709/tcp"
+    read_only: true
+    cap_drop: [ALL]
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+
+  exportarr-prowlarr:
+    # onedr0p/exportarr v2.3.0 amd64
+    image: ghcr.io/onedr0p/exportarr@sha256:af535d94061cf97a52e1661945ffba78c03f9443eae7c0da1a80a5a4be56b520
+    pull_policy: missing
+    container_name: exportarr-prowlarr
+    command: ["prowlarr"]
+    user: "0:0"
+    environment:
+      PORT: "9710"
+      URL: http://10.10.0.82:9696
+      API_KEY_FILE: /run/secrets/apikey
+      # INFO logs one line per API call on every scrape (arr_docker noise).
+      LOG_LEVEL: warn
+      TZ: America/Chicago
+    volumes:
+      - /opt/stacks/arr/secrets/prowlarr.apikey:/run/secrets/apikey:ro
+    ports:
+      - "10.10.0.82:9710:9710/tcp"
+    read_only: true
+    cap_drop: [ALL]
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+
+  exportarr-bazarr:
+    # onedr0p/exportarr v2.3.0 amd64
+    image: ghcr.io/onedr0p/exportarr@sha256:af535d94061cf97a52e1661945ffba78c03f9443eae7c0da1a80a5a4be56b520
+    pull_policy: missing
+    container_name: exportarr-bazarr
+    command: ["bazarr"]
+    user: "0:0"
+    environment:
+      PORT: "9711"
+      URL: http://10.10.0.82:6767
+      API_KEY_FILE: /run/secrets/apikey
+      # INFO logs one line per API call on every scrape (arr_docker noise).
+      LOG_LEVEL: warn
+      TZ: America/Chicago
+    volumes:
+      - /opt/stacks/arr/secrets/bazarr.apikey:/run/secrets/apikey:ro
+    ports:
+      - "10.10.0.82:9711:9711/tcp"
+    read_only: true
+    cap_drop: [ALL]
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+
+  qbittorrent-exporter:
+    # martabal/qbittorrent-exporter v2.0.4 amd64. In gluetun's namespace so it
+    # reaches qBittorrent at 127.0.0.1:8085 with no credentials: owner card
+    # t58s340 (5:54 PM CT Nov 14) set qBittorrent [WebUI] LocalHostAuth=false;
+    # LAN and Caddy clients still authenticate. :17871 is published by
+    # gluetun above. Per-torrent and tracker series are off or dropped
+    # (no torrent names or tracker URLs as labels): ENABLE_TRACKER=false here,
+    # and the Prometheus job drops qbittorrent_torrent_* except _states.
+    image: ghcr.io/martabal/qbittorrent-exporter@sha256:9289fc5ad5cef7af6af5af5ab5ed7b8d609827490ba374df858905d66da7ec5f
+    pull_policy: missing
+    container_name: qbittorrent-exporter
+    network_mode: service:gluetun
+    depends_on:
+      gluetun:
+        condition: service_healthy
+    environment:
+      QBITTORRENT_BASE_URL: http://127.0.0.1:8085
+      EXPORTER_PORT: "17871"
+      ENABLE_TRACKER: "false"
+      ENABLE_HIGH_CARDINALITY: "false"
+      ENABLE_INCREASED_CARDINALITY: "false"
+      TZ: America/Chicago
+    read_only: true
+    cap_drop: [ALL]
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+
+  cadvisor:
+    # google/cadvisor v0.60.6 amd64. Docker containers only; heavy/per-CPU
+    # collectors off and no container labels exported (cardinality).
+    # Prometheus also drops container_* series without a container name.
+    image: ghcr.io/google/cadvisor@sha256:b8e7d1093144fd088f425ff003d75a4aa405de075db78dae3bc563730b1bd07a
+    pull_policy: missing
+    container_name: cadvisor
+    command:
+      - --port=8080
+      - --docker_only=true
+      - --housekeeping_interval=30s
+      - --store_container_labels=false
+      - --whitelisted_container_labels=com.docker.compose.service
+      - --disable_metrics=advtcp,cpu_topology,cpuset,disk,diskIO,hugetlb,memory_numa,percpu,perf_event,process,referenced_memory,resctrl,sched,tcp,udp
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker:/var/lib/docker:ro
+    ports:
+      - "10.10.0.82:8080:8080/tcp"
     restart: unless-stopped
     security_opt:
       - no-new-privileges:true

@@ -1,0 +1,11 @@
+# Managed by ansible role alloy (alehpineda/homelab). Do not edit live.
+# Fires on create/rename in the log dir (qBittorrent rotation).
+[Unit]
+Description=Watch the qBittorrent log dir for rotation
+
+[Path]
+PathChanged={{ alloy_qbittorrent_log_dir }}
+Unit=alloy-qbittorrent-acl.service
+
+[Install]
+WantedBy=paths.target
