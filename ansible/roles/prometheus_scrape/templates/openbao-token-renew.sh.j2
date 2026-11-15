@@ -1,0 +1,55 @@
+#!/bin/bash
+# Renew the OpenBao Prometheus metrics token. Logs TTL only; never the token.
+# Managed by ansible role prometheus_scrape (alehpineda/homelab).
+set +o history
+unset HISTFILE
+export HISTFILE=/dev/null
+set -euo pipefail
+umask 077
+
+TOKEN_FILE={{ prometheus_openbao_token_file | to_json }}
+URL={{ prometheus_openbao_renew_url | to_json }}
+
+if [[ ! -r "$TOKEN_FILE" ]]; then
+  echo "openbao-token-renew: token file missing" >&2
+  exit 2
+fi
+
+tmp=$(mktemp)
+hdr=$(mktemp)
+trap 'shred -u "$tmp" "$hdr" 2>/dev/null || rm -f "$tmp" "$hdr"' EXIT
+chmod 0600 "$tmp" "$hdr"
+
+# Header file so the token is not on the curl argv.
+{
+  printf 'X-Vault-Token: '
+  tr -d '\n' < "$TOKEN_FILE"
+  printf '\n'
+} > "$hdr"
+
+set +e
+http=$(curl -sS -k --connect-timeout 10 --max-time 20 \
+  -o "$tmp" -w '%{http_code}' \
+  -X POST "$URL" \
+  -H 'Content-Type: application/json' \
+  -H "@${hdr}" \
+  -d '{}')
+curl_rc=$?
+set -e
+
+if [[ "$curl_rc" -ne 0 || "$http" != "200" ]]; then
+  echo "openbao-token-renew: HTTP ${http:-000} curl_rc=${curl_rc}" >&2
+  exit 1
+fi
+
+ttl=$(python3 -c '
+import json, sys
+from pathlib import Path
+d = json.loads(Path(sys.argv[1]).read_text() or "{}")
+ttl = (d.get("auth") or {}).get("lease_duration")
+if ttl is None:
+    sys.exit(3)
+print(ttl)
+' "$tmp") || { echo "openbao-token-renew: no lease_duration in response" >&2; exit 1; }
+
+echo "openbao-token-renew: renewed ttl_seconds=${ttl}"

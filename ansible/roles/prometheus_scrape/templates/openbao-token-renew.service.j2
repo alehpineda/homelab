@@ -1,0 +1,11 @@
+# Managed by ansible role prometheus_scrape (alehpineda/homelab). Do not edit live.
+[Unit]
+Description=Renew the OpenBao Prometheus metrics token
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=root
+ExecStart={{ prometheus_openbao_renew_script }}
+# Nonzero exit from the script is a failed unit, visible in journald.

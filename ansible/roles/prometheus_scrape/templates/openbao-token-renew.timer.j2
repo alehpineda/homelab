@@ -1,0 +1,12 @@
+# Managed by ansible role prometheus_scrape (alehpineda/homelab). Do not edit live.
+[Unit]
+Description=Monthly renewal of the OpenBao Prometheus metrics token
+
+[Timer]
+OnCalendar=monthly
+Persistent=true
+RandomizedDelaySec={{ prometheus_openbao_renew_randomized_delay }}
+AccuracySec=1h
+
+[Install]
+WantedBy=timers.target

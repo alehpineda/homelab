@@ -98,7 +98,9 @@
         # (card t57s331, 5:41 PM CT Nov 14): exportarr x5, qbittorrent, cadvisor, n8n;
         # OpenBao scrape (card t872s4598, 7:31 PM CT Nov 14).
         # One target at a time on apply (-e prometheus_scrape_jobs=<subset>);
-        # this is the end state.
+        # this is the end state. The OpenBao token renew timer is independent
+        # of that subset (card t874u, 7:44 PM CT Nov 14).
+        prometheus_openbao_token_renew: true
         prometheus_scrape_jobs:
           - job: openobserve_node
             static_configs:
