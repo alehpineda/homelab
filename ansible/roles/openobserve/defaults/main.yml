@@ -35,3 +35,9 @@ openobserve_root_secret_file: "{{ lookup('ansible.builtin.env', 'HOME') }}/.conf
 openobserve_ingest_secret_file: "{{ lookup('ansible.builtin.env', 'HOME') }}/.config/forge/openobserve_ingest"
 # Create the ingest user (role admin; OSS has no narrower role) after start.
 openobserve_create_ingest_user: true
+
+# v1.1.2 setup_logs() applies RUST_LOG via tracing_subscriber
+# EnvFilter::from_env_lossy(). Keep the default at info and drop only the
+# realtime pipeline batch logger, which emitted ~4 INFO lines per batch after
+# Wolff attached the wolff-json-extract-* pipelines.
+openobserve_rust_log: "info,openobserve_core::pipeline::batch_execution=warn"
