@@ -1,0 +1,6 @@
+---
+- name: Restart unbound-exporter
+  ansible.builtin.systemd_service:
+    name: unbound-exporter
+    state: restarted
+    daemon_reload: true

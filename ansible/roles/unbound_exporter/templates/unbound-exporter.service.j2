@@ -1,0 +1,25 @@
+# Managed by ansible role unbound_exporter (alehpineda/homelab).
+[Unit]
+Description=Unbound Prometheus exporter {{ unbound_exporter_version }}
+After=network-online.target unbound.service
+Wants=network-online.target
+
+[Service]
+User={{ unbound_exporter_user }}
+Group={{ unbound_exporter_user }}
+SupplementaryGroups={{ unbound_exporter_socket_group }}
+ExecStart=/usr/bin/unbound_exporter -unbound.host unix://{{ unbound_exporter_socket }} -web.listen-address {{ unbound_exporter_listen }}
+Restart=on-failure
+RestartSec=10
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectKernelTunables=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+LockPersonality=true
+
+[Install]
+WantedBy=multi-user.target

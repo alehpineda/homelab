@@ -1,0 +1,12 @@
+---
+# letsencrypt/unbound_exporter on CT154. Talks to Unbound over the existing
+# remote-control unix socket (control-interface /run/unbound.ctl, root:unbound
+# 0660), so no Unbound config change and no TLS control certs. /metrics on
+# the LAN IP for Prometheus CT172 only (PVE guest fw: tcp/9167 from prometheus).
+unbound_exporter_version: "0.6.0"
+unbound_exporter_sha256: 4f61876a292b49f918baf6b6b57d17dcf94f97513787282b0dadb88b95084890
+unbound_exporter_url: "https://github.com/letsencrypt/unbound_exporter/releases/download/v{{ unbound_exporter_version }}/unbound_exporter-v{{ unbound_exporter_version }}.x86_64.deb"
+unbound_exporter_user: unbound-exporter
+unbound_exporter_socket_group: unbound
+unbound_exporter_socket: /run/unbound.ctl
+unbound_exporter_listen: "{{ ansible_host }}:9167"

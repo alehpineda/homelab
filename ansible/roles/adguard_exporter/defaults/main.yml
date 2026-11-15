@@ -1,0 +1,26 @@
+---
+# henrywhitaker3/adguard-exporter on an AdGuard CT (153/155). It reads the
+# local AdGuard API over loopback and serves /metrics on the LAN IP for
+# Prometheus CT172 only (PVE guest fw: tcp/9618 from alias prometheus).
+# Pinned release + sha256 of the upstream linux_amd64 tarball (checksums.txt).
+adguard_exporter_version: "1.2.3"
+adguard_exporter_sha256: aa86ad8bceabd47d2f8c5b1b450f5e7789bb826bf47e0369f4b174b6b6dab438
+adguard_exporter_url: "https://github.com/henrywhitaker3/adguard-exporter/releases/download/v{{ adguard_exporter_version }}/adguard-exporter_{{ adguard_exporter_version }}_linux_amd64.tar.gz"
+adguard_exporter_install_dir: "/usr/local/lib/adguard-exporter-{{ adguard_exporter_version }}"
+adguard_exporter_bin: /usr/local/bin/adguard-exporter
+adguard_exporter_user: adguard-exporter
+adguard_exporter_listen: "{{ ansible_host }}:9618"
+# AdGuard force_https redirects authenticated HTTP to HTTPS. The origin cert
+# covers *.alehpineda.com, not 127.0.0.1: use that DNS name with an exporter-
+# private /etc/hosts bind mount mapping it to loopback. No host DNS/AGH edit.
+adguard_exporter_server: https://adguard.alehpineda.com
+adguard_exporter_ca_url: https://developers.cloudflare.com/ssl/static/origin_ca_rsa_root.pem
+adguard_exporter_ca_sha256: 91a8a5567efa6bf941162aa806b3ba476aaddf7867640e53053b35fb225a5dae
+adguard_exporter_ca_file: /etc/adguard-exporter/origin-ca.pem
+adguard_exporter_interval: 60s
+# Root-only env file on the CT (ADGUARD_SERVERS / _USERNAMES / _PASSWORDS).
+adguard_exporter_env_file: /etc/adguard-exporter/adguard-exporter.env
+# Controller-side files holding the existing AdGuard admin login (one value
+# each, 0600). Pass with -e; never commit, never logged (no_log).
+adguard_exporter_username_file: ""
+adguard_exporter_password_file: ""

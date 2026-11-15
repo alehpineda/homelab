@@ -1,0 +1,130 @@
+---
+- name: Require controller credential files
+  ansible.builtin.assert:
+    that:
+      - adguard_exporter_username_file | length > 0
+      - adguard_exporter_password_file | length > 0
+    fail_msg: Pass -e adguard_exporter_username_file=... -e adguard_exporter_password_file=...
+  no_log: true
+
+- name: System user for the exporter
+  ansible.builtin.user:
+    name: "{{ adguard_exporter_user }}"
+    system: true
+    shell: /usr/sbin/nologin
+    create_home: false
+    home: /nonexistent
+
+- name: Install dir
+  ansible.builtin.file:
+    path: "{{ adguard_exporter_install_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Download pinned release (sha256 checked)
+  ansible.builtin.get_url:
+    url: "{{ adguard_exporter_url }}"
+    dest: "/root/adguard-exporter_{{ adguard_exporter_version }}_linux_amd64.tar.gz"
+    checksum: "sha256:{{ adguard_exporter_sha256 }}"
+    owner: root
+    group: root
+    mode: "0600"
+
+- name: Unpack
+  ansible.builtin.unarchive:
+    src: "/root/adguard-exporter_{{ adguard_exporter_version }}_linux_amd64.tar.gz"
+    dest: "{{ adguard_exporter_install_dir }}"
+    remote_src: true
+    owner: root
+    group: root
+    creates: "{{ adguard_exporter_install_dir }}/adguard-exporter"
+  notify: Restart adguard-exporter
+
+- name: Link binary
+  ansible.builtin.file:
+    src: "{{ adguard_exporter_install_dir }}/adguard-exporter"
+    dest: "{{ adguard_exporter_bin }}"
+    state: link
+    force: true
+  notify: Restart adguard-exporter
+
+- name: Config dir (only env file is root-only)
+  ansible.builtin.file:
+    path: "{{ adguard_exporter_env_file | dirname }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Cloudflare Origin CA (public root, pinned checksum)
+  ansible.builtin.get_url:
+    url: "{{ adguard_exporter_ca_url }}"
+    dest: "{{ adguard_exporter_ca_file }}"
+    checksum: "sha256:{{ adguard_exporter_ca_sha256 }}"
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Restart adguard-exporter
+
+- name: Exporter-private hosts (loopback only, not the host's /etc/hosts)
+  ansible.builtin.copy:
+    dest: /etc/adguard-exporter/hosts
+    content: |
+      127.0.0.1 localhost adguard.alehpineda.com
+      ::1 localhost
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Restart adguard-exporter
+
+- name: Env file with the AdGuard login (root 0600, values never logged)
+  ansible.builtin.copy:
+    dest: "{{ adguard_exporter_env_file }}"
+    content: |
+      ADGUARD_SERVERS={{ adguard_exporter_server }}
+      ADGUARD_USERNAMES={{ lookup('ansible.builtin.file', adguard_exporter_username_file) | trim }}
+      ADGUARD_PASSWORDS={{ lookup('ansible.builtin.file', adguard_exporter_password_file) | trim }}
+      ADGUARD_CA_CERT_FILE={{ adguard_exporter_ca_file }}
+      INTERVAL={{ adguard_exporter_interval }}
+      BIND_ADDR={{ adguard_exporter_listen }}
+    owner: root
+    group: root
+    mode: "0600"
+  no_log: true
+  diff: false
+  notify: Restart adguard-exporter
+
+- name: Systemd unit
+  ansible.builtin.template:
+    src: adguard-exporter.service.j2
+    dest: /etc/systemd/system/adguard-exporter.service
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Restart adguard-exporter
+
+- name: Enable and start
+  ansible.builtin.systemd_service:
+    name: adguard-exporter
+    enabled: true
+    state: started
+    daemon_reload: true
+
+- name: Flush handlers
+  ansible.builtin.meta: flush_handlers
+
+- name: Wait for /metrics
+  ansible.builtin.uri:
+    url: "http://{{ adguard_exporter_listen }}/metrics"
+    return_content: false
+  register: adguard_exporter_probe
+  retries: 10
+  delay: 3
+  until: adguard_exporter_probe.status == 200
+
+- name: Remove the downloaded tarball
+  ansible.builtin.file:
+    path: "/root/adguard-exporter_{{ adguard_exporter_version }}_linux_amd64.tar.gz"
+    state: absent
