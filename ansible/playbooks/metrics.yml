@@ -6,6 +6,9 @@
 #  -e adguard_exporter_username_file=... -e adguard_exporter_password_file=...)
 # and the Unbound exporter on CT154 (--tags metrics_unbound). Exporters only:
 # no AdGuardHome.yaml or Unbound config change.
+# Wave 6 (owner card t72s425, 10:42 PM CT Nov 14): PBS exporter on CT172
+# (--tags metrics_pbs; token in /etc/pbs-exporter/token 0600 root on CT172,
+#  or -e pbs_exporter_token_file=...).
 # Owner yes: Wolff 1:1, 5:14 PM CT Nov 14 2026.
 #
 #   cd ansible && ansible-playbook -i <inv> playbooks/metrics.yml --tags metrics_jellyfin
@@ -303,3 +306,13 @@
   tags: [metrics_unbound, metrics_wave5]
   roles:
     - role: unbound_exporter
+
+# Wave 6 exporter (owner card t72s425, 10:42 PM CT Nov 14). On the Prometheus
+# CT itself, loopback only. Token of pbs-exporter@pbs!prometheus (Audit on /,
+# read-only) in /etc/pbs-exporter/token (0600 root) or -e pbs_exporter_token_file.
+- name: PBS exporter on CT 172 (Prometheus)
+  hosts: prometheus-blr-lxc
+  gather_facts: false
+  tags: [metrics_pbs, metrics_wave6]
+  roles:
+    - role: pbs_exporter

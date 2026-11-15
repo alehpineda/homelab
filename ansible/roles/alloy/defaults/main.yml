@@ -55,6 +55,9 @@ alloy_service_label: "{{ alloy_journal_job }}"
 # CT id as a string stream label. Empty (BRL host) = no ct/service stream
 # labels, so the live pve_journal stream identity stays unchanged.
 alloy_ct_label: ""
+# Host-level sources with no ct (wave 6 PBS): still stamp the service stream
+# label. BRL keeps false, so its render stays byte-identical.
+alloy_journal_service_stream_label: false
 # Optional per-host journal drop filters, applied to MESSAGE (the "msg"
 # field) before the JSON line is built, so both Loki and OpenObserve lose
 # the same lines. List of {expression: RE2 regex, reason: drop_counter_reason,
@@ -92,3 +95,12 @@ alloy_qbittorrent_config_dir: /opt/arr/qbittorrent
 alloy_qbittorrent_log_dir: "{{ alloy_qbittorrent_config_dir }}/qBittorrent/logs"
 alloy_qbittorrent_log: "{{ alloy_qbittorrent_log_dir }}/qbittorrent.log"
 alloy_qbittorrent_acl_interval: 2min
+
+# Remote syslog listener (wave 6, CT 173): one listener per device, e.g.
+#   - {address: "10.10.0.73:1514", protocol: udp, format: rfc3164,
+#      job: flint_syslog, host: flint, service: flint}
+# Open the port in fw_allowlists (CT rule) and the in-guest nft for the
+# device IP only.
+alloy_source_syslog: false
+alloy_syslog_listeners: []
+alloy_syslog_drop_rules: []

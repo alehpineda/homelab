@@ -30,6 +30,12 @@
 #                 the querylog (same Alloy, plays alloy_adguard_a/_b). Per-CT
 #                 tags alloy_<service>. One CT at a time, CT151 before CT150;
 #                 ipset first. Never touch NetBird or forge_arr_router config.
+#   alloy_wave6   wave 6 (card t72s425, 10:42 PM CT Nov 14): PBS host journal
+#                 (play alloy_pbs; grokops on PBS has allowlisted sudo only, so
+#                 the owner applies it as root with the staged script, see
+#                 docs/runbooks/logging-loki-openobserve.md) and the Flint
+#                 remote-syslog listener on the CT 173 Alloy (play alloy_loki,
+#                 job flint_syslog, udp/1514 from 10.10.0.1 only).
 # See docs/runbooks/logging-loki-openobserve.md.
 - name: Loki config
   hosts: loki-blr-lxc
@@ -106,6 +112,9 @@
         # (card t57s331, 5:41 PM CT Nov 14): exportarr x5, qbittorrent, cadvisor, n8n;
         # OpenBao scrape (card t872s4598, 7:31 PM CT Nov 14).
         # Wave 5 (card t67s400, 9:48 PM CT Nov 14): adguard x2, unbound.
+        # Wave 6 (card t72s425, 10:42 PM CT Nov 14): pbs (exporter on CT172
+        # itself, 127.0.0.1:10019); adguard `server` label dropped (both
+        # exporters reported the same upstream URL).
         # One target at a time on apply (-e prometheus_scrape_jobs=<subset>);
         # this is the end state. The OpenBao token renew timer is independent
         # of that subset (card t874u, 7:44 PM CT Nov 14).
@@ -248,6 +257,9 @@
               - {source_labels: [domain], regex: ".+", action: drop}
               - {source_labels: [user], regex: ".+", action: drop}
               - {source_labels: [name], regex: ".+", action: drop}
+              # Wave 6: both exporters report server=https://adguard.alehpineda.com;
+              # host/ct already tell them apart.
+              - {regex: server, action: labeldrop}
             static_configs:
               - targets: ["10.10.0.53:9618"]
                 labels: {host: adguard-blr-lxc, ct: "153", service: adguard, env: homelab}
@@ -259,6 +271,17 @@
             static_configs:
               - targets: ["10.10.0.54:9167"]
                 labels: {host: unbound-blr-lxc, ct: "154", service: unbound, env: homelab}
+          # Metrics wave 6 (owner card t72s425, 10:42 PM CT Nov 14).
+          - job: pbs
+            # natrontech/pbs-exporter on CT172 (role pbs_exporter), loopback
+            # only; read-only token pbs-exporter@pbs!prometheus (Audit on /).
+            # Never via Caddy. Datastore usage, last backup time per guest,
+            # last verify state.
+            scrape_interval: 60s
+            scrape_timeout: 30s
+            static_configs:
+              - targets: ["127.0.0.1:10019"]
+                labels: {host: astarothrinascimento, service: pbs, env: homelab}
 
 - name: Prometheus remote_write to OpenObserve
   hosts: prometheus-blr-lxc
@@ -346,6 +369,20 @@
         alloy_apt_existing_grafana_repo: true  # keep the existing apt.grafana.com source/key
         alloy_service_label: loki
         alloy_ct_label: "173"
+        # Wave 6 (card t72s425, 10:42 PM CT Nov 14): remote syslog from the
+        # Flint router (OpenWrt logd, RFC3164 over UDP). Comet KVM has no
+        # remote-syslog setting, so it has no listener.
+        alloy_source_syslog: true
+        alloy_syslog_listeners:
+          - {address: "10.10.0.73:1514", protocol: udp, format: rfc3164,
+             job: flint_syslog, host: flint, service: flint}
+        alloy_syslog_drop_rules:
+          - reason: secret_token_shape
+            comment: "Tokens, JWTs, private key headers (same as the wave 3 guard)."
+            expression: '(hvs\.[A-Za-z0-9_-]{20,}|\bs\.[A-Za-z0-9]{24}\b|eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}|-----BEGIN [A-Z ]*PRIVATE KEY)'
+          - reason: secret_password_kv
+            comment: "password=/passwd=/psk= key-value pairs (hostapd, PPPoE, VPN logs)."
+            expression: "(?i)\\b(password|passwd|psk|wpa_passphrase|secret)\\s*[=:]\\s*\\S+"
 
 - name: Alloy on CT 177 (OpenObserve journal, wave 1)
   hosts: openobserve-blr-lxc
@@ -790,4 +827,22 @@
         alloy_source_journal: true
         alloy_journal_job: adguard_journal
         alloy_service_label: adguard
+        alloy_journal_drop_rules: *w3_secret_drops
+
+# Wave 6 (owner card t72s425, 10:42 PM CT Nov 14, Wolff 1:1): PBS host journal.
+# Host-level: no ct label. grokops on PBS only has allowlisted sudo
+# (proxmox-backup-manager, proxmox-backup-client, systemctl, apt), so this play
+# needs root (-u root -k). The live apply is the owner-run script rendered from
+# this play (runbook). Never touch the datastore or the 02:00/03:30 jobs.
+- name: Alloy on the PBS host (journal, wave 6)
+  hosts: astarothrinascimento
+  gather_facts: false
+  tags: [alloy_pbs, alloy_wave6]
+  roles:
+    - role: alloy
+      vars:
+        alloy_source_journal: true
+        alloy_journal_job: pbs_journal
+        alloy_service_label: pbs
+        alloy_journal_service_stream_label: true
         alloy_journal_drop_rules: *w3_secret_drops

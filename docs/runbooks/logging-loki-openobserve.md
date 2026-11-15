@@ -71,6 +71,41 @@ Owner, 2026-11-14 1:54 PM CT: "The json for the rest of the existing logs is a y
 4. Add the CT IP to the `log_shippers` ipset (`fw_allowlists.yml`) and to CT173's in-guest `push_allow` before the first push.
 5. Verify both sinks get valid JSON with 0 drops, then hand the service to Wolff.
 
+## Wave 6: PBS host, Flint syslog, PBS exporter (owner card t72s425, 10:42 PM CT Nov 14 2026)
+
+- **PBS host journal** (job `pbs_journal`, labels env/host/service/job, no ct).
+  `grokops` on PBS only has allowlisted sudo (proxmox-backup-manager,
+  proxmox-backup-client, systemctl, apt), so `--tags alloy_pbs` needs root
+  (`-u root -k`). Live apply: the owner runs, as root on PBS,
+  `/home/grokops/forge-wave6/pbs-alloy-wave6-20261114.sh` after
+  `sha256sum -c /home/grokops/forge-wave6/pbs-alloy-wave6-20261114.sh.sha256`.
+  It does what the role does (pinned Alloy from apt.grafana.com, held; journal
+  groups; o2.env 0600; config rendered from this play). `rollback` argument
+  undoes it. Alloy HTTP stays on 127.0.0.1:12345. `.25` is in `log_shippers`
+  and CT173 `push_allow`.
+- **Flint remote syslog** (job `flint_syslog`, host `flint`). Listener on the
+  CT173 Alloy, `10.10.0.73:1514/udp`, RFC3164; PVE guest rule udp/1514 from
+  alias `flint` only, plus `ip saddr 10.10.0.1 udp dport 1514 accept` in
+  CT173's in-guest nft. JSON body `{ts, level, service, host, env, app, msg}`,
+  `ts` = receive time. Router side (OpenWrt logd), backup
+  `/etc/config/system.bak-forge-wave6-*` first:
+  ```
+  uci set system.@system[0].log_ip=10.10.0.73
+  uci set system.@system[0].log_port=1514
+  uci set system.@system[0].log_proto=udp
+  uci commit system
+  /etc/init.d/log restart
+  ```
+  Rollback: `uci delete` the three options, commit, restart log.
+- **Comet KVM (GL-RM1)**: no remote-syslog setting in the UI or docs; not
+  shipped.
+- **PBS exporter**: role `pbs_exporter` on CT172 (`metrics.yml --tags
+  metrics_pbs`), natrontech/pbs-exporter v0.10.0 (tarball and binary sha256
+  pinned), `127.0.0.1:10019`, Prometheus job `pbs`. Read-only identity
+  `pbs-exporter@pbs!prometheus` (Audit on `/` for user and token), token in
+  `/etc/pbs-exporter/token` (0600 root, systemd LoadCredential, DynamicUser).
+  TLS verified against the pinned PBS cert (fingerprint in role defaults).
+
 ## Rollback
 
 - Alloy: `systemctl disable --now alloy`; `apt-mark unhold alloy && apt purge alloy`;
