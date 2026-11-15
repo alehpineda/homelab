@@ -1,0 +1,33 @@
+# Managed by ansible role pbs_exporter (alehpineda/homelab).
+[Unit]
+Description=Proxmox Backup Server Prometheus exporter {{ pbs_exporter_version }}
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+DynamicUser=true
+LoadCredential=token:{{ pbs_exporter_token_dest }}
+Environment=PBS_ENDPOINT={{ pbs_exporter_endpoint }}
+Environment=PBS_USERNAME={{ pbs_exporter_username }}
+Environment=PBS_API_TOKEN_NAME={{ pbs_exporter_token_name }}
+Environment=PBS_API_TOKEN_FILE=%d/token
+Environment=PBS_LISTEN_ADDRESS={{ pbs_exporter_listen }}
+Environment=PBS_TIMEOUT=20s
+Environment=PBS_WRITE_TIMEOUT=25s
+Environment=SSL_CERT_FILE=/etc/pbs-exporter/pbs-ca.pem
+BindReadOnlyPaths=/etc/pbs-exporter/hosts:/etc/hosts
+ExecStart=/usr/local/bin/pbs-exporter
+Restart=on-failure
+RestartSec=10
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectKernelTunables=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+LockPersonality=true
+
+[Install]
+WantedBy=multi-user.target

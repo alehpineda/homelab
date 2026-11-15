@@ -65,6 +65,11 @@ loki.source.journal "host" {
     ct      = "{{ alloy_ct_label }}",
     service = "{{ alloy_service_label }}",
   }
+{% elif alloy_journal_service_stream_label %}
+  labels         = {
+    job     = "{{ alloy_journal_job }}",
+    service = "{{ alloy_service_label }}",
+  }
 {% else %}
   labels         = { job = "{{ alloy_journal_job }}" }
 {% endif %}
@@ -485,6 +490,98 @@ loki.process "adguard_querylog" {
       service = "adguard",
       env     = "{{ alloy_env_label }}",
     }
+  }
+  forward_to = [loki.write.loki.receiver, loki.relabel.o2route.receiver]
+}
+{% endif %}
+{% if alloy_source_syslog %}
+
+// Remote syslog from network devices (wave 6: Flint router). LAN listener;
+// the PVE guest firewall and in-guest nft allow only the listed senders.
+// Each listener stamps job/host/service for its one device, so the
+// external host label of this Alloy is overridden per entry.
+loki.relabel "syslog" {
+  forward_to = []
+
+  rule {
+    source_labels = ["__syslog_message_severity"]
+    target_label  = "level"
+  }
+
+  rule {
+    source_labels = ["__syslog_message_app_name"]
+    target_label  = "syslog_app"
+  }
+}
+
+loki.source.syslog "devices" {
+{% for l in alloy_syslog_listeners %}
+  listener {
+    address            = "{{ l.address }}"
+    protocol           = "{{ l.protocol | default('udp') }}"
+    syslog_format      = "{{ l.format | default('rfc3164') }}"
+    max_message_length = 8192
+    labels             = {
+      job     = "{{ l.job }}",
+      host    = "{{ l.host }}",
+      service = "{{ l.service }}",
+    }
+  }
+{% endfor %}
+  relabel_rules = loki.relabel.syslog.rules
+  forward_to    = [loki.process.syslog_json.receiver]
+}
+
+// Pack each syslog message into one JSON line:
+// {ts, level, service, host, env, app, msg}. ts = receive time (RFC3164
+// has no year or zone); the Loki/OpenObserve entry time is the same.
+loki.process "syslog_json" {
+  stage.drop {
+    expression          = "^\\s*$"
+    drop_counter_reason = "blank_line"
+  }
+{% for rule in alloy_syslog_drop_rules %}
+
+  // {{ rule.comment | default('Syslog secret guard (alloy_syslog_drop_rules).') }}
+  stage.drop {
+    expression          = {{ rule.expression | to_json }}
+    drop_counter_reason = "{{ rule.reason }}"
+  }
+{% endfor %}
+
+  stage.template {
+    source   = "level_norm"
+{% raw %}    template = `{{ $s := default "" .level }}{{ if eq $s "emergency" }}emerg{{ else if eq $s "critical" }}crit{{ else if eq $s "informational" }}info{{ else if eq $s "warn" }}warning{{ else if eq $s "err" }}error{{ else if $s }}{{ $s }}{{ else }}unknown{{ end }}`{% endraw %}
+  }
+
+  stage.template {
+    source   = "ts"
+{% raw %}    template = `{{ dateInZone "2006-01-02T15:04:05.000000Z" now "UTC" }}`{% endraw %}
+  }
+
+  stage.template {
+    source   = "line_json"
+{% raw %}    template = `{"ts":{{ toJson .ts }},"level":{{ toJson .level_norm }},"service":{{ toJson .service }},"host":{{ toJson .host }},"env":"{% endraw %}{{ alloy_env_label }}{% raw %}","app":{{ toJson (default "" .syslog_app) }},"msg":{{ toJson .Entry }}}`{% endraw %}
+  }
+
+  stage.output {
+    source = "line_json"
+  }
+
+  stage.structured_metadata {
+    values = { syslog_app = "syslog_app" }
+  }
+
+  stage.label_drop {
+    values = ["syslog_app"]
+  }
+
+  stage.labels {
+    values = { level = "level_norm" }
+  }
+
+  stage.static_labels {
+    values = { env = "{{ alloy_env_label }}" }
   }
   forward_to = [loki.write.loki.receiver, loki.relabel.o2route.receiver]
 }

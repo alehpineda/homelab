@@ -1,0 +1,27 @@
+---
+# natrontech/pbs-exporter on the Prometheus CT (CT172), wave 6 (owner card
+# t72s425, 10:42 PM CT Nov 14). Listens on loopback only; Prometheus on the
+# same CT scrapes 127.0.0.1:10019 (job pbs). Talks to PBS directly on the LAN
+# (https://astarothrinascimento:8007, never via Caddy) and verifies the PBS
+# self-signed certificate (pinned file, private /etc/hosts bind mount for the
+# cert's DNS SAN).
+pbs_exporter_version: "0.10.0"
+pbs_exporter_tgz_sha256: f5a1a1b4273a63836ed92b1cb3928864d51efe3f33316c27d00956732dbb2d39
+pbs_exporter_bin_sha256: 1ef51e8b7573330325b3fadcdb0fb06db5a351791f6b986637935a45d802ad8d
+pbs_exporter_url: "https://github.com/natrontech/pbs-exporter/releases/download/v{{ pbs_exporter_version }}/pbs-exporter_v{{ pbs_exporter_version }}_linux_amd64.tar.gz"
+pbs_exporter_listen: "127.0.0.1:10019"
+pbs_exporter_pbs_name: astarothrinascimento
+pbs_exporter_pbs_ip: 10.10.0.25
+pbs_exporter_endpoint: "https://{{ pbs_exporter_pbs_name }}:8007"
+# SHA-256 of the PBS proxy cert (same as BRL storage.cfg pbs-hdd fingerprint).
+pbs_exporter_pbs_fingerprint: "CC:32:9B:FC:4B:CF:DC:13:22:8B:5B:C7:49:48:9C:4C:8C:78:5A:45:C1:E2:0E:D5:D3:DF:AB:FE:CE:E0:4B:AD"
+# Read-only PBS identity: user pbs-exporter@pbs, privilege-separated token
+# "prometheus", role Audit on / for both (created with proxmox-backup-manager).
+pbs_exporter_username: pbs-exporter@pbs
+pbs_exporter_token_name: prometheus
+# Optional controller-side file with the token secret only (never in git),
+# copied to pbs_exporter_token_dest. Empty: the token must already be there
+# (0600 root; wave 6 wrote it straight from the vault copy). systemd
+# LoadCredential hands it to the DynamicUser service.
+pbs_exporter_token_file: ""
+pbs_exporter_token_dest: /etc/pbs-exporter/token

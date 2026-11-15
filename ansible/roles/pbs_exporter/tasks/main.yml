@@ -1,0 +1,143 @@
+---
+# 0755: the DynamicUser service must read the pinned cert (SSL_CERT_FILE).
+# The token file itself stays 0600 root; systemd LoadCredential reads it.
+- name: Config directory
+  ansible.builtin.file:
+    path: /etc/pbs-exporter
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+  notify: Restart pbs-exporter
+
+- name: Token from the controller (0600 root, never logged)
+  ansible.builtin.copy:
+    src: "{{ pbs_exporter_token_file }}"
+    dest: "{{ pbs_exporter_token_dest }}"
+    owner: root
+    group: root
+    mode: "0600"
+  no_log: true
+  when: pbs_exporter_token_file | length > 0
+  notify: Restart pbs-exporter
+
+- name: Token must be present on the target
+  ansible.builtin.stat:
+    path: "{{ pbs_exporter_token_dest }}"
+  register: pbs_exporter_tok
+
+- name: Refuse to start without a root-only token
+  ansible.builtin.assert:
+    that:
+      - pbs_exporter_tok.stat.exists
+      - pbs_exporter_tok.stat.mode == "0600"
+      - pbs_exporter_tok.stat.pw_name == "root"
+    fail_msg: "Put the token secret in {{ pbs_exporter_token_dest }} (0600 root) or pass -e pbs_exporter_token_file=<controller file>"
+
+- name: Fetch the PBS certificate
+  ansible.builtin.shell: >-
+    set -o pipefail;
+    openssl s_client -connect {{ pbs_exporter_pbs_ip }}:8007 -servername {{ pbs_exporter_pbs_name }} </dev/null 2>/dev/null
+    | openssl x509 -outform PEM > /etc/pbs-exporter/pbs-ca.pem.new
+    && openssl x509 -in /etc/pbs-exporter/pbs-ca.pem.new -noout -fingerprint -sha256
+  args:
+    executable: /bin/bash
+  register: pbs_exporter_fp
+  changed_when: false
+
+- name: Refuse an unexpected PBS certificate
+  ansible.builtin.assert:
+    that: pbs_exporter_pbs_fingerprint in pbs_exporter_fp.stdout
+    fail_msg: "PBS cert fingerprint changed: {{ pbs_exporter_fp.stdout }}"
+
+- name: Pin the PBS certificate as the exporter's only trust anchor
+  ansible.builtin.copy:
+    src: /etc/pbs-exporter/pbs-ca.pem.new
+    dest: /etc/pbs-exporter/pbs-ca.pem
+    remote_src: true
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Restart pbs-exporter
+
+- name: Private hosts file
+  ansible.builtin.template:
+    src: hosts.j2
+    dest: /etc/pbs-exporter/hosts
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Restart pbs-exporter
+
+- name: Download the pinned release (sha256 checked)
+  ansible.builtin.get_url:
+    url: "{{ pbs_exporter_url }}"
+    dest: "/root/pbs-exporter-v{{ pbs_exporter_version }}.tar.gz"
+    checksum: "sha256:{{ pbs_exporter_tgz_sha256 }}"
+    owner: root
+    group: root
+    mode: "0600"
+
+- name: Unpack the binary
+  ansible.builtin.unarchive:
+    src: "/root/pbs-exporter-v{{ pbs_exporter_version }}.tar.gz"
+    dest: /root
+    remote_src: true
+    include: [pbs-exporter-linux-amd64]
+
+- name: Check the binary hash
+  ansible.builtin.stat:
+    path: /root/pbs-exporter-linux-amd64
+    checksum_algorithm: sha256
+  register: pbs_exporter_bin
+
+- name: Refuse an unexpected binary
+  ansible.builtin.assert:
+    that: pbs_exporter_bin.stat.checksum == pbs_exporter_bin_sha256
+
+- name: Install the binary
+  ansible.builtin.copy:
+    src: /root/pbs-exporter-linux-amd64
+    dest: /usr/local/bin/pbs-exporter
+    remote_src: true
+    owner: root
+    group: root
+    mode: "0755"
+  notify: Restart pbs-exporter
+
+- name: Systemd unit
+  ansible.builtin.template:
+    src: pbs-exporter.service.j2
+    dest: /etc/systemd/system/pbs-exporter.service
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Restart pbs-exporter
+
+- name: Enable and start
+  ansible.builtin.systemd_service:
+    name: pbs-exporter
+    enabled: true
+    state: started
+    daemon_reload: true
+
+- name: Flush handlers
+  ansible.builtin.meta: flush_handlers
+
+- name: Wait for pbs_up 1
+  ansible.builtin.uri:
+    url: "http://{{ pbs_exporter_listen }}/metrics"
+    return_content: true
+  register: pbs_exporter_probe
+  retries: 10
+  delay: 3
+  until: pbs_exporter_probe.status == 200 and ('\npbs_up 1' in pbs_exporter_probe.content)
+
+- name: Remove the download leftovers
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: absent
+  loop:
+    - "/root/pbs-exporter-v{{ pbs_exporter_version }}.tar.gz"
+    - /root/pbs-exporter-linux-amd64
+    - /etc/pbs-exporter/pbs-ca.pem.new
