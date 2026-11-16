@@ -1,0 +1,78 @@
+---
+# Installs Intel's OpenCL runtime in CT 180 so jellyfin-ffmpeg can derive
+# an OpenCL device from VA-API (tonemap_opencl for HDR/DV). Does not touch
+# Jellyfin settings (encoding.xml), the jellyfin service, or the PVE host.
+
+- name: Install the ICD loader and clinfo from the distro
+  ansible.builtin.apt:
+    name: "{{ jellyfin_opencl_apt_packages }}"
+    state: present
+    install_recommends: false
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: Read installed package versions
+  ansible.builtin.package_facts:
+    manager: apt
+
+- name: Ensure the download directory
+  ansible.builtin.file:
+    path: "{{ jellyfin_opencl_download_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0700"
+
+- name: Download the pinned Intel release packages (sha256 verified)
+  ansible.builtin.get_url:
+    url: "{{ item.url_base }}/{{ item.file }}"
+    dest: "{{ jellyfin_opencl_download_dir }}/{{ item.file }}"
+    checksum: "sha256:{{ item.sha256 }}"
+    mode: "0644"
+  loop: "{{ jellyfin_opencl_packages }}"
+  loop_control:
+    label: "{{ item.file }}"
+
+- name: Install the pinned Intel packages in dependency order
+  ansible.builtin.apt:
+    deb: "{{ jellyfin_opencl_download_dir }}/{{ item.file }}"
+    install_recommends: false
+  loop: "{{ jellyfin_opencl_packages }}"
+  loop_control:
+    label: "{{ item.name }} {{ item.version }}"
+  when: >-
+    item.name not in ansible_facts.packages
+    or (ansible_facts.packages[item.name] | map(attribute='version') | list) is not contains(item.version)
+
+- name: Check the jellyfin user sees an Intel OpenCL device
+  ansible.builtin.command:
+    argv: [runuser, -u, "{{ jellyfin_opencl_user }}", --, clinfo, -l]
+  register: jellyfin_opencl_clinfo
+  changed_when: false
+  failed_when: "'Intel(R) OpenCL Graphics' not in jellyfin_opencl_clinfo.stdout"
+
+- name: Check jellyfin-ffmpeg can derive OpenCL from VA-API
+  ansible.builtin.command:
+    argv:
+      - runuser
+      - -u
+      - "{{ jellyfin_opencl_user }}"
+      - --
+      - "{{ jellyfin_opencl_ffmpeg }}"
+      - -hide_banner
+      - -v
+      - error
+      - -init_hw_device
+      - "vaapi=va:{{ jellyfin_opencl_render_node }}"
+      - -init_hw_device
+      - opencl=ocl@va
+      - -f
+      - lavfi
+      - -i
+      - nullsrc
+      - -t
+      - "1"
+      - -f
+      - "null"
+      - "-"
+  changed_when: false

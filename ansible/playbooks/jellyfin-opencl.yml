@@ -1,0 +1,12 @@
+---
+# Intel OpenCL runtime (compute-runtime 26.40) on CT 180 for tonemap_opencl
+# on the Arc Pro B60. Package installs plus read-only checks; no Jellyfin
+# restart and no settings change. Not imported by site.yml.
+# Live 2026-11-16 by hand with the same pins, so an apply should be a no-op.
+# See docs/runbooks/jellyfin-opencl.md.
+- name: Ensure Intel OpenCL runtime on Jellyfin
+  hosts: jellyfin-blr-lxc
+  gather_facts: false
+  become: true
+  roles:
+    - role: jellyfin_opencl
