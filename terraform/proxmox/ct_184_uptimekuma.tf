@@ -10,9 +10,11 @@
 # uptimekuma (ct/uptimekuma.sh → install/uptimekuma-install.sh), run
 # inside the IaC-created CT. Debian 13 unprivileged, Node 22 + npm,
 # tarball from louislam/uptime-kuma, systemd uptime-kuma.service on
-# port 3001. Pin Uptime Kuma 2.5.9 (latest stable as of 2026-11-09;
-# GitHub tag 2.5.9). Not Docker. Updates via the script's `update`
-# helper; backup /opt/uptime-kuma/data first (v2 has no JSON restore).
+# port 3001. Installed 2.5.9 on 2026-11-09. Not Docker. Since
+# 2026-11-16 the version (2.5.11) and the service env
+# (UPTIME_KUMA_LOG_FORMAT=json) are pinned by ansible
+# playbooks/uptime-kuma.yml (role uptime_kuma), which takes a cold
+# backup of /opt/uptime-kuma/data first (v2 has no JSON restore).
 # Root is locked (lxc_root_password left null; install wrapper uses a
 # PASSWORD sentinel so customize() does not unlock root).
 #

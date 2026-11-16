@@ -1,0 +1,13 @@
+---
+# CT 184 Uptime Kuma: pinned release + service environment (JSON logs).
+# Not imported by site.yml. Role: roles/uptime_kuma.
+# Authority: DeathScythe 2026-11-16 12:01 AM CT, Christian Wolff's 1:1
+# (card t81s500): "Yes, have Forge upgrade Kuma to 2.5.11 with JSON logs".
+# Before an upgrade: pct snapshot 184 pre-kuma-<ver>-<date> on the PVE host.
+# Run from ansible/:  ansible-playbook playbooks/uptime-kuma.yml --check --diff
+- name: Uptime Kuma
+  hosts: uptimekuma-blr-lxc
+  become: true
+  gather_facts: false
+  roles:
+    - role: uptime_kuma

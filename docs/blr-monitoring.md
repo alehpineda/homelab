@@ -112,6 +112,21 @@ To `deathscythe+kuma@mail.grokbot.com`. The app password is supplied at run
 time via `SMTP_PASSWORD`; it is not in the repo. Grafana/Prometheus remain
 the metrics path; Kuma is up/down, cert-expiry, and SMTP alerting.
 
+Version and service environment are pinned by
+`ansible/playbooks/uptime-kuma.yml` (role `uptime_kuma`): Uptime Kuma
+2.5.11 and `UPTIME_KUMA_LOG_FORMAT=json` in the drop-in
+`/etc/systemd/system/uptime-kuma.service.d/10-forge-env.conf`. Journal lines
+are then one JSON object each: `{"time", "module", "level", "msg"}` (`time`
+is RFC3339 with the America/Chicago offset; `level` is info/warn/error/debug).
+An upgrade builds the new tree beside the running one, stops once, takes a
+cold copy of `data/` to `/root/forge-kuma-data-<YYYYMMDD-HHMM>` (sha256
+manifest beside it), swaps trees and starts once. Take
+`pct snapshot 184 pre-kuma-<ver>-<date>` on the host first.
+
+Rollback: `systemctl stop uptime-kuma`, move `/opt/uptime-kuma` aside, move
+`/opt/uptime-kuma-<old>.prev` back, copy the cold backup to
+`/opt/uptime-kuma/data`, start (or `pct rollback 184 <snapshot>`).
+
 ## Logging: Loki and OpenObserve side by side (2026-11-11)
 
 Plan: Forge `/workspace/forge/plans/openobserve-loki-plan-20261111.md`.
