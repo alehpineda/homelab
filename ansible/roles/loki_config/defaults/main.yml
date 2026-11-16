@@ -4,6 +4,9 @@
 loki_config_path: /etc/loki/config.yml
 loki_http_port: 3100
 loki_grpc_port: 9095
+# Loki's own logs (query/push/table_manager INFO lines) were ~37k lines/h
+# into Loki itself via Alloy (2026-11-16 audit). warn keeps warn+error.
+loki_log_level: warn
 loki_path_prefix: /var/lib/loki
 # 30 days, same window as OpenObserve CT 177 for a fair footprint comparison.
 loki_retention_period: 720h

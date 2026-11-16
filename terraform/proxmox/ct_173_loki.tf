@@ -17,9 +17,11 @@ resource "proxmox_lxc" "ct_173" {
   # Static LXCs do not get Flint DHCP option 6. Live 2026-11-10: pct set --nameserver "10.10.0.53 10.10.0.55".
   nameserver   = "10.10.0.53 10.10.0.55"
 
+  # Live 2026-11-16: pct resize 173 rootfs 40G (was 20G). Loki grew
+  # ~0.83 GB/day after the JSON log rollout; 30d retention + ~50% headroom.
   rootfs {
     storage = var.pm_storage
-    size    = "20G"
+    size    = "40G"
   }
 
   network {
