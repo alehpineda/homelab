@@ -114,7 +114,8 @@ the metrics path; Kuma is up/down, cert-expiry, and SMTP alerting.
 
 Version and service environment are pinned by
 `ansible/playbooks/uptime-kuma.yml` (role `uptime_kuma`): Uptime Kuma
-2.5.11 and `UPTIME_KUMA_LOG_FORMAT=json` in the drop-in
+2.5.11 on Node.js 22.23.5 (NodeSource `nodejs=22.23.5-1nodesource1`, apt pin
+`/etc/apt/preferences.d/forge-nodejs-pin`) and `UPTIME_KUMA_LOG_FORMAT=json` in the drop-in
 `/etc/systemd/system/uptime-kuma.service.d/10-forge-env.conf`. Journal lines
 are then one JSON object each: `{"time", "module", "level", "msg"}` (`time`
 is RFC3339 with the America/Chicago offset; `level` is info/warn/error/debug).

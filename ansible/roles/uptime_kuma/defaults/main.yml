@@ -8,6 +8,11 @@ uptime_kuma_version: "2.5.11"
 # sha256 of https://github.com/louislam/uptime-kuma/archive/refs/tags/<version>.tar.gz
 uptime_kuma_tarball_sha256: "84cb0d784e57f4991b62352ae0c76c9e4a1c3d14da72d326ea0693b8b2e58d62"
 uptime_kuma_dir: /opt/uptime-kuma
+# Node.js runtime from the NodeSource node_22.x apt repo (community-scripts
+# setup_nodejs). Exact Debian version, held by an apt pin (priority 1001).
+# 22.23.5: Node.js November 2026 security release, which the Kuma 2.5.10
+# notes ask non-Docker installs to apply.
+uptime_kuma_nodejs_version: "22.23.5-1nodesource1"
 uptime_kuma_service: uptime-kuma
 # Cold copy of <dir>/data taken while the service is stopped for an upgrade.
 uptime_kuma_backup_prefix: /root/forge-kuma-data
