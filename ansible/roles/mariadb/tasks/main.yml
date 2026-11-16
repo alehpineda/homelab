@@ -101,6 +101,14 @@
     name: "{{ mariadb_exporter_package }}"
     state: present
 
+- name: Exporter config directory (the Debian package does not create it)
+  ansible.builtin.file:
+    path: "{{ mariadb_exporter_cnf | dirname }}"
+    state: directory
+    owner: root
+    group: prometheus
+    mode: "0750"
+
 - name: Exporter client config (socket, no password)
   ansible.builtin.copy:
     dest: "{{ mariadb_exporter_cnf }}"

@@ -11,7 +11,11 @@ name="$1"; db="$2"; user="$3"; client="$4"
 f="{{ mariadb_secret_dir }}/${name}.pass"
 umask 077
 if [[ ! -s "$f" ]]; then
-  tr -dc 'A-Za-z0-9' </dev/urandom | head -c 40 >"$f"
+  # No `tr </dev/urandom | head`: under pipefail tr dies of SIGPIPE (141) and
+  # set -e aborts the first run after the file is written. Bounded read instead.
+  pw_new="$(head -c 1024 /dev/urandom | tr -dc 'A-Za-z0-9' | cut -c1-40)"
+  [[ "$pw_new" =~ ^[A-Za-z0-9]{40}$ ]] || { echo "password generation came up short" >&2; exit 67; }
+  printf '%s' "$pw_new" >"$f"; unset pw_new
 fi
 chown root:root "$f"; chmod 0600 "$f"
 pw="$(<"$f")"

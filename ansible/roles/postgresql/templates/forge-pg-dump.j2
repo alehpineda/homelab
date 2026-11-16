@@ -4,13 +4,15 @@
 #   forge-pg-dump restore-test  restore newest dump of each db into restoretest_<db>,
 #                               compare user-table counts, drop it
 # Retention: {{ postgresql_dump_keep_daily }} daily, {{ postgresql_dump_keep_weekly }} weekly (Sunday copy).
-# Every line on stdout is one JSON object {level, component, msg}; the Alloy
+# Every line on stdout is one JSON object {ts, level, component, msg}; the Alloy
 # journal pipeline lifts it into the house {ts, level, service, host, env, ...} body.
 set -euo pipefail
 umask 027
 base="{{ postgresql_dump_dir }}"
 dbs=({% for app in postgresql_apps %}{{ app.db }} {% endfor %})
-log() { printf '{"level":"%s","component":"%s","msg":"%s"}\n' "$1" "$2" "$3"; }
+# ts is set here: the Alloy unwrap takes ts from the inner object, and without
+# it the packed line carries "ts":null.
+log() { printf '{"ts":"%s","level":"%s","component":"%s","msg":"%s"}\n' "$(date -u +%Y-%m-%dT%H:%M:%S.%6NZ)" "$1" "$2" "$3"; }
 psqlq() { runuser -u postgres -- psql -qAt -v ON_ERROR_STOP=1 "$@"; }
 prune() { # dir keep
   { ls -1t "$1"/*.dump "$1"/*.sql 2>/dev/null || true; } | tail -n +"$(( $2 + 1 ))" | xargs -r rm -f --

@@ -90,9 +90,19 @@ secrets plan.
 ## Apply order (each step its own yes)
 
 1. Terraform create CT178 and CT179 (`-target=proxmox_lxc.ct_178` / `ct_179`). Then `pct set <id> --timezone America/Chicago` and `pct start <id>`.
+   Telmate 3.0.2-rc10 drops `backup = true` on `mp0` at create (state and
+   `pct config` show no `backup=1`; CT177 was fixed by hand the same way).
+   Before the first start, run `pct set 178 --mp0 data2:vm-178-disk-1,mp=/var/lib/postgresql,backup=1,size=16G`
+   and `pct set 179 --mp0 data2:vm-179-disk-1,mp=/var/lib/mysql,backup=1,size=8G`.
+   On a running CT the change stays pending until the next CT stop/start.
+   Without it, vzdump skips the data volume and the PostgreSQL dumps on it.
 2. `playbooks/databases.yml --tags db_postgres`, then `db_mariadb`, then `db_node_exporter`.
 3. `pve-guest-firewall.yml` with `pve_fw_rollout: [178]`, then `[179]`.
 4. `logging.yml --tags alloy_postgres`, then `alloy_mariadb`, then the prom_scrape subset.
+   Before the first push, add .78 and .79 to CT173's in-guest `push_allow`
+   (`/etc/nftables.conf`, table `inet loki_filter`, 3100 only). That set is
+   not in IaC (see logging-loki-openobserve.md step 4). Without it, Alloy on
+   178/179 reaches OpenObserve but times out on Loki.
 5. Migrations follow the plan: OpenObserve, then Kuma, then Grafana after a 7-day soak.
 
 ## Rollback
