@@ -165,6 +165,8 @@ handle @dockge {
 }
 	@pbs host pbs.alehpineda.com
 	handle @pbs {
+		@head method HEAD
+		method @head GET
 		reverse_proxy https://10.10.0.25:8007 {
 			transport http {
 				tls_insecure_skip_verify
