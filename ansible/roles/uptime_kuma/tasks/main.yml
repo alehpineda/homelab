@@ -33,8 +33,13 @@
     mode: "0644"
   register: uptime_kuma_dropin
 
+- name: Check mode stops here for an upgrade (staging cannot be simulated)
+  ansible.builtin.debug:
+    msg: "Would upgrade {{ uptime_kuma_installed }} -> {{ uptime_kuma_version }}"
+  when: (uptime_kuma_upgrade | bool) and ansible_check_mode
+
 - name: Upgrade {{ uptime_kuma_installed }} -> {{ uptime_kuma_version }}
-  when: uptime_kuma_upgrade | bool
+  when: (uptime_kuma_upgrade | bool) and not ansible_check_mode
   block:
     - name: Download the release tarball (pinned sha256)
       ansible.builtin.get_url:
