@@ -1,0 +1,58 @@
+#!/bin/bash
+# Managed by ansible role mariadb.
+#   forge-mariadb-dump               daily mariadb-dump per app db (gzip)
+#   forge-mariadb-dump restore-test  load newest dump into restoretest_<db>,
+#                                    compare table counts, drop it
+# Retention: {{ mariadb_dump_keep_daily }} daily, {{ mariadb_dump_keep_weekly }} weekly (Sunday copy).
+# stdout lines are JSON {level, component, msg} for the Alloy journal pipeline.
+set -euo pipefail
+umask 027
+base="{{ mariadb_dump_dir }}"
+dbs=({% for app in mariadb_apps %}{{ app.db }} {% endfor %})
+log() { printf '{"level":"%s","component":"%s","msg":"%s"}\n' "$1" "$2" "$3"; }
+q() { mariadb -NB -e "$1"; }
+prune() { # dir glob keep
+  { ls -1t "$1"/$2 2>/dev/null || true; } | tail -n +"$(( $3 + 1 ))" | xargs -r rm -f --
+}
+mode="${1:-dump}"
+install -d -m 0750 "$base" "$base/weekly"
+fail=0
+if [[ "$mode" == dump ]]; then
+  day="$(date +%Y%m%d)"
+  for db in "${dbs[@]}"; do
+    install -d -m 0750 "$base/$db"
+    out="$base/$db/${db}-${day}.sql.gz"
+    if [[ "$(q "SELECT COUNT(*) FROM information_schema.schemata WHERE schema_name='${db}'")" == 0 ]]; then
+      log warning mariadb_dump "${db}: database absent, skipped"; continue
+    fi
+    if mariadb-dump --single-transaction --quick --routines --events --triggers "$db" | gzip -6 >"${out}.tmp"; then
+      mv -f "${out}.tmp" "$out"
+      log info mariadb_dump "${db}: ok $(stat -c %s "$out") bytes"
+      [[ "$(date +%u)" == 7 ]] && cp -f "$out" "$base/weekly/"
+      prune "$base/$db" "${db}-*.sql.gz" {{ mariadb_dump_keep_daily }}
+      prune "$base/weekly" "${db}-*.sql.gz" {{ mariadb_dump_keep_weekly }}
+    else
+      rm -f "${out}.tmp"; log error mariadb_dump "${db}: mariadb-dump failed"; fail=1
+    fi
+  done
+  [[ $fail == 0 ]] && log info mariadb_dump "dump run PASS" || log error mariadb_dump "dump run FAIL"
+elif [[ "$mode" == restore-test ]]; then
+  for db in "${dbs[@]}"; do
+    f="$({ ls -1t "$base/$db/${db}-"*.sql.gz 2>/dev/null || true; } | head -1)"
+    [[ -n "$f" ]] || { log warning restore_test "${db}: no dump, skipped"; continue; }
+    t="restoretest_${db}"
+    q "DROP DATABASE IF EXISTS \`${t}\`; CREATE DATABASE \`${t}\`"
+    if gunzip -c "$f" | mariadb "$t"; then
+      src="$(q "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='${db}'")"
+      dst="$(q "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='${t}'")"
+      if [[ "$src" == "$dst" ]]; then log info restore_test "${db}: PASS (${dst} tables from $(basename "$f"))"
+      else log error restore_test "${db}: FAIL table count ${dst} vs live ${src}"; fail=1; fi
+    else
+      log error restore_test "${db}: FAIL load error"; fail=1
+    fi
+    q "DROP DATABASE IF EXISTS \`${t}\`"
+  done
+else
+  echo "usage: $0 [dump|restore-test]" >&2; exit 64
+fi
+exit $fail

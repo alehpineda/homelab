@@ -1,0 +1,43 @@
+---
+# MariaDB on CT 179 (mariadb-blr-lxc), for Uptime Kuma CT 184 only.
+# Mirrors community-scripts install/mariadb-install.sh + core lib/db.func
+# setup_mariadb() with its default MARIADB_VERSION=latest, which installs
+# the Debian distribution packages mariadb-server + mariadb-client:
+#   https://github.com/community-scripts/ProxmoxVE/blob/main/install/mariadb-install.sh
+#   https://github.com/community-scripts/core/blob/main/lib/db.func
+# Debian 13 trixie ships MariaDB 11.8 (1:11.8.6-0+deb13u1 on 2026-11-16).
+# The script then uncomments `port` in my.cnf and comments out
+# bind-address (= listen on all interfaces). Forge keeps those files as
+# shipped and puts its settings in a later-sorting drop-in instead.
+mariadb_packages: [mariadb-server, mariadb-client]
+
+# CT 179 mp0 (8G data2). The role refuses to install unless this is a mountpoint.
+mariadb_data_dir: /var/lib/mysql
+mariadb_dropin: /etc/mysql/mariadb.conf.d/60-forge.cnf
+mariadb_port: 3306
+# Deviation: script listens on all interfaces.
+mariadb_bind_address: "127.0.0.1,10.10.0.79"
+mariadb_max_connections: 50
+# Sized for the 1024 MiB CT. kuma.db was 14.9 MB + 7.7 MB WAL on 2026-11-16.
+mariadb_innodb_buffer_pool_size: 256M
+
+# Per-app databases. Password generated ON THE CT into
+# mariadb_secret_dir/<name>.pass (root 0600, alnum) on first run, then read
+# from there. Never committed, never sent to the controller, never logged.
+mariadb_apps:
+  - {name: kuma, db: kuma, user: kuma, client: 10.10.0.84}
+mariadb_secret_dir: /root/forge-db
+
+# Metrics: Debian prometheus-mysqld-exporter on :9104, unix_socket auth as
+# OS user `prometheus` (no password).
+mariadb_exporter_package: prometheus-mysqld-exporter
+mariadb_exporter_listen: ":9104"
+mariadb_exporter_cnf: /etc/prometheus/mysqld-exporter.cnf
+
+# Daily dumps 01:30 America/Chicago (before vzdump 02:00 / PBS 03:30).
+# On the rootfs (mp0 is the datadir; dumps must not sit inside it).
+mariadb_dump_dir: /var/backups/mariadb
+mariadb_dump_oncalendar: "*-*-* 01:30:00 America/Chicago"
+mariadb_dump_keep_daily: 14
+mariadb_dump_keep_weekly: 8
+mariadb_restore_test_oncalendar: "*-*-01 04:30:00 America/Chicago"

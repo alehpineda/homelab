@@ -1,0 +1,40 @@
+---
+# Observability databases. Not imported by site.yml.
+#   CT 178 postgres-blr-lxc 10.10.0.78  PostgreSQL 17 (OpenObserve, then Grafana)
+#   CT 179 mariadb-blr-lxc  10.10.0.79  MariaDB 11.8 (Uptime Kuma only)
+# Install steps mirror community-scripts install/postgresql-install.sh and
+# install/mariadb-install.sh; the CTs come from terraform (ct_178/ct_179),
+# the same split as OpenObserve CT177. See docs/runbooks/obs-databases.md.
+# Authority (DeathScythe, Forge 1:1): design 4:47 PM CT Nov 16 (t927u); two
+# LXCs 4:48 PM CT (t928u); community-scripts basis 4:49 PM CT (t929u).
+# Merge, apply, package installs and each migration need their own yes.
+#
+#   cd ansible && ansible-playbook -i <inv> playbooks/databases.yml --tags db_postgres
+#   ... --tags db_mariadb
+#   ... --tags db_node_exporter
+# One CT at a time. Log shipping is in logging.yml (--tags alloy_postgres /
+# alloy_mariadb); never --tags alloy_host.
+
+- name: PostgreSQL on CT 178
+  hosts: postgres-blr-lxc
+  become: true
+  gather_facts: false
+  tags: [db_postgres]
+  roles:
+    - role: postgresql
+
+- name: MariaDB on CT 179
+  hosts: mariadb-blr-lxc
+  become: true
+  gather_facts: false
+  tags: [db_mariadb]
+  roles:
+    - role: mariadb
+
+- name: node_exporter on CT 178 / 179
+  hosts: postgres-blr-lxc:mariadb-blr-lxc
+  become: true
+  gather_facts: false
+  tags: [db_node_exporter]
+  roles:
+    - role: node_exporter

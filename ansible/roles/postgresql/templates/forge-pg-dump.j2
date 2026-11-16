@@ -1,0 +1,68 @@
+#!/bin/bash
+# Managed by ansible role postgresql.
+#   forge-pg-dump               daily pg_dump -Fc per app db + globals (no role passwords)
+#   forge-pg-dump restore-test  restore newest dump of each db into restoretest_<db>,
+#                               compare user-table counts, drop it
+# Retention: {{ postgresql_dump_keep_daily }} daily, {{ postgresql_dump_keep_weekly }} weekly (Sunday copy).
+# Every line on stdout is one JSON object {level, component, msg}; the Alloy
+# journal pipeline lifts it into the house {ts, level, service, host, env, ...} body.
+set -euo pipefail
+umask 027
+base="{{ postgresql_dump_dir }}"
+dbs=({% for app in postgresql_apps %}{{ app.db }} {% endfor %})
+log() { printf '{"level":"%s","component":"%s","msg":"%s"}\n' "$1" "$2" "$3"; }
+psqlq() { runuser -u postgres -- psql -qAt -v ON_ERROR_STOP=1 "$@"; }
+prune() { # dir keep
+  { ls -1t "$1"/*.dump "$1"/*.sql 2>/dev/null || true; } | tail -n +"$(( $2 + 1 ))" | xargs -r rm -f --
+}
+mode="${1:-dump}"
+install -d -o postgres -g postgres -m 0750 "$base" "$base/globals" "$base/weekly"
+fail=0
+if [[ "$mode" == dump ]]; then
+  day="$(date +%Y%m%d)"
+  for db in "${dbs[@]}"; do
+    install -d -o postgres -g postgres -m 0750 "$base/$db"
+    out="$base/$db/${db}-${day}.dump"
+    if [[ -z "$(psqlq -c "SELECT 1 FROM pg_database WHERE datname='${db}'")" ]]; then
+      log warning pg_dump "${db}: database absent, skipped"; continue
+    fi
+    if runuser -u postgres -- pg_dump -Fc -d "$db" -f "${out}.tmp"; then
+      mv -f "${out}.tmp" "$out"
+      log info pg_dump "${db}: ok $(stat -c %s "$out") bytes"
+      [[ "$(date +%u)" == 7 ]] && cp -f "$out" "$base/weekly/"
+      prune "$base/$db" {{ postgresql_dump_keep_daily }}
+    else
+      rm -f "${out}.tmp"; log error pg_dump "${db}: pg_dump failed"; fail=1
+    fi
+  done
+  g="$base/globals/globals-${day}.sql"
+  if runuser -u postgres -- pg_dumpall --globals-only --no-role-passwords -f "${g}.tmp"; then
+    mv -f "${g}.tmp" "$g"; prune "$base/globals" {{ postgresql_dump_keep_daily }}
+  else
+    rm -f "${g}.tmp"; log error pg_dump "globals: pg_dumpall failed"; fail=1
+  fi
+  for db in "${dbs[@]}"; do
+    { ls -1t "$base/weekly/${db}-"*.dump 2>/dev/null || true; } | tail -n +{{ postgresql_dump_keep_weekly + 1 }} | xargs -r rm -f --
+  done
+  [[ $fail == 0 ]] && log info pg_dump "dump run PASS" || log error pg_dump "dump run FAIL"
+elif [[ "$mode" == restore-test ]]; then
+  for db in "${dbs[@]}"; do
+    f="$({ ls -1t "$base/$db/${db}-"*.dump 2>/dev/null || true; } | head -1)"
+    [[ -n "$f" ]] || { log warning restore_test "${db}: no dump, skipped"; continue; }
+    t="restoretest_${db}"
+    psqlq -c "DROP DATABASE IF EXISTS ${t}" >/dev/null
+    psqlq -c "CREATE DATABASE ${t}" >/dev/null
+    if runuser -u postgres -- pg_restore --no-owner --no-privileges -d "$t" "$f" 2>/dev/null; then
+      src="$(psqlq -d "$db" -c "SELECT count(*) FROM pg_stat_user_tables")"
+      dst="$(psqlq -d "$t" -c "SELECT count(*) FROM pg_stat_user_tables")"
+      if [[ "$src" == "$dst" ]]; then log info restore_test "${db}: PASS (${dst} tables from $(basename "$f"))"
+      else log error restore_test "${db}: FAIL table count ${dst} vs live ${src}"; fail=1; fi
+    else
+      log error restore_test "${db}: FAIL pg_restore error"; fail=1
+    fi
+    psqlq -c "DROP DATABASE IF EXISTS ${t}" >/dev/null
+  done
+else
+  echo "usage: $0 [dump|restore-test]" >&2; exit 64
+fi
+exit $fail

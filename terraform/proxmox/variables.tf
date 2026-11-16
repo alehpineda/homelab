@@ -66,6 +66,18 @@ variable "ct177_ssh_public_keys" {
   default     = ""
 }
 
+variable "ct178_ssh_public_keys" {
+  description = "SSH authorized public keys for CT178 (postgres). Public keys only. Empty until TF_VAR_ct178_ssh_public_keys is set at create."
+  type        = string
+  default     = ""
+}
+
+variable "ct179_ssh_public_keys" {
+  description = "SSH authorized public keys for CT179 (mariadb). Public keys only. Empty until TF_VAR_ct179_ssh_public_keys is set at create."
+  type        = string
+  default     = ""
+}
+
 variable "ct182_ssh_public_keys" {
   description = "SSH authorized public keys for CT182. Public keys only. Empty until TF_VAR_ct182_ssh_public_keys is set at create."
   type        = string

@@ -43,6 +43,14 @@ all:
         openobserve-blr-lxc:
           ansible_host: 10.10.0.77
           ansible_port: 22
+        # CT 178 / 179. playbooks/databases.yml + logging.yml (alloy_postgres /
+        # alloy_mariadb) target these. site.yml does not. Declared, not created.
+        postgres-blr-lxc:
+          ansible_host: 10.10.0.78
+          ansible_port: 22
+        mariadb-blr-lxc:
+          ansible_host: 10.10.0.79
+          ansible_port: 22
         # CT 174. playbooks/logging.yml (alloy_pve_exporter) targets this host.
         pve-exporter-blr-lxc:
           ansible_host: 10.10.0.74

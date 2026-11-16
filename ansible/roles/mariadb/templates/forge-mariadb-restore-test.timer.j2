@@ -1,0 +1,10 @@
+# Managed by ansible role mariadb.
+[Unit]
+Description=Forge monthly MariaDB restore test ({{ mariadb_restore_test_oncalendar }})
+
+[Timer]
+OnCalendar={{ mariadb_restore_test_oncalendar }}
+Persistent=true
+
+[Install]
+WantedBy=timers.target

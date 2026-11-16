@@ -1,0 +1,10 @@
+# Managed by ansible role mariadb.
+[Unit]
+Description=Forge monthly restore test of the newest MariaDB dumps
+After=mariadb.service
+Requires=mariadb.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/forge-mariadb-dump restore-test
+Nice=10

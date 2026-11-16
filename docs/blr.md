@@ -55,6 +55,8 @@ Renumbered 2026-11-01 (Option Y): static IPs on 10.10.0.0/24, gateway
 | 174 | pve-exporter-blr-lxc | 10.10.0.74 | vmbr0 | running |
 | 175 | ollama-blr-lxc | 10.10.0.63 | vmbr0 | running |
 | 176 | forge-ws-blr-lxc | 10.10.0.76 | vmbr0 | created |
+| 178 | postgres-blr-lxc | 10.10.0.78 | vmbr0 | declared (not created) |
+| 179 | mariadb-blr-lxc | 10.10.0.79 | vmbr0 | declared (not created) |
 | 180 | jellyfin-blr-lxc | 10.10.0.80 | vmbr1 | running |
 | 181 | metube | 10.10.0.81 | vmbr0 | running |
 | 250 | caddy-blr-lxc | 10.10.0.250 | vmbr0 | running |
