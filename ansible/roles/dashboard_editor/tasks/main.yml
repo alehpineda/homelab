@@ -1,30 +1,38 @@
 ---
 # Idempotent. Adds keys only; never removes existing ones. Keeps root as
-# owner of the config file and directory; only the group and g+w change.
-# No service restart: Homepage hot-reloads services.yaml and Homer serves
+# owner of the config files and directories; only the group and g+w change.
+# No service restart: Homepage hot-reloads these YAML files and Homer serves
 # config.yml as a static file.
 
-- name: Require a config file path and at least one public key
+- name: Normalize the config file list
+  ansible.builtin.set_fact:
+    dashboard_editor_files: "{{ dashboard_editor_config_files if (dashboard_editor_config_files | default([]) | length > 0) else ([dashboard_editor_config_file] if dashboard_editor_config_file is defined else []) }}"
+
+- name: Require at least one config file path and at least one public key
   ansible.builtin.assert:
     that:
-      - dashboard_editor_config_file is defined
-      - dashboard_editor_config_file | length > 0
+      - dashboard_editor_files | length > 0
       - dashboard_editor_pubkeys | length > 0
     fail_msg: >-
-      Set dashboard_editor_config_file per host and dashboard_editor_pubkeys
+      Set dashboard_editor_config_files (or the legacy
+      dashboard_editor_config_file) per host and dashboard_editor_pubkeys
       in the gitignored inventory/blr.yml.
 
-- name: Check the config file exists
+- name: Check each config file exists
   ansible.builtin.stat:
-    path: "{{ dashboard_editor_config_file }}"
+    path: "{{ item }}"
+  loop: "{{ dashboard_editor_files }}"
   register: dashboard_editor_cfg
 
-- name: Require the existing config file
+- name: Require the existing config files
   ansible.builtin.assert:
     that:
-      - dashboard_editor_cfg.stat.exists
-      - dashboard_editor_cfg.stat.isreg
-    fail_msg: "{{ dashboard_editor_config_file }} is missing. This role does not install the dashboard."
+      - item.stat.exists
+      - item.stat.isreg
+    fail_msg: "{{ item.item }} is missing. This role does not install the dashboard."
+  loop: "{{ dashboard_editor_cfg.results }}"
+  loop_control:
+    label: "{{ item.item }}"
 
 - name: Create the editor group
   ansible.builtin.group:
@@ -59,18 +67,20 @@
     mode: "0600"
   loop: "{{ dashboard_editor_pubkeys }}"
 
-- name: Group-write the config directory (setgid so new files keep the group)
+- name: Group-write each config directory (setgid so new files keep the group)
   ansible.builtin.file:
-    path: "{{ dashboard_editor_config_file | dirname }}"
+    path: "{{ item }}"
     state: directory
     owner: root
     group: "{{ dashboard_editor_group }}"
     mode: "2775"
+  loop: "{{ dashboard_editor_files | map('dirname') | unique | list }}"
 
-- name: Group-write the config file
+- name: Group-write each config file
   ansible.builtin.file:
-    path: "{{ dashboard_editor_config_file }}"
+    path: "{{ item }}"
     state: file
     owner: root
     group: "{{ dashboard_editor_group }}"
     mode: "0664"
+  loop: "{{ dashboard_editor_files }}"
