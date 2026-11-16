@@ -1,0 +1,74 @@
+---
+# Idempotent. Never reads, prints, or writes secret values: it only sets
+# ownership/modes and decides which env NAMES to wire from file size.
+- name: Secrets parent directory
+  ansible.builtin.file:
+    path: "{{ homepage_secrets_dir | dirname }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Secrets directory
+  ansible.builtin.file:
+    path: "{{ homepage_secrets_dir }}"
+    state: directory
+    owner: "{{ homepage_secrets_owner }}"
+    group: "{{ homepage_secrets_group }}"
+    mode: "{{ homepage_secrets_dir_mode }}"
+
+- name: Stat each secret file (metadata only)
+  ansible.builtin.stat:
+    path: "{{ homepage_secrets_dir }}/{{ item.value }}"
+    get_checksum: false
+    get_mime: false
+  loop: "{{ homepage_secret_files | dict2items }}"
+  loop_control:
+    label: "{{ item.key }}"
+  register: homepage_secret_stat
+
+- name: Enforce owner and mode on present secret files
+  ansible.builtin.file:
+    path: "{{ item.stat.path }}"
+    state: file
+    owner: "{{ homepage_secrets_owner }}"
+    group: "{{ homepage_secrets_group }}"
+    mode: "{{ homepage_secrets_file_mode }}"
+  loop: "{{ homepage_secret_stat.results | selectattr('stat.exists') | list }}"
+  loop_control:
+    label: "{{ item.item.key }}"
+
+- name: Pick the env names whose files exist and are non-empty
+  ansible.builtin.set_fact:
+    homepage_secret_wired: >-
+      {{ homepage_secret_stat.results
+         | selectattr('stat.exists')
+         | selectattr('stat.size', 'gt', 0)
+         | map(attribute='item') | items2dict }}
+    homepage_secret_pending: >-
+      {{ homepage_secret_stat.results
+         | rejectattr('stat.exists') | map(attribute='item.key') | list
+         + (homepage_secret_stat.results | selectattr('stat.exists')
+            | selectattr('stat.size', 'eq', 0) | map(attribute='item.key') | list) }}
+
+- name: Report pending secret names (names only)
+  ansible.builtin.debug:
+    msg: "Pending HOMEPAGE_FILE_* (no file or empty): {{ homepage_secret_pending | join(', ') or 'none' }}"
+
+- name: Drop-in directory
+  ansible.builtin.file:
+    path: "{{ homepage_dropin_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Homepage env drop-in (LOG_TARGETS + HOMEPAGE_FILE_* paths)
+  ansible.builtin.template:
+    src: forge-secrets.conf.j2
+    dest: "{{ homepage_dropin_dir }}/{{ homepage_dropin_name }}"
+    owner: root
+    group: root
+    mode: "0644"
+    backup: true
+  notify: Restart homepage
