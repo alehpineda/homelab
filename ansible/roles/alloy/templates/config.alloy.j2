@@ -156,14 +156,15 @@ loki.process "journal_json" {
 {% raw %}    template = `{{ if .in_msg }}{{ .in_msg }}{{ else }}{{ default "" .msg }}{{ end }}`{% endraw %}
   }
 
-  // ts = the app's own time/ts when the MESSAGE object has one, else journald
+  // ts = the app's own time/ts when the MESSAGE object has a date-time one
+  // (epoch numbers and junk fall through), else journald
   // _SOURCE_REALTIME_TIMESTAMP (RFC3339, UTC, microseconds), else null.
   // Alloy does not expose the entry's __REALTIME_TIMESTAMP to templates, so
   // entries without a source timestamp (most service stdout) get ts=null;
   // the Loki/OpenObserve entry timestamp is always the journal time.
   stage.template {
     source   = "ts"
-{% raw %}    template = `{{ if .in_time }}{{ toJson .in_time }}{{ else if .in_ts }}{{ toJson .in_ts }}{{ else }}{{ $raw := default "" .ts_us }}{{ if $raw }}"{{ $us := atoi $raw }}{{ dateInZone "2006-01-02T15:04:05" (div $us 1000000) "UTC" }}.{{ printf "%06d" (mod $us 1000000) }}Z"{{ else }}null{{ end }}{{ end }}`{% endraw %}
+{% raw %}    template = `{{ $re := "^[0-9]{4}-[0-9]{2}-[0-9]{2}[T ][0-9]{2}:[0-9]{2}" }}{{ if regexMatch $re (default "" .in_time) }}{{ toJson .in_time }}{{ else if regexMatch $re (default "" .in_ts) }}{{ toJson .in_ts }}{{ else }}{{ $raw := default "" .ts_us }}{{ if $raw }}"{{ $us := atoi $raw }}{{ dateInZone "2006-01-02T15:04:05" (div $us 1000000) "UTC" }}.{{ printf "%06d" (mod $us 1000000) }}Z"{{ else }}null{{ end }}{{ end }}`{% endraw %}
   }
 
   // Entry time = app time when it parses; skip (never fudge) otherwise, so
