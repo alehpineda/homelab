@@ -75,7 +75,11 @@ all:
         homepage-blr-lxc:
           ansible_host: 10.10.0.91
           ansible_port: 22
-          dashboard_editor_config_file: /opt/homepage/config/services.yaml
+          dashboard_editor_config_files:
+            - /opt/homepage/config/services.yaml
+            - /opt/homepage/config/settings.yaml
+            - /opt/homepage/config/widgets.yaml
+            - /opt/homepage/config/bookmarks.yaml
           # dashboard_editor_pubkeys: ["ssh-ed25519 AAAA... forge-ct176"]
         homarr-blr-lxc:  # CT 192
           ansible_host: 10.10.0.92
@@ -83,7 +87,8 @@ all:
         homer-blr-lxc:
           ansible_host: 10.10.0.98
           ansible_port: 22
-          dashboard_editor_config_file: /opt/homer/assets/config.yml
+          dashboard_editor_config_files:
+            - /opt/homer/assets/config.yml
           # dashboard_editor_pubkeys: ["ssh-ed25519 AAAA... forge-ct176"]
         honcho-blr-lxc:  # CT 165
           ansible_host: 10.10.0.65
