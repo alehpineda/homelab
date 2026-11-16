@@ -1,0 +1,11 @@
+---
+# 5-minute syslog heartbeat on the Flint main router (GL-BE9300, 10.10.0.1)
+# so a quiet night does not look like a dead flint_syslog shipper.
+# Flint has no Python; this play uses ansible.builtin.raw only.
+# Not imported by site.yml. Do not run against the live router until a
+# separate plan says so. See docs/runbooks/logging-loki-openobserve.md.
+- name: Ensure Flint syslog heartbeat
+  hosts: flint
+  gather_facts: false
+  roles:
+    - role: flint_heartbeat

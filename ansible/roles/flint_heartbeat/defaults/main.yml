@@ -1,0 +1,5 @@
+---
+# Keep this in sync with files/flint-heartbeat. The copy module cannot
+# be used here: Flint (GL.iNet OpenWrt) has no Python, so tasks use raw.
+flint_heartbeat_line: "*/5 * * * * logger -t flint-heartbeat alive"
+flint_heartbeat_fragment: /etc/gl_crontabs/crontabs.d/flint-heartbeat
