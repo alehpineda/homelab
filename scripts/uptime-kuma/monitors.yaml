@@ -477,11 +477,11 @@ monitors:
   # --- Ten-service raise 2026-11-10 (CT191-199 + Listenarr on CT182) ---
   - name: Homepage
     type: http
-    url: https://homepage.alehpineda.com
+    url: https://homepage.alehpineda.com/api/healthcheck
     tags: [admin]
     interval: 180
     resend_interval: 120
-    description: CT191, Caddy .250.
+    description: CT191, Caddy .250. GET /api/healthcheck (200, body "up").
   - name: Homarr
     type: http
     url: https://homarr.alehpineda.com
