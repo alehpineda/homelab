@@ -97,6 +97,33 @@ Owner, 2026-11-14 1:54 PM CT: "The json for the rest of the existing logs is a y
   /etc/init.d/log restart
   ```
   Rollback: `uci delete` the three options, commit, restart log.
+- **Flint syslog heartbeat** (job `flint_syslog`). A 5-minute cron on the
+  router so a quiet night does not look like a dead shipper. Owner (Wolff
+  1:1 card t90s555, 9:29 AM CT Nov 16): "Yes, add the Flint heartbeat and
+  switch the alert to it". Persistent fragment
+  `/etc/gl_crontabs/crontabs.d/flint-heartbeat`:
+  ```
+  */5 * * * * logger -t flint-heartbeat alive
+  ```
+  Live crond is started by `/etc/init.d/gl_timer`, which copies
+  `/etc/gl_crontabs/crontabs.d/*` into tmpfs `/tmp/gl_crontabs/crontabs.d/`,
+  concatenates them into `/tmp/gl_crontabs/root`, and runs
+  `crond -c /tmp/gl_crontabs`. `/etc/init.d/cron` is the stock OpenWrt
+  unit and starts nothing here (`/etc/crontabs` is empty). List the live
+  crontab with `crontab -c /tmp/gl_crontabs -l`. Reload with
+  `/etc/init.d/gl_timer restart` (do not reboot). Do not put backup files
+  inside `crontabs.d/` — every file there is concatenated into root.
+  Verified 9:35:00 AM CT Nov 16: `logread` showed `flint-heartbeat: alive`,
+  and Loki `{job="flint_syslog"} |= "flint-heartbeat"` returned JSON
+  `{ts,level,service,host,env,app=flint-heartbeat,msg=alive}` (ts
+  2026-11-16T15:35:00.094956Z). Existing `auto_timezone` and ARP-scan
+  crons stayed in the live crontab.
+  Role: `ansible/roles/flint_heartbeat` via `playbooks/flint.yml` (raw
+  only; Flint has no Python). Not imported by `site.yml`. Rollback:
+  remove the fragment and restart `gl_timer`. Pre-change copies:
+  `/root/bak-forge-heartbeat-20261116/` and
+  `*.bak-forge-heartbeat-20261116` next to the originals (not inside
+  `crontabs.d/`).
 - **Comet KVM (GL-RM1)**: no remote-syslog setting in the UI or docs; not
   shipped.
 - **PBS exporter**: role `pbs_exporter` on CT172 (`metrics.yml --tags

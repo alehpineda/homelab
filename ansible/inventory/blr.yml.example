@@ -164,6 +164,19 @@ all:
           ansible_host: 163.192.206.150
           ansible_user: gremory
           # gremory_pull_source_pubkey: set in gitignored host_vars
+    # Flint main router (GL-BE9300, 10.10.0.1). playbooks/flint.yml targets
+    # this group. No Python on the device; that play uses raw only.
+    # Commented here so a copied example + playbooks/ping.yml (hosts: all)
+    # does not try ansible.builtin.ping against Flint. Uncomment in the
+    # gitignored inventory/blr.yml before running playbooks/flint.yml.
+    # flint:
+    #   hosts:
+    #     flint-main:
+    #       ansible_host: 10.10.0.1
+    #       ansible_port: 22
+    #       ansible_user: root
+    #       ansible_python_interpreter: /bin/false
+
     # Console root autologin. Empty until the gitignored copy lists the
     # approved guests (CT 175, CT 182, CT 250). CT 176 is not a member.
     # See ansible/README.md.

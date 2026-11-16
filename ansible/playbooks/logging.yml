@@ -36,6 +36,7 @@
 #                 docs/runbooks/logging-loki-openobserve.md) and the Flint
 #                 remote-syslog listener on the CT 173 Alloy (play alloy_loki,
 #                 job flint_syslog, udp/1514 from 10.10.0.1 only).
+#                 The router-side 5-minute heartbeat is playbooks/flint.yml.
 # See docs/runbooks/logging-loki-openobserve.md.
 - name: Loki config
   hosts: loki-blr-lxc

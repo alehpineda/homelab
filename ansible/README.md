@@ -40,6 +40,8 @@ SSH port **4488**. Fresh LXCs often still listen on **22**. Set
 | `roles/openobserve/` | OpenObserve OSS pinned binary, service user, hardened unit, `/etc/openobserve/openobserve.env` 0600 from controller secret files. |
 | `roles/alloy/` | Grafana Alloy pinned + held; per-host sources fan out to Loki and OpenObserve. |
 | `roles/prometheus_remote_write/` | Marked `remote_write` block to OpenObserve; `promtool check config` before replace. |
+| `playbooks/flint.yml` | Flint 5-minute syslog heartbeat (raw only; no Python on the router). Not run by `site.yml`. |
+| `roles/flint_heartbeat/` | That playbook. Persistent file under `/etc/gl_crontabs/crontabs.d/`. See `docs/runbooks/logging-loki-openobserve.md`. |
 
 ## Inventory
 
@@ -73,6 +75,7 @@ ansible-playbook --syntax-check playbooks/ollama.yml
 ansible-playbook --syntax-check playbooks/grokbot-headless.yml
 ansible-playbook --syntax-check playbooks/arr.yml
 ansible-playbook --syntax-check playbooks/caddy.yml
+ansible-playbook --syntax-check playbooks/flint.yml
 ```
 
 A live ping connects with SSH. It does not install or configure anything,

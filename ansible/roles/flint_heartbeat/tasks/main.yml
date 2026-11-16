@@ -1,0 +1,47 @@
+---
+# Persistent source of truth is /etc/gl_crontabs/crontabs.d/flint-heartbeat.
+# /etc/init.d/gl_timer copies those fragments into tmpfs
+# /tmp/gl_crontabs/crontabs.d/, rebuilds /tmp/gl_crontabs/root, and runs
+# crond -c /tmp/gl_crontabs. /etc/init.d/cron is the stock OpenWrt unit;
+# /etc/crontabs is empty, so it starts nothing. Do not write /etc/crontabs
+# or place .bak files inside crontabs.d/ (every file there is concatenated
+# into the live crontab). rm_crond_files only removes GL-managed
+# led/reboot/wifi/disk/screen/langs/netifydupdate fragments, so this
+# custom file survives a gl_timer restart and a reboot.
+
+- name: Check the persistent flint-heartbeat fragment
+  ansible.builtin.raw: |
+    if [ -f "{{ flint_heartbeat_fragment }}" ] && grep -qxF '{{ flint_heartbeat_line }}' "{{ flint_heartbeat_fragment }}"; then
+      echo PRESENT
+    else
+      echo MISSING
+    fi
+  register: flint_heartbeat_check
+  changed_when: false
+  check_mode: false
+
+- name: Install the persistent flint-heartbeat fragment
+  ansible.builtin.raw: |
+    set -e
+    umask 022
+    dest='{{ flint_heartbeat_fragment }}'
+    mkdir -p "$(dirname "$dest")"
+    printf '%s\n' '{{ flint_heartbeat_line }}' > "$dest.new"
+    chmod 0755 "$dest.new"
+    mv "$dest.new" "$dest"
+  when: "'PRESENT' not in flint_heartbeat_check.stdout"
+  register: flint_heartbeat_write
+
+- name: Reload gl_timer so crond picks up the fragment
+  ansible.builtin.raw: /etc/init.d/gl_timer restart
+  when: flint_heartbeat_write is changed
+
+- name: Verify the live crontab has the heartbeat and the stock GL jobs
+  ansible.builtin.raw: |
+    set -e
+    out=$(crontab -c /tmp/gl_crontabs -l)
+    echo "$out" | grep -qxF '{{ flint_heartbeat_line }}'
+    echo "$out" | grep -q '/usr/bin/auto_timezone'
+    echo "$out" | grep -q 'get_arp_scan_ret'
+    echo OK
+  changed_when: false
