@@ -4,12 +4,14 @@
 #   forge-mariadb-dump restore-test  load newest dump into restoretest_<db>,
 #                                    compare table counts, drop it
 # Retention: {{ mariadb_dump_keep_daily }} daily, {{ mariadb_dump_keep_weekly }} weekly (Sunday copy).
-# stdout lines are JSON {level, component, msg} for the Alloy journal pipeline.
+# stdout lines are JSON {ts, level, component, msg} for the Alloy journal pipeline.
 set -euo pipefail
 umask 027
 base="{{ mariadb_dump_dir }}"
 dbs=({% for app in mariadb_apps %}{{ app.db }} {% endfor %})
-log() { printf '{"level":"%s","component":"%s","msg":"%s"}\n' "$1" "$2" "$3"; }
+# ts is set here: the Alloy unwrap takes ts from the inner object, and without
+# it the packed line carries "ts":null.
+log() { printf '{"ts":"%s","level":"%s","component":"%s","msg":"%s"}\n' "$(date -u +%Y-%m-%dT%H:%M:%S.%6NZ)" "$1" "$2" "$3"; }
 q() { mariadb -NB -e "$1"; }
 prune() { # dir glob keep
   { ls -1t "$1"/$2 2>/dev/null || true; } | tail -n +"$(( $3 + 1 ))" | xargs -r rm -f --

@@ -816,7 +816,7 @@
 
 # Databases (Forge 1:1, design t927u 4:47 PM CT Nov 16; two LXCs t928u).
 # Journal only: PostgreSQL logs via syslog -> journald, MariaDB error log via
-# stderr -> journald, dump/restore-test scripts print JSON {level, component,
+# stderr -> journald, dump/restore-test scripts print JSON {ts, level, component,
 # msg}. Apply after CT178/179 exist; one CT at a time.
 - name: Alloy on CT 178 (PostgreSQL journal)
   hosts: postgres-blr-lxc
