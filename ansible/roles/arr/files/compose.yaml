@@ -49,6 +49,15 @@ services:
       # 7878 Radarr, 8686 Lidarr, 6767 Bazarr, 4545 Listenarr, 9117 Jackett,
       # 17871 qBittorrent exporter. Not 8191.
       FIREWALL_INPUT_PORTS: "8085,9696,8989,7878,8686,6767,4545,9117,17871"
+      # Only LAN Caddy .251 (family ingress, serves jellyfin) leaves outside
+      # the tunnel; the rest of the LAN stays blocked (card t901s4709).
+      FIREWALL_OUTBOUND_SUBNETS: "10.10.0.251/32"
+    # No "search lan": public names retried as <name>.lan were sent by
+    # gluetun's local-name forwarder to Docker DNS -> AdGuard, outside the VPN.
+    dns_search: .
+    # Public DNS (via VPN) answers gremory's public IP; Jellyfin is LAN-only.
+    extra_hosts:
+      - "jellyfin.alehpineda.com:10.10.0.251"
     volumes:
       - /opt/arr/gluetun:/gluetun
     sysctls:
