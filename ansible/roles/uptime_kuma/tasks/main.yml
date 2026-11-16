@@ -1,0 +1,137 @@
+---
+# Idempotent. Pins the Uptime Kuma release and the service environment.
+# An upgrade builds the new tree beside the running one (no downtime), then
+# stops the service once, takes a cold copy of data/, swaps the trees, moves
+# data/ across and starts once. An env-only change is a single restart.
+# The previous tree stays at <dir>-<old>.prev for rollback (never deleted here).
+
+- name: Read installed package.json
+  ansible.builtin.slurp:
+    src: "{{ uptime_kuma_dir }}/package.json"
+  register: uptime_kuma_pkg
+
+- name: Set installed version
+  ansible.builtin.set_fact:
+    uptime_kuma_installed: "{{ (uptime_kuma_pkg.content | b64decode | from_json).version }}"
+    uptime_kuma_upgrade: "{{ (uptime_kuma_pkg.content | b64decode | from_json).version != uptime_kuma_version }}"
+    uptime_kuma_staging: "{{ uptime_kuma_dir }}-{{ uptime_kuma_version }}.staging"
+
+- name: Drop-in directory
+  ansible.builtin.file:
+    path: "/etc/systemd/system/{{ uptime_kuma_service }}.service.d"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Write the service environment drop-in
+  ansible.builtin.template:
+    src: 10-forge-env.conf.j2
+    dest: "/etc/systemd/system/{{ uptime_kuma_service }}.service.d/10-forge-env.conf"
+    owner: root
+    group: root
+    mode: "0644"
+  register: uptime_kuma_dropin
+
+- name: Upgrade {{ uptime_kuma_installed }} -> {{ uptime_kuma_version }}
+  when: uptime_kuma_upgrade | bool
+  block:
+    - name: Download the release tarball (pinned sha256)
+      ansible.builtin.get_url:
+        url: "https://github.com/louislam/uptime-kuma/archive/refs/tags/{{ uptime_kuma_version }}.tar.gz"
+        dest: "/root/uptime-kuma-{{ uptime_kuma_version }}.tar.gz"
+        checksum: "sha256:{{ uptime_kuma_tarball_sha256 }}"
+        mode: "0600"
+
+    - name: Fresh staging dir
+      ansible.builtin.file:
+        path: "{{ uptime_kuma_staging }}"
+        state: "{{ item }}"
+        mode: "0755"
+      loop: [absent, directory]
+
+    - name: Unpack into staging
+      ansible.builtin.unarchive:
+        src: "/root/uptime-kuma-{{ uptime_kuma_version }}.tar.gz"
+        dest: "{{ uptime_kuma_staging }}"
+        remote_src: true
+        extra_opts: [--strip-components=1]
+
+    - name: Install production dependencies (staging, service still running)
+      ansible.builtin.command: npm ci --omit dev
+      args:
+        chdir: "{{ uptime_kuma_staging }}"
+      changed_when: true
+
+    - name: Download the prebuilt frontend (dist) for this version
+      ansible.builtin.command: npm run download-dist
+      args:
+        chdir: "{{ uptime_kuma_staging }}"
+      changed_when: true
+
+    - name: Require dist/index.html
+      ansible.builtin.stat:
+        path: "{{ uptime_kuma_staging }}/dist/index.html"
+      register: uptime_kuma_dist
+      failed_when: not uptime_kuma_dist.stat.exists
+
+    - name: Chromium symlink (community-scripts layout, real-browser monitors)
+      ansible.builtin.file:
+        src: /usr/bin/chromium
+        dest: "{{ uptime_kuma_staging }}/chromium"
+        state: link
+        force: true
+
+    - name: Stop the service (start of the single restart window)
+      ansible.builtin.systemd:
+        name: "{{ uptime_kuma_service }}"
+        state: stopped
+
+    - name: Backup timestamp
+      ansible.builtin.command: date +%Y%m%d-%H%M
+      register: uptime_kuma_ts
+      changed_when: false
+
+    - name: Cold copy of data/ (incl. kuma.db) and a sha256 manifest
+      ansible.builtin.shell: |
+        set -euo pipefail
+        dst={{ uptime_kuma_backup_prefix }}-{{ uptime_kuma_ts.stdout }}
+        test ! -e "$dst"
+        cp -a {{ uptime_kuma_dir }}/data "$dst"
+        cd "$dst" && find . -type f -print0 | sort -z | xargs -0 sha256sum > /root/$(basename "$dst").sha256
+        echo "$dst"
+      args:
+        executable: /bin/bash
+      register: uptime_kuma_backup
+      changed_when: true
+
+    - name: Swap trees and carry data/ across
+      ansible.builtin.shell: |
+        set -euo pipefail
+        prev={{ uptime_kuma_dir }}-{{ uptime_kuma_installed }}.prev
+        test ! -e "$prev"
+        mv {{ uptime_kuma_dir }} "$prev"
+        mv {{ uptime_kuma_staging }} {{ uptime_kuma_dir }}
+        mv "$prev/data" {{ uptime_kuma_dir }}/data
+      args:
+        executable: /bin/bash
+      changed_when: true
+
+- name: Start or restart once (picks up the new tree and/or the drop-in)
+  ansible.builtin.systemd:
+    name: "{{ uptime_kuma_service }}"
+    state: restarted
+    daemon_reload: true
+    enabled: true
+  when: (uptime_kuma_upgrade | bool) or uptime_kuma_dropin.changed
+
+- name: Wait for the listener
+  ansible.builtin.wait_for:
+    port: 3001
+    timeout: 120
+
+- name: Report
+  ansible.builtin.debug:
+    msg: >-
+      installed_before={{ uptime_kuma_installed }} target={{ uptime_kuma_version }}
+      backup={{ uptime_kuma_backup.stdout | default('none (no upgrade)') }}

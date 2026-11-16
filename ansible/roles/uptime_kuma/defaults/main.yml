@@ -1,0 +1,19 @@
+---
+# Uptime Kuma on CT 184 (native Node 22 + systemd uptime-kuma.service, from
+# the community-scripts install; see terraform/proxmox/ct_184_uptimekuma.tf).
+# Pinned upstream release (github.com/louislam/uptime-kuma, tag = version).
+# 2.5.11 (2026-11-12): GHSA-437w-j82f-9vjh admin-only RCE fix; 2.5.10 is the
+# Node.js 22.23.5 security note for Docker.
+uptime_kuma_version: "2.5.11"
+# sha256 of https://github.com/louislam/uptime-kuma/archive/refs/tags/<version>.tar.gz
+uptime_kuma_tarball_sha256: "84cb0d784e57f4991b62352ae0c76c9e4a1c3d14da72d326ea0693b8b2e58d62"
+uptime_kuma_dir: /opt/uptime-kuma
+uptime_kuma_service: uptime-kuma
+# Cold copy of <dir>/data taken while the service is stopped for an upgrade.
+uptime_kuma_backup_prefix: /root/forge-kuma-data
+# Environment for the service (systemd drop-in). JSON logs are the homelab
+# default (user standard 2026-11-14). Kuma >= 2.2.0 reads
+# UPTIME_KUMA_LOG_FORMAT=json and prints one JSON object per line:
+# {"time": "<RFC3339 with offset>", "module": "...", "level": "info|warn|error|debug", "msg": "..."}.
+uptime_kuma_env:
+  UPTIME_KUMA_LOG_FORMAT: json

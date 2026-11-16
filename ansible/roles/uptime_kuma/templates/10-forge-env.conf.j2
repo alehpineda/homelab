@@ -1,0 +1,5 @@
+# Managed by ansible role uptime_kuma (alehpineda/homelab). Do not edit by hand.
+[Service]
+{% for k, v in uptime_kuma_env | dictsort %}
+Environment={{ k }}={{ v }}
+{% endfor %}
