@@ -1,0 +1,202 @@
+---
+# Installs PostgreSQL on CT 178 the community-scripts way. Does not create
+# the CT or mp0. Never reads, prints or transfers a password (no_log on
+# every task that could carry one).
+
+- name: Confirm the data path is the mp0 volume
+  ansible.builtin.command:
+    argv: [findmnt, --mountpoint, "{{ postgresql_base_dir }}", --noheadings]
+  register: _pg_mount
+  changed_when: false
+  failed_when: false
+
+- name: Fail when the data path is not a mountpoint
+  ansible.builtin.assert:
+    that:
+      - _pg_mount.rc == 0
+    fail_msg: >-
+      {{ postgresql_base_dir }} is not a mountpoint. CT 178 mp0 (16G data2)
+      must exist before PostgreSQL is installed.
+
+- name: Prerequisites (curl, gnupg, ssl-cert for the snakeoil pair)
+  ansible.builtin.apt:
+    name: [ca-certificates, curl, gnupg, ssl-cert]
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: Fetch the PGDG signing key
+  ansible.builtin.get_url:
+    url: "{{ postgresql_pgdg_key_url }}"
+    dest: "{{ postgresql_pgdg_keyring }}"
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Read the PGDG key fingerprint
+  ansible.builtin.shell:
+    cmd: >-
+      set -o pipefail;
+      gpg --show-keys --with-colons {{ postgresql_pgdg_keyring | quote }}
+      | awk -F: '$1=="fpr"{print $10; exit}'
+    executable: /bin/bash
+  register: _pg_fpr
+  changed_when: false
+
+- name: Refuse an unexpected PGDG key
+  ansible.builtin.assert:
+    that:
+      - _pg_fpr.stdout | trim == postgresql_pgdg_key_fingerprint
+    fail_msg: "PGDG key fingerprint mismatch: {{ _pg_fpr.stdout | trim }}"
+
+- name: PGDG apt source (deb822)
+  ansible.builtin.copy:
+    dest: /etc/apt/sources.list.d/pgdg.sources
+    owner: root
+    group: root
+    mode: "0644"
+    content: |
+      # Managed by ansible role postgresql (community-scripts setup_postgresql layout).
+      Types: deb
+      URIs: {{ postgresql_pgdg_uri }}
+      Suites: {{ postgresql_pgdg_suite }}
+      Components: main
+      Signed-By: {{ postgresql_pgdg_keyring }}
+  register: _pg_src
+
+- name: Install PostgreSQL {{ postgresql_version }} (pinned major)
+  ansible.builtin.apt:
+    name:
+      - "postgresql-{{ postgresql_version }}"
+      - "postgresql-client-{{ postgresql_version }}"
+    state: present
+    update_cache: "{{ _pg_src.changed }}"
+
+- name: postgresql.conf (script layout + Forge deviations)
+  ansible.builtin.template:
+    src: postgresql.conf.j2
+    dest: "{{ postgresql_conf_dir }}/postgresql.conf"
+    owner: postgres
+    group: postgres
+    mode: "0644"
+    backup: true
+  notify: Restart postgresql
+
+- name: pg_hba.conf (per-app hostssl scram lines only)
+  ansible.builtin.template:
+    src: pg_hba.conf.j2
+    dest: "{{ postgresql_conf_dir }}/pg_hba.conf"
+    owner: postgres
+    group: postgres
+    mode: "0640"
+    backup: true
+  notify: Reload postgresql
+
+- name: Enable and start postgresql
+  ansible.builtin.systemd_service:
+    name: postgresql
+    enabled: true
+    state: started
+
+- name: Flush handlers before creating roles
+  ansible.builtin.meta: flush_handlers
+
+- name: Secret directory (root 0700)
+  ansible.builtin.file:
+    path: "{{ postgresql_secret_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0700"
+
+- name: Install the app/role helper and the dump script
+  ansible.builtin.template:
+    src: "{{ item }}.j2"
+    dest: "/usr/local/sbin/{{ item }}"
+    owner: root
+    group: root
+    mode: "0750"
+  loop: [forge-pg-ensure-app, forge-pg-dump]
+
+- name: Ensure each app's role, database and password (generated on the CT)
+  ansible.builtin.command:
+    argv:
+      - /usr/local/sbin/forge-pg-ensure-app
+      - "{{ item.name }}"
+      - "{{ item.db }}"
+      - "{{ item.user }}"
+  loop: "{{ postgresql_apps }}"
+  loop_control:
+    label: "{{ item.name }}"
+  register: _pg_app
+  changed_when: "'created' in _pg_app.stdout"
+  no_log: true
+
+- name: Report app state (names only)
+  ansible.builtin.debug:
+    msg: "{{ _pg_app.results | map(attribute='stdout') | list }}"
+
+- name: Monitoring role for the exporter (peer auth, pg_monitor)
+  ansible.builtin.command:
+    argv:
+      - runuser
+      - -u
+      - postgres
+      - --
+      - psql
+      - -v
+      - ON_ERROR_STOP=1
+      - -qAtc
+      - >-
+        DO $$ BEGIN
+        IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'prometheus') THEN
+        CREATE ROLE prometheus LOGIN; RAISE NOTICE 'created'; END IF;
+        GRANT pg_monitor TO prometheus; END $$;
+  register: _pg_mon
+  changed_when: "'created' in _pg_mon.stderr"
+
+- name: Install the Postgres exporter
+  ansible.builtin.apt:
+    name: "{{ postgresql_exporter_package }}"
+    state: present
+
+- name: Exporter settings (unix socket, peer auth, no password)
+  ansible.builtin.copy:
+    dest: /etc/default/prometheus-postgres-exporter
+    owner: root
+    group: root
+    mode: "0644"
+    backup: true
+    content: |
+      # Managed by ansible role postgresql.
+      DATA_SOURCE_NAME="user=prometheus host=/run/postgresql dbname=postgres sslmode=disable"
+      ARGS="--web.listen-address={{ postgresql_exporter_listen }}"
+  notify: Restart postgres exporter
+
+- name: Enable the exporter
+  ansible.builtin.systemd_service:
+    name: prometheus-postgres-exporter
+    enabled: true
+    state: started
+
+- name: Dump and restore-test units
+  ansible.builtin.template:
+    src: "{{ item }}.j2"
+    dest: "/etc/systemd/system/{{ item }}"
+    owner: root
+    group: root
+    mode: "0644"
+  loop:
+    - forge-pg-dump.service
+    - forge-pg-dump.timer
+    - forge-pg-restore-test.service
+    - forge-pg-restore-test.timer
+  register: _pg_units
+
+- name: Enable the dump and restore-test timers
+  ansible.builtin.systemd_service:
+    name: "{{ item }}"
+    enabled: true
+    state: started
+    daemon_reload: "{{ _pg_units.changed }}"
+  loop: [forge-pg-dump.timer, forge-pg-restore-test.timer]

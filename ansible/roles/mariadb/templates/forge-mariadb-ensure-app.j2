@@ -1,0 +1,29 @@
+#!/bin/bash
+# Managed by ansible role mariadb. Usage: forge-mariadb-ensure-app NAME DB USER CLIENT_IP
+# Creates DB (utf8mb4) and 'USER'@'CLIENT_IP' if missing, sets the password
+# from {{ mariadb_secret_dir }}/NAME.pass (generated on first run, root 0600,
+# 40 alnum chars) and grants ALL on DB only. SQL goes to the client on stdin,
+# never argv; nothing secret is printed. Prints "created" or "exists".
+set -euo pipefail
+name="$1"; db="$2"; user="$3"; client="$4"
+[[ "$name" =~ ^[a-z0-9_]+$ && "$db" =~ ^[a-z0-9_]+$ && "$user" =~ ^[a-z0-9_]+$ ]] || { echo "bad identifier" >&2; exit 64; }
+[[ "$client" =~ ^[0-9]{1,3}(\.[0-9]{1,3}){3}$ ]] || { echo "bad client ip" >&2; exit 64; }
+f="{{ mariadb_secret_dir }}/${name}.pass"
+umask 077
+if [[ ! -s "$f" ]]; then
+  tr -dc 'A-Za-z0-9' </dev/urandom | head -c 40 >"$f"
+fi
+chown root:root "$f"; chmod 0600 "$f"
+pw="$(<"$f")"
+[[ "$pw" =~ ^[A-Za-z0-9]{24,}$ ]] || { echo "$f is not 24+ alnum chars" >&2; exit 65; }
+state=exists
+if [[ "$(mariadb -NBe "SELECT COUNT(*) FROM mysql.user WHERE User='${user}' AND Host='${client}'")" == 0 ]]; then
+  state=created
+fi
+mariadb <<SQL
+CREATE DATABASE IF NOT EXISTS \`${db}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE USER IF NOT EXISTS '${user}'@'${client}' IDENTIFIED BY '${pw}';
+ALTER USER '${user}'@'${client}' IDENTIFIED BY '${pw}';
+GRANT ALL PRIVILEGES ON \`${db}\`.* TO '${user}'@'${client}';
+SQL
+echo "${name}: ${state}"

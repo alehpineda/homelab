@@ -1,0 +1,10 @@
+# Managed by ansible role mariadb.
+[Unit]
+Description=Forge daily mariadb-dump ({{ mariadb_dump_oncalendar }})
+
+[Timer]
+OnCalendar={{ mariadb_dump_oncalendar }}
+Persistent=true
+
+[Install]
+WantedBy=timers.target

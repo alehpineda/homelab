@@ -1,0 +1,15 @@
+# Managed by ansible role mariadb. Sorts after Debian's 50-server.cnf, so
+# these win. community-scripts edits my.cnf/50-server.cnf in place instead.
+[mariadbd]
+port = {{ mariadb_port }}
+# Deviation: script comments out bind-address (all interfaces).
+bind-address = {{ mariadb_bind_address }}
+skip-name-resolve
+max_connections = {{ mariadb_max_connections }}
+innodb_buffer_pool_size = {{ mariadb_innodb_buffer_pool_size }}
+character-set-server = utf8mb4
+collation-server = utf8mb4_unicode_ci
+# House JSON standard: no log_error file, so the error log goes to stderr ->
+# journald -> Alloy job mariadb_journal. MariaDB has no native JSON error
+# log; [Warning]/[ERROR] stay in msg (see docs/runbooks/obs-databases.md).
+log_warnings = 2

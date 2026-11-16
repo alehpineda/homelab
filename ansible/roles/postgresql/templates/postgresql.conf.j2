@@ -1,0 +1,55 @@
+# Managed by ansible role postgresql. Layout and defaults follow
+# community-scripts install/postgresql-install.sh; "Deviation" marks Forge changes.
+
+data_directory = '{{ postgresql_data_dir }}'
+hba_file = '{{ postgresql_conf_dir }}/pg_hba.conf'
+ident_file = '{{ postgresql_conf_dir }}/pg_ident.conf'
+external_pid_file = '/var/run/postgresql/{{ postgresql_version }}-main.pid'
+
+# Deviation: script listens on '*'.
+listen_addresses = '{{ postgresql_listen_addresses }}'
+port = {{ postgresql_port }}
+# Deviation: script 100.
+max_connections = {{ postgresql_max_connections }}
+unix_socket_directories = '/var/run/postgresql'
+# Deviation: script leaves the default; SCRAM only.
+password_encryption = scram-sha-256
+
+ssl = on
+ssl_cert_file = '/etc/ssl/certs/ssl-cert-snakeoil.pem'
+ssl_key_file = '/etc/ssl/private/ssl-cert-snakeoil.key'
+
+# Deviation: script shared_buffers 128MB.
+shared_buffers = {{ postgresql_shared_buffers }}
+effective_cache_size = {{ postgresql_effective_cache_size }}
+work_mem = {{ postgresql_work_mem }}
+maintenance_work_mem = {{ postgresql_maintenance_work_mem }}
+dynamic_shared_memory_type = posix
+
+max_wal_size = 1GB
+min_wal_size = 80MB
+
+# Deviation: house JSON standard via journald (Alloy job postgres_journal).
+log_destination = 'syslog'
+syslog_facility = 'LOCAL0'
+syslog_ident = '{{ postgresql_syslog_ident }}'
+syslog_split_messages = on
+log_min_messages = {{ postgresql_log_min_messages }}
+log_min_error_statement = error
+log_min_duration_statement = {{ postgresql_log_min_duration_statement }}
+log_connections = off
+log_disconnections = off
+log_line_prefix = '%q%u@%d '
+log_timezone = 'Etc/UTC'
+
+cluster_name = '{{ postgresql_version }}/main'
+
+datestyle = 'iso, mdy'
+timezone = 'Etc/UTC'
+lc_messages = 'C'
+lc_monetary = 'C'
+lc_numeric = 'C'
+lc_time = 'C'
+default_text_search_config = 'pg_catalog.english'
+
+include_dir = 'conf.d'

@@ -1,0 +1,155 @@
+---
+# Installs MariaDB on CT 179 the community-scripts way (distro packages).
+# Does not create the CT or mp0. Never reads, prints or transfers a password.
+
+- name: Confirm the data path is the mp0 volume
+  ansible.builtin.command:
+    argv: [findmnt, --mountpoint, "{{ mariadb_data_dir }}", --noheadings]
+  register: _mdb_mount
+  changed_when: false
+  failed_when: false
+
+- name: Fail when the data path is not a mountpoint
+  ansible.builtin.assert:
+    that:
+      - _mdb_mount.rc == 0
+    fail_msg: >-
+      {{ mariadb_data_dir }} is not a mountpoint. CT 179 mp0 (8G data2)
+      must exist before MariaDB is installed.
+
+- name: Preseed debconf like setup_mariadb (no feedback plugin prompt)
+  ansible.builtin.debconf:
+    name: mariadb-server
+    question: mariadb-server/feedback
+    value: "false"
+    vtype: boolean
+
+- name: Install MariaDB (Debian packages, as setup_mariadb "latest")
+  ansible.builtin.apt:
+    name: "{{ mariadb_packages }}"
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: Forge server drop-in (bind, sizing, journald logging)
+  ansible.builtin.template:
+    src: 60-forge.cnf.j2
+    dest: "{{ mariadb_dropin }}"
+    owner: root
+    group: root
+    mode: "0644"
+    backup: true
+  notify: Restart mariadb
+
+- name: Enable and start mariadb
+  ansible.builtin.systemd_service:
+    name: mariadb
+    enabled: true
+    state: started
+
+- name: Flush handlers before creating users
+  ansible.builtin.meta: flush_handlers
+
+- name: Secret directory (root 0700)
+  ansible.builtin.file:
+    path: "{{ mariadb_secret_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0700"
+
+- name: Install the app/user helper and the dump script
+  ansible.builtin.template:
+    src: "{{ item }}.j2"
+    dest: "/usr/local/sbin/{{ item }}"
+    owner: root
+    group: root
+    mode: "0750"
+  loop: [forge-mariadb-ensure-app, forge-mariadb-dump]
+
+- name: Ensure each app's user, database and password (generated on the CT)
+  ansible.builtin.command:
+    argv:
+      - /usr/local/sbin/forge-mariadb-ensure-app
+      - "{{ item.name }}"
+      - "{{ item.db }}"
+      - "{{ item.user }}"
+      - "{{ item.client }}"
+  loop: "{{ mariadb_apps }}"
+  loop_control:
+    label: "{{ item.name }}"
+  register: _mdb_app
+  changed_when: "'created' in _mdb_app.stdout"
+  no_log: true
+
+- name: Report app state (names only)
+  ansible.builtin.debug:
+    msg: "{{ _mdb_app.results | map(attribute='stdout') | list }}"
+
+- name: Exporter user (unix_socket, read-only monitoring grants)
+  ansible.builtin.command:
+    argv:
+      - mariadb
+      - -e
+      - >-
+        CREATE USER IF NOT EXISTS 'prometheus'@'localhost' IDENTIFIED VIA unix_socket;
+        GRANT PROCESS, REPLICA MONITOR, SELECT ON *.* TO 'prometheus'@'localhost';
+  changed_when: false
+
+- name: Install the mysqld exporter
+  ansible.builtin.apt:
+    name: "{{ mariadb_exporter_package }}"
+    state: present
+
+- name: Exporter client config (socket, no password)
+  ansible.builtin.copy:
+    dest: "{{ mariadb_exporter_cnf }}"
+    owner: root
+    group: prometheus
+    mode: "0640"
+    content: |
+      # Managed by ansible role mariadb. unix_socket auth; no password.
+      [client]
+      user = prometheus
+      socket = /run/mysqld/mysqld.sock
+  notify: Restart mysqld exporter
+
+- name: Exporter settings
+  ansible.builtin.copy:
+    dest: /etc/default/prometheus-mysqld-exporter
+    owner: root
+    group: root
+    mode: "0644"
+    backup: true
+    content: |
+      # Managed by ansible role mariadb.
+      ARGS="--config.my-cnf={{ mariadb_exporter_cnf }} --web.listen-address={{ mariadb_exporter_listen }}"
+  notify: Restart mysqld exporter
+
+- name: Enable the exporter
+  ansible.builtin.systemd_service:
+    name: prometheus-mysqld-exporter
+    enabled: true
+    state: started
+
+- name: Dump and restore-test units
+  ansible.builtin.template:
+    src: "{{ item }}.j2"
+    dest: "/etc/systemd/system/{{ item }}"
+    owner: root
+    group: root
+    mode: "0644"
+  loop:
+    - forge-mariadb-dump.service
+    - forge-mariadb-dump.timer
+    - forge-mariadb-restore-test.service
+    - forge-mariadb-restore-test.timer
+  register: _mdb_units
+
+- name: Enable the dump and restore-test timers
+  ansible.builtin.systemd_service:
+    name: "{{ item }}"
+    enabled: true
+    state: started
+    daemon_reload: "{{ _mdb_units.changed }}"
+  loop: [forge-mariadb-dump.timer, forge-mariadb-restore-test.timer]

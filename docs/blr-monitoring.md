@@ -28,6 +28,8 @@ is not set (same as the firecrawl and jellyfin declarations).
 | 172 | prometheus-blr-lxc | 10.10.0.72 | Prometheus | :9090 LAN |
 | 173 | loki-blr-lxc | 10.10.0.73 | Loki 3.7.9 | :3100 LAN |
 | 174 | pve-exporter-blr-lxc | 10.10.0.74 | prometheus-pve-exporter | :9221 LAN |
+| 178 | postgres-blr-lxc | 10.10.0.78 | PostgreSQL 17 (declared) | :5432 from .71/.77, :9187 exporter |
+| 179 | mariadb-blr-lxc | 10.10.0.79 | MariaDB 11.8 (declared) | :3306 from .84, :9104 exporter |
 | 177 | openobserve-blr-lxc | 10.10.0.77 | OpenObserve OSS 1.1.2 (declared 2026-11-11, not created yet) | :5080 via Caddy `.250` |
 
 Resources: 169 is 4 cores / 8192 MB / 20G; 171 is 1 / 1024 MB / 8G; 172 is

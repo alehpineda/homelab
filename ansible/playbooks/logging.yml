@@ -129,6 +129,24 @@
             static_configs:
               - targets: ["10.10.0.77:5080"]
                 labels: {host: openobserve-blr-lxc, ct: "177", service: openobserve, env: homelab}
+          # Databases (t927u/t928u, Nov 16). Apply only after CT178/179
+          # exist: -e prometheus_scrape_jobs=<these four>.
+          - job: postgres
+            static_configs:
+              - targets: ["10.10.0.78:9187"]
+                labels: {host: postgres-blr-lxc, ct: "178", service: postgres_exporter, env: homelab}
+          - job: postgres_node
+            static_configs:
+              - targets: ["10.10.0.78:9100"]
+                labels: {host: postgres-blr-lxc, ct: "178", service: node_exporter, env: homelab}
+          - job: mariadb
+            static_configs:
+              - targets: ["10.10.0.79:9104"]
+                labels: {host: mariadb-blr-lxc, ct: "179", service: mysqld_exporter, env: homelab}
+          - job: mariadb_node
+            static_configs:
+              - targets: ["10.10.0.79:9100"]
+                labels: {host: mariadb-blr-lxc, ct: "179", service: node_exporter, env: homelab}
           - job: loki
             static_configs:
               - targets: ["10.10.0.73:3100"]
@@ -794,6 +812,36 @@
         alloy_journal_job: adguardsync_journal
         alloy_service_label: adguardsync
         alloy_ct_label: "156"
+        alloy_journal_drop_rules: *w3_secret_drops
+
+# Databases (Forge 1:1, design t927u 4:47 PM CT Nov 16; two LXCs t928u).
+# Journal only: PostgreSQL logs via syslog -> journald, MariaDB error log via
+# stderr -> journald, dump/restore-test scripts print JSON {level, component,
+# msg}. Apply after CT178/179 exist; one CT at a time.
+- name: Alloy on CT 178 (PostgreSQL journal)
+  hosts: postgres-blr-lxc
+  gather_facts: false
+  tags: [alloy_postgres, alloy_databases]
+  roles:
+    - role: alloy
+      vars:
+        alloy_source_journal: true
+        alloy_journal_job: postgres_journal
+        alloy_service_label: postgres
+        alloy_ct_label: "178"
+        alloy_journal_drop_rules: *w3_secret_drops
+
+- name: Alloy on CT 179 (MariaDB journal)
+  hosts: mariadb-blr-lxc
+  gather_facts: false
+  tags: [alloy_mariadb, alloy_databases]
+  roles:
+    - role: alloy
+      vars:
+        alloy_source_journal: true
+        alloy_journal_job: mariadb_journal
+        alloy_service_label: mariadb
+        alloy_ct_label: "179"
         alloy_journal_drop_rules: *w3_secret_drops
 
 # AdGuard querylog (owner card t49s294, 3:42 PM CT Nov 14). Family DNS: one CT

@@ -1,0 +1,11 @@
+# Managed by ansible role postgresql.
+[Unit]
+Description=Forge daily pg_dump of app databases
+After=postgresql.service
+Requires=postgresql.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/forge-pg-dump dump
+Nice=10
+IOSchedulingClass=idle

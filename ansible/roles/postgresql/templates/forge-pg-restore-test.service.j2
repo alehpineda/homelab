@@ -1,0 +1,10 @@
+# Managed by ansible role postgresql.
+[Unit]
+Description=Forge monthly pg_restore test of the newest dumps
+After=postgresql.service
+Requires=postgresql.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/forge-pg-dump restore-test
+Nice=10

@@ -1,0 +1,10 @@
+# Managed by ansible role postgresql.
+[Unit]
+Description=Forge monthly pg_restore test ({{ postgresql_restore_test_oncalendar }})
+
+[Timer]
+OnCalendar={{ postgresql_restore_test_oncalendar }}
+Persistent=true
+
+[Install]
+WantedBy=timers.target

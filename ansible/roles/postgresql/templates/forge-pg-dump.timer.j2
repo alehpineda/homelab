@@ -1,0 +1,10 @@
+# Managed by ansible role postgresql.
+[Unit]
+Description=Forge daily pg_dump ({{ postgresql_dump_oncalendar }})
+
+[Timer]
+OnCalendar={{ postgresql_dump_oncalendar }}
+Persistent=true
+
+[Install]
+WantedBy=timers.target

@@ -24,13 +24,15 @@ pve_fw_cluster_ipsets:
     # Wave 4 (2026-11-14, card t64s378): + journald on 191,192,198,176,165. Logs only.
     # Wave 5 (2026-11-14, card t67s400): + journald on 151,150,154,156 (.53/.55 already in).
     # Wave 6 (2026-11-14, card t72s425): + PBS host .25 journald (bare metal, no guest fw).
+    # Databases (2026-11-16, t927u/t928u): + journald on 178 (.78), 179 (.79). Inert until the CTs exist.
     cidrs: [10.10.0.21, 10.10.0.250, 10.10.0.82, 10.10.0.71, 10.10.0.72, 10.10.0.73, 10.10.0.74, 10.10.0.77, 10.10.0.84,
             10.10.0.80, 10.10.0.83, 10.10.0.85, 10.10.0.86, 10.10.0.87, 10.10.0.93, 10.10.0.96, 10.10.0.60, 10.10.0.61, 10.10.0.81, 10.10.0.88,
             10.10.0.55, 10.10.0.53,
             10.10.0.70, 10.10.0.69, 10.10.0.97, 10.10.0.64, 10.10.0.63, 10.10.0.62, 10.10.0.89, 10.10.0.94, 10.10.0.95, 10.10.0.99,
             10.10.0.91, 10.10.0.92, 10.10.0.98, 10.10.0.76, 10.10.0.65,
             10.10.0.51, 10.10.0.50, 10.10.0.54, 10.10.0.56,
-            10.10.0.25]
+            10.10.0.25,
+            10.10.0.78, 10.10.0.79]
   # `management` already exists (10.10.0.0/24, 100.85.0.0/16) and is used by
   # node rules for 22/8006/3128. Not managed here; change it only with NetTit.
 
@@ -96,6 +98,15 @@ pve_fw_ct_rules:
     - {proto: tcp, dport: "5080", source: prometheus, comment: "remote_write"}
     - {proto: tcp, dport: "9100", source: prometheus, comment: "node_exporter scrape"}
     - {proto: tcp, dport: "12345", source: prometheus, comment: "alloy /metrics"}
+  178:  # postgres (t927u/t928u Nov 16) — 5432 only from OpenObserve .77 and Grafana .71; exporters for Prometheus. Not rolled out until CT178 exists.
+    - {proto: tcp, dport: "5432", source: openobserve, comment: "O2 meta store"}
+    - {proto: tcp, dport: "5432", source: grafana, comment: "Grafana config db"}
+    - {proto: tcp, dport: "9187", source: prometheus, comment: "postgres_exporter"}
+    - {proto: tcp, dport: "9100", source: prometheus, comment: "node_exporter scrape"}
+  179:  # mariadb (t928u Nov 16) — 3306 only from Uptime Kuma .84; exporters for Prometheus. Not rolled out until CT179 exists.
+    - {proto: tcp, dport: "3306", source: 10.10.0.84, comment: "Uptime Kuma db"}
+    - {proto: tcp, dport: "9104", source: prometheus, comment: "mysqld_exporter"}
+    - {proto: tcp, dport: "9100", source: prometheus, comment: "node_exporter scrape"}
   174:  # pve-exporter
     - {proto: tcp, dport: "9221", source: prometheus}
     - {proto: tcp, dport: "12345", source: prometheus, comment: "alloy /metrics"}

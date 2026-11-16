@@ -1,0 +1,31 @@
+#!/bin/bash
+# Managed by ansible role postgresql. Usage: forge-pg-ensure-app NAME DB USER
+# Creates USER (LOGIN) and DB (owner USER) if missing and sets USER's
+# password from {{ postgresql_secret_dir }}/NAME.pass, generating that file
+# (root 0600, 40 alnum chars) on first run. The password goes to psql on
+# stdin, never argv, and is never printed. Prints "created" or "exists".
+set -euo pipefail
+name="$1"; db="$2"; user="$3"
+[[ "$name" =~ ^[a-z0-9_]+$ && "$db" =~ ^[a-z0-9_]+$ && "$user" =~ ^[a-z0-9_]+$ ]] || { echo "bad identifier" >&2; exit 64; }
+f="{{ postgresql_secret_dir }}/${name}.pass"
+umask 077
+if [[ ! -s "$f" ]]; then
+  tr -dc 'A-Za-z0-9' </dev/urandom | head -c 40 >"$f"
+fi
+chown root:root "$f"; chmod 0600 "$f"
+pw="$(<"$f")"
+[[ "$pw" =~ ^[A-Za-z0-9]{24,}$ ]] || { echo "$f is not 24+ alnum chars" >&2; exit 65; }
+state=exists
+if [[ -z "$(runuser -u postgres -- psql -qAtc "SELECT 1 FROM pg_roles WHERE rolname='${user}'")" ]]; then
+  state=created
+fi
+runuser -u postgres -- psql -q -v ON_ERROR_STOP=1 -v u="$user" -v d="$db" -f - <<SQL >/dev/null
+SELECT format('CREATE ROLE %I LOGIN', :'u') WHERE NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = :'u')\gexec
+SELECT format('ALTER ROLE %I PASSWORD %L', :'u', '${pw}')\gexec
+SELECT format('CREATE DATABASE %I OWNER %I', :'d', :'u') WHERE NOT EXISTS (SELECT 1 FROM pg_database WHERE datname = :'d')\gexec
+SELECT format('REVOKE ALL ON DATABASE %I FROM PUBLIC', :'d')\gexec
+SQL
+if [[ -z "$(runuser -u postgres -- psql -qAtc "SELECT 1 FROM pg_database WHERE datname='${db}'")" ]]; then
+  echo "database ${db} missing after ensure" >&2; exit 66
+fi
+echo "${name}: ${state}"

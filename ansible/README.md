@@ -31,6 +31,7 @@ SSH port **4488**. Fresh LXCs often still listen on **22**. Set
 | `playbooks/grokbot-headless.yml` | Opt-in always-on Grok Bot on CT 176. Not run by `site.yml`. |
 | `roles/grokbot_headless/` | Xvfb `:99` + Grok Bot user units, linger, empty-password keyring. See `docs/runbooks/ct176-headless-grokbot.md`. |
 | `playbooks/homepage-secrets.yml` | CT 191 Homepage: `/etc/homepage/secrets` (root 0700, files root 0600) and the `homepage.service` drop-in with `LOG_TARGETS=stdout` plus one `HOMEPAGE_FILE_*` line per non-empty secret file. Names only, never values. One restart when the drop-in changes. Not run by `site.yml`. |
+| `playbooks/databases.yml` | CT 178 PostgreSQL 17 (role `postgresql`) and CT 179 MariaDB (role `mariadb`), installed the community-scripts way; per-app db/user with passwords generated on the CT in `/root/forge-db/*.pass` (root 0600, never on the controller); exporters; daily dump timer 01:30 CT (14 daily / 8 weekly) and a monthly restore test. Not run by `site.yml`. See `docs/runbooks/obs-databases.md`. |
 | `playbooks/dashboards.yml` | CT 191 Homepage / CT 198 Homer: `grokops` key, `dashcfg` group write on Homepage `services.yaml`/`settings.yaml`/`widgets.yaml`/`bookmarks.yaml`/`proxmox.yaml` and Homer `config.yml`. No sudo. Not run by `site.yml`. |
 | `roles/dashboard_editor/` | That playbook. See `docs/runbooks/dashboard-editor.md`. |
 | `roles/console_autologin/` | Getty drop-ins for that playbook. Default off. |

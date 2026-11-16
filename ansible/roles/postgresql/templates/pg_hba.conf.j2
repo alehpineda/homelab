@@ -1,0 +1,12 @@
+# Managed by ansible role postgresql.
+# Deviation from community-scripts: no md5, no 0.0.0.0/0. Local sockets use
+# peer (postgres, prometheus exporter, root via runuser); each app gets one
+# TLS-only SCRAM line from its client IP. The PVE guest firewall also limits
+# tcp/5432 to the same IPs.
+# TYPE   DATABASE  USER  ADDRESS  METHOD
+local    all       all            peer
+host     all       all   127.0.0.1/32  scram-sha-256
+host     all       all   ::1/128       scram-sha-256
+{% for app in postgresql_apps %}
+hostssl  {{ app.db }}  {{ app.user }}  {{ app.client }}  scram-sha-256
+{% endfor %}

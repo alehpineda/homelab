@@ -1,0 +1,68 @@
+---
+# PostgreSQL on CT 178 (postgres-blr-lxc). Mirrors community-scripts
+# install/postgresql-install.sh + core lib/db.func setup_postgresql():
+#   https://github.com/community-scripts/ProxmoxVE/blob/main/install/postgresql-install.sh
+#   https://github.com/community-scripts/core/blob/main/lib/db.func
+# i.e. Debian 13, PGDG apt repo (trixie-pgdg), major 17 (the script's
+# default answer), its postgresql.conf / pg_hba.conf layout, ssl on with the
+# ssl-cert snakeoil pair. Forge deviations are marked "Deviation:".
+postgresql_version: "17"
+
+# PGDG repo, as setup_postgresql() configures it. Key fingerprint of the
+# PostgreSQL Debian Repository signing key (ACCC4CF8).
+postgresql_pgdg_uri: https://apt.postgresql.org/pub/repos/apt
+postgresql_pgdg_suite: trixie-pgdg
+postgresql_pgdg_key_url: https://www.postgresql.org/media/keys/ACCC4CF8.asc
+postgresql_pgdg_key_fingerprint: B97B0AFCAA1A47F044F244A07FCC7D46ACCC4CF8  # gitleaks:allow (public GPG fingerprint)
+postgresql_pgdg_keyring: /usr/share/keyrings/pgdg.asc
+
+# CT 178 mp0 (16G data2). The role refuses to install unless this is a
+# mountpoint, so initdb lands on mp0 and not the 8G rootfs.
+postgresql_base_dir: /var/lib/postgresql
+postgresql_conf_dir: "/etc/postgresql/{{ postgresql_version }}/main"
+postgresql_data_dir: "{{ postgresql_base_dir }}/{{ postgresql_version }}/main"
+
+# Deviation: script listens on '*'; CT 178 listens on loopback + its LAN IP.
+postgresql_listen_addresses: "localhost,10.10.0.78"
+postgresql_port: 5432
+postgresql_max_connections: 50
+# Deviation: script 128MB. Sized for the 2048 MiB CT (25%).
+postgresql_shared_buffers: 512MB
+postgresql_effective_cache_size: 1GB
+postgresql_work_mem: 8MB
+postgresql_maintenance_work_mem: 128MB
+
+# Deviation: house JSON log standard. PG sends to syslog -> journald; the
+# Alloy journal pipeline (role alloy, job postgres_journal) packs each line
+# as {ts, level, service, host, env, unit, [component], msg}, level from the
+# syslog priority PG sets per severity. jsonlog needs the logging collector
+# and a file source the alloy role does not have; syslog reuses the
+# existing pipeline with no Alloy change.
+postgresql_log_min_messages: warning
+postgresql_log_min_duration_statement: 1000
+postgresql_syslog_ident: postgres
+
+# Per-app databases. Deviation: script pg_hba has md5 from 0.0.0.0/0; here
+# each app gets one `hostssl <db> <user> <client>/32 scram-sha-256` line.
+# Passwords: generated ON THE CT into postgresql_secret_dir/<name>.pass
+# (root 0600, alnum only) the first time, then read from there on every run.
+# Never committed, never sent to the controller, never logged.
+postgresql_apps:
+  - {name: openobserve, db: openobserve, user: openobserve, client: 10.10.0.77/32}
+  - {name: grafana, db: grafana, user: grafana, client: 10.10.0.71/32}
+postgresql_secret_dir: /root/forge-db
+
+# Metrics: Debian prometheus-postgres-exporter on :9187, peer auth as the
+# OS user `prometheus` mapped to a pg_monitor role (no password).
+postgresql_exporter_package: prometheus-postgres-exporter
+postgresql_exporter_listen: ":9187"
+
+# Daily logical dumps 01:30 America/Chicago, before vzdump 02:00
+# (backup-ssd) and 03:30 (PBS), so both carry them. On mp0.
+postgresql_dump_dir: "{{ postgresql_base_dir }}/backups"
+postgresql_dump_oncalendar: "*-*-* 01:30:00 America/Chicago"
+postgresql_dump_keep_daily: 14
+postgresql_dump_keep_weekly: 8
+# Monthly restore test (restore newest dump into restoretest_<db>, compare
+# table count, drop). 1st of the month 04:30, after PBS.
+postgresql_restore_test_oncalendar: "*-*-01 04:30:00 America/Chicago"

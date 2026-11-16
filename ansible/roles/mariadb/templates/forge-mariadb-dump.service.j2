@@ -1,0 +1,11 @@
+# Managed by ansible role mariadb.
+[Unit]
+Description=Forge daily mariadb-dump of app databases
+After=mariadb.service
+Requires=mariadb.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/forge-mariadb-dump dump
+Nice=10
+IOSchedulingClass=idle
