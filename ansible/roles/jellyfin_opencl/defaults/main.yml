@@ -1,0 +1,43 @@
+---
+# Intel compute-runtime (NEO) for OpenCL on the Arc Pro B60 (Battlemage
+# BMG-G21) in CT 180. Ubuntu noble ships intel-opencl-icd 23.43, which
+# predates Battlemage, so the role installs Intel's official GitHub
+# release .debs pinned below. Live on CT 180 since 2026-11-16.
+# sha256 values: compute-runtime ww40.sum and the IGC v2.42.6 release notes.
+jellyfin_opencl_neo_version: "26.40.40196.8"
+jellyfin_opencl_igc_version: "2.42.6"
+jellyfin_opencl_igc_build: "23070"
+jellyfin_opencl_gmm_version: "22.10.2"
+
+jellyfin_opencl_download_dir: "/root/intel-opencl-{{ jellyfin_opencl_neo_version }}"
+
+jellyfin_opencl_packages:
+  - name: intel-igc-core-2
+    version: "{{ jellyfin_opencl_igc_version }}"
+    file: "intel-igc-core-2_{{ jellyfin_opencl_igc_version }}+{{ jellyfin_opencl_igc_build }}_amd64.deb"
+    url_base: "https://github.com/intel/intel-graphics-compiler/releases/download/v{{ jellyfin_opencl_igc_version }}"
+    sha256: e20539632f2d99875d8f8b225d5da58b31f98baa54bb47c6328aa98ec473ab9d
+  - name: intel-igc-opencl-2
+    version: "{{ jellyfin_opencl_igc_version }}"
+    file: "intel-igc-opencl-2_{{ jellyfin_opencl_igc_version }}+{{ jellyfin_opencl_igc_build }}_amd64.deb"
+    url_base: "https://github.com/intel/intel-graphics-compiler/releases/download/v{{ jellyfin_opencl_igc_version }}"
+    sha256: 7f5593cf828503ffb8450967768bde9209e22753bc576296e846b5a751011fa3
+  - name: libigdgmm12
+    version: "{{ jellyfin_opencl_gmm_version }}"
+    file: "libigdgmm12_{{ jellyfin_opencl_gmm_version }}_amd64.deb"
+    url_base: "https://github.com/intel/compute-runtime/releases/download/{{ jellyfin_opencl_neo_version }}"
+    sha256: 053fceadb84a1d2f9a30a0d1bc9b16424b3f1a90cc49900fcd80aadcf25c8a4d
+  - name: intel-opencl-icd
+    version: "{{ jellyfin_opencl_neo_version }}-0"
+    file: "intel-opencl-icd_{{ jellyfin_opencl_neo_version }}-0_amd64.deb"
+    url_base: "https://github.com/intel/compute-runtime/releases/download/{{ jellyfin_opencl_neo_version }}"
+    sha256: 96046069e94680b761df6e83ddc64244721178b826e3e1f8af3ca104cfd0c7c2
+
+# Distro packages: the ICD loader the runtime depends on, and clinfo for checks.
+jellyfin_opencl_apt_packages:
+  - ocl-icd-libopencl1
+  - clinfo
+
+jellyfin_opencl_ffmpeg: /usr/lib/jellyfin-ffmpeg/ffmpeg
+jellyfin_opencl_render_node: /dev/dri/renderD128
+jellyfin_opencl_user: jellyfin

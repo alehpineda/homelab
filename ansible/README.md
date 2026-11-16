@@ -35,6 +35,7 @@ SSH port **4488**. Fresh LXCs often still listen on **22**. Set
 | `playbooks/dashboards.yml` | CT 191 Homepage / CT 198 Homer: `grokops` key, `dashcfg` group write on Homepage `services.yaml`/`settings.yaml`/`widgets.yaml`/`bookmarks.yaml`/`proxmox.yaml` and Homer `config.yml`. No sudo. Not run by `site.yml`. |
 | `roles/dashboard_editor/` | That playbook. See `docs/runbooks/dashboard-editor.md`. |
 | `roles/console_autologin/` | Getty drop-ins for that playbook. Default off. |
+| `playbooks/jellyfin-opencl.yml` | CT 180 Intel OpenCL runtime (role `jellyfin_opencl`): pinned compute-runtime 26.40.40196.8, IGC 2.42.6, gmmlib 22.10.2 from Intel GitHub releases (sha256 pinned), plus `clinfo`; checks `clinfo` and `opencl=ocl@va` as `jellyfin`. No Jellyfin restart or settings. Not run by `site.yml`. See `docs/runbooks/jellyfin-opencl.md`. |
 | `playbooks/arr.yml` | CT 182 Docker, Dockge, and the phase-1 stack. Not run by `site.yml`. |
 | `roles/arr/` | That playbook. Skips gluetun, qBittorrent, and Watchtower when `.env` is missing. |
 | `playbooks/logging.yml` | Loki CT 173 config, OpenObserve CT 177, Alloy agents, Prometheus remote_write. Per-phase `--tags`. Not run by `site.yml`. |
