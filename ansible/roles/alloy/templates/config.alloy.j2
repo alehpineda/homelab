@@ -78,10 +78,10 @@ loki.source.journal "host" {
 
 {# One journal pipeline for every host, driven by host vars
    (alloy_journal_job / alloy_service_label / alloy_ct_label). BRL keeps
-   job=pve_journal with no ct/service stream labels (alloy_ct_label empty),
-   so its rendered config stays byte-identical to PR #70. #}
+   job=pve_journal with no ct/service stream labels (alloy_ct_label empty). #}
 // Pack each journal entry into one JSON line:
-// {ts, level, service, host, env, unit, msg}. Never emits an empty line.
+// {ts, level, service, host, env, unit, [component], msg}. Never emits an
+// empty line.
 loki.process "journal_json" {
   // Drop empty / whitespace-only lines (OpenObserve rejects a whole
   // Loki-push batch that contains one).
@@ -115,23 +115,74 @@ loki.process "journal_json" {
   }
 {% endfor %}
 
-  stage.template {
-    source   = "level_norm"
-{% raw %}    template = `{{ $p := default "" .prio }}{{ if eq $p "0" }}emerg{{ else if eq $p "1" }}alert{{ else if eq $p "2" }}crit{{ else if eq $p "3" }}error{{ else if eq $p "4" }}warning{{ else if eq $p "5" }}notice{{ else if eq $p "6" }}info{{ else if eq $p "7" }}debug{{ else }}unknown{{ end }}`{% endraw %}
+  // Unwrap one JSON object in MESSAGE (Uptime Kuma 2.5.11 with
+  // UPTIME_KUMA_LOG_FORMAT=json: {time, module, level, msg}). Runs after the
+  // drop rules, so they still see the raw MESSAGE. Plain-text MESSAGE does not
+  // parse (drop_malformed defaults to false), sets no in_* key, and packs
+  // byte-identical to before. Aliases: time|ts -> ts, module|component ->
+  // component (body only, never a label).
+  stage.json {
+    source      = "msg"
+    expressions = {
+      in_time      = "time",
+      in_ts        = "ts",
+      in_module    = "module",
+      in_component = "component",
+      in_level     = "level",
+      in_msg       = "msg",
+    }
   }
 
-  // ts = journald _SOURCE_REALTIME_TIMESTAMP (RFC3339, UTC, microseconds).
+  // App level, normalized like arr_pack (pino numbers too). A template that
+  // renders "" deletes its key, so in_level_norm exists only when the inner
+  // object has a level.
+  stage.template {
+    source   = "in_level_norm"
+{% raw %}    template = `{{ $l := lower (toString (default "" .in_level)) }}{{ if or (eq $l "inf") (eq $l "info") (eq $l "information") (eq $l "informational") (eq $l "30") }}info{{ else if or (eq $l "wrn") (eq $l "warn") (eq $l "warning") (eq $l "40") }}warning{{ else if or (eq $l "err") (eq $l "eror") (eq $l "error") (eq $l "50") }}error{{ else if or (eq $l "dbg") (eq $l "debug") (eq $l "trc") (eq $l "trace") (eq $l "vrb") (eq $l "verbose") (eq $l "10") (eq $l "20") }}debug{{ else if or (eq $l "crit") (eq $l "critical") }}crit{{ else if or (eq $l "ftl") (eq $l "fatal") (eq $l "panic") (eq $l "60") }}fatal{{ else if or (eq $l "emerg") (eq $l "emergency") }}emerg{{ else }}{{ $l }}{{ end }}`{% endraw %}
+  }
+
+  stage.template {
+    source   = "level_norm"
+{% raw %}    template = `{{ if .in_level_norm }}{{ .in_level_norm }}{{ else }}{{ $p := default "" .prio }}{{ if eq $p "0" }}emerg{{ else if eq $p "1" }}alert{{ else if eq $p "2" }}crit{{ else if eq $p "3" }}error{{ else if eq $p "4" }}warning{{ else if eq $p "5" }}notice{{ else if eq $p "6" }}info{{ else if eq $p "7" }}debug{{ else }}unknown{{ end }}{{ end }}`{% endraw %}
+  }
+
+  stage.template {
+    source   = "component"
+{% raw %}    template = `{{ if .in_component }}{{ .in_component }}{{ else }}{{ default "" .in_module }}{{ end }}`{% endraw %}
+  }
+
+  stage.template {
+    source   = "msg_out"
+{% raw %}    template = `{{ if .in_msg }}{{ .in_msg }}{{ else }}{{ default "" .msg }}{{ end }}`{% endraw %}
+  }
+
+  // ts = the app's own time/ts when the MESSAGE object has one, else journald
+  // _SOURCE_REALTIME_TIMESTAMP (RFC3339, UTC, microseconds), else null.
   // Alloy does not expose the entry's __REALTIME_TIMESTAMP to templates, so
   // entries without a source timestamp (most service stdout) get ts=null;
   // the Loki/OpenObserve entry timestamp is always the journal time.
   stage.template {
     source   = "ts"
-{% raw %}    template = `{{ $raw := default "" .ts_us }}{{ if $raw }}"{{ $us := atoi $raw }}{{ dateInZone "2006-01-02T15:04:05" (div $us 1000000) "UTC" }}.{{ printf "%06d" (mod $us 1000000) }}Z"{{ else }}null{{ end }}`{% endraw %}
+{% raw %}    template = `{{ if .in_time }}{{ toJson .in_time }}{{ else if .in_ts }}{{ toJson .in_ts }}{{ else }}{{ $raw := default "" .ts_us }}{{ if $raw }}"{{ $us := atoi $raw }}{{ dateInZone "2006-01-02T15:04:05" (div $us 1000000) "UTC" }}.{{ printf "%06d" (mod $us 1000000) }}Z"{{ else }}null{{ end }}{{ end }}`{% endraw %}
+  }
+
+  // Entry time = app time when it parses; skip (never fudge) otherwise, so
+  // plain lines keep the journal time.
+  stage.timestamp {
+    source            = "in_time"
+    format            = "RFC3339"
+    action_on_failure = "skip"
+  }
+
+  // level label: journald __journal_priority_keyword (relabel above) unless
+  // the MESSAGE object carried its own level. No key, no change.
+  stage.labels {
+    values = { level = "in_level_norm" }
   }
 
   stage.template {
     source   = "line_json"
-{% raw %}    template = `{"ts":{{ .ts }},"level":{{ toJson .level_norm }},"service":"{% endraw %}{{ alloy_service_label }}{% raw %}","host":"{% endraw %}{{ alloy_host_label }}{% raw %}","env":"{% endraw %}{{ alloy_env_label }}{% raw %}","unit":{{ toJson (default "" .unit_raw) }},"msg":{{ toJson (default "" .msg) }}}`{% endraw %}
+{% raw %}    template = `{"ts":{{ .ts }},"level":{{ toJson .level_norm }},"service":"{% endraw %}{{ alloy_service_label }}{% raw %}","host":"{% endraw %}{{ alloy_host_label }}{% raw %}","env":"{% endraw %}{{ alloy_env_label }}{% raw %}","unit":{{ toJson (default "" .unit_raw) }}{{ if .component }},"component":{{ toJson .component }}{{ end }},"msg":{{ toJson (default "" .msg_out) }}}`{% endraw %}
   }
 
   stage.output {
