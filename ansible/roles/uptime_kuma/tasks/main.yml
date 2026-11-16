@@ -2,7 +2,8 @@
 # Idempotent. Pins the Uptime Kuma release and the service environment.
 # An upgrade builds the new tree beside the running one (no downtime), then
 # stops the service once, takes a cold copy of data/, swaps the trees, moves
-# data/ across and starts once. An env-only change is a single restart.
+# data/ across and starts once. An env-only or nodejs-only change is a single
+# restart (both together are still one restart).
 # The previous tree stays at <dir>-<old>.prev for rollback (never deleted here).
 
 - name: Read installed package.json
@@ -15,6 +16,35 @@
     uptime_kuma_installed: "{{ (uptime_kuma_pkg.content | b64decode | from_json).version }}"
     uptime_kuma_upgrade: "{{ (uptime_kuma_pkg.content | b64decode | from_json).version != uptime_kuma_version }}"
     uptime_kuma_staging: "{{ uptime_kuma_dir }}-{{ uptime_kuma_version }}.staging"
+
+- name: Pin nodejs to the NodeSource version
+  ansible.builtin.copy:
+    dest: /etc/apt/preferences.d/forge-nodejs-pin
+    owner: root
+    group: root
+    mode: "0644"
+    content: |
+      # Managed by ansible role uptime_kuma (alehpineda/homelab).
+      Package: nodejs
+      Pin: version {{ uptime_kuma_nodejs_version }}
+      Pin-Priority: 1001
+
+- name: Install the pinned nodejs
+  ansible.builtin.apt:
+    name: "nodejs={{ uptime_kuma_nodejs_version }}"
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+  register: uptime_kuma_node
+
+- name: Check node -v matches the pin
+  ansible.builtin.command: node -v
+  register: uptime_kuma_node_v
+  changed_when: false
+  check_mode: false
+  failed_when: >-
+    not ansible_check_mode and
+    uptime_kuma_node_v.stdout != 'v' ~ (uptime_kuma_nodejs_version | regex_replace('-.*$', ''))
 
 - name: Drop-in directory
   ansible.builtin.file:
@@ -122,13 +152,13 @@
         executable: /bin/bash
       changed_when: true
 
-- name: Start or restart once (picks up the new tree and/or the drop-in)
+- name: Start or restart once (new tree, drop-in and/or nodejs)
   ansible.builtin.systemd:
     name: "{{ uptime_kuma_service }}"
     state: restarted
     daemon_reload: true
     enabled: true
-  when: (uptime_kuma_upgrade | bool) or uptime_kuma_dropin.changed
+  when: (uptime_kuma_upgrade | bool) or uptime_kuma_dropin.changed or uptime_kuma_node.changed
 
 - name: Wait for the listener
   ansible.builtin.wait_for:
