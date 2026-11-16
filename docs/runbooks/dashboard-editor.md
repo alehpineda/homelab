@@ -14,7 +14,7 @@ widgets and bookmarks".
 
 | CT | Files | Directory |
 |----|-------|-----------|
-| 191 homepage-blr-lxc (10.10.0.91) | `/opt/homepage/config/services.yaml`, `settings.yaml`, `widgets.yaml`, `bookmarks.yaml` root:dashcfg 0664 | `/opt/homepage/config` root:dashcfg 2775 |
+| 191 homepage-blr-lxc (10.10.0.91) | `/opt/homepage/config/services.yaml`, `settings.yaml`, `widgets.yaml`, `bookmarks.yaml`, `proxmox.yaml` root:dashcfg 0664 | `/opt/homepage/config` root:dashcfg 2775 |
 | 198 homer-blr-lxc (10.10.0.98) | `/opt/homer/assets/config.yml` root:dashcfg 0664 | `/opt/homer/assets` root:dashcfg 2775 |
 
 - User `grokops`: password locked, not in `sudo`, no sudoers drop-in.
@@ -28,7 +28,8 @@ widgets and bookmarks".
 - Before state on both (2026-11-13): directory root:root 0755, file
   root:root 0644. After that apply, only `services.yaml` / Homer
   `config.yml` were `root:dashcfg` 0664. On 2026-11-16 the other three
-  Homepage YAMLs were brought to the same owner and mode.
+  Homepage YAMLs were brought to the same owner and mode, and
+  `proxmox.yaml` followed later that day (Homepage plan step 2.6).
 - No restart: Homepage hot-reloads these YAML files; Homer is a static
   `python3 -m http.server 8010`.
 - The role accepts `dashboard_editor_config_files` (list, preferred) or
@@ -63,7 +64,7 @@ ForceNew, so dropping it from `ignore_changes` would plan a replacement.
 ## Verify (as grokops from CT 176)
 
 ```bash
-ssh -i ~/.ssh/id_ed25519_forge -o IdentitiesOnly=yes grokops@10.10.0.91 'id; for f in services.yaml settings.yaml widgets.yaml bookmarks.yaml; do test -w /opt/homepage/config/$f && echo $f writable; done; sudo -n true'
+ssh -i ~/.ssh/id_ed25519_forge -o IdentitiesOnly=yes grokops@10.10.0.91 'id; for f in services.yaml settings.yaml widgets.yaml bookmarks.yaml proxmox.yaml; do test -w /opt/homepage/config/$f && echo $f writable; done; sudo -n true'
 ```
 
 Expect `dashcfg` in `id`, `writable` for all four files, and
@@ -75,7 +76,7 @@ To undo only the 2026-11-16 Homepage grant (leave grokops and
 `services.yaml` as they were on 2026-11-13):
 
 ```bash
-chown root:root /opt/homepage/config/settings.yaml /opt/homepage/config/widgets.yaml /opt/homepage/config/bookmarks.yaml && chmod 644 /opt/homepage/config/settings.yaml /opt/homepage/config/widgets.yaml /opt/homepage/config/bookmarks.yaml
+chown root:root /opt/homepage/config/settings.yaml /opt/homepage/config/widgets.yaml /opt/homepage/config/bookmarks.yaml /opt/homepage/config/proxmox.yaml && chmod 644 /opt/homepage/config/settings.yaml /opt/homepage/config/widgets.yaml /opt/homepage/config/bookmarks.yaml /opt/homepage/config/proxmox.yaml
 ```
 
 To unwind the whole editor grant on CT 191:

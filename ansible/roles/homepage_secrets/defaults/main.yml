@@ -1,0 +1,43 @@
+---
+# CT 191 Homepage secret plumbing (plan steps 2.2 and 2.9).
+# Homepage substitutes {{HOMEPAGE_FILE_<NAME>}} in its YAML config with the
+# contents of the file the env var points at. Only names and paths live here.
+# Secret VALUES are never in git: they are placed out of band (Forge, from
+# box secrets or the owning bot's handoff) into homepage_secrets_dir.
+#
+# homepage.service runs as User=root (community script), and there is no
+# 'homepage' user or group on CT 191, so the directory is root 0700 and the
+# files root 0600. Switch homepage_secrets_group/modes if the unit ever
+# gets a dedicated user.
+homepage_secrets_dir: /etc/homepage/secrets
+homepage_secrets_owner: root
+homepage_secrets_group: root
+homepage_secrets_dir_mode: "0700"
+homepage_secrets_file_mode: "0600"
+
+homepage_unit: homepage.service
+homepage_dropin_dir: /etc/systemd/system/homepage.service.d
+homepage_dropin_name: forge-secrets.conf
+
+# Plan step 2.9: log only to stdout (journald), not also to config/logs.
+homepage_log_targets: stdout
+
+# HOMEPAGE_FILE_<name> -> file under homepage_secrets_dir. A line is wired
+# into the drop-in only when that file exists and is non-empty, so pending
+# secrets can be added later with one more run (and one restart).
+homepage_secret_files:
+  GRAFANA_TOKEN: grafana_token
+  PVE_TOKEN_ID: pve_token_id
+  PVE_TOKEN_SECRET: pve_token_secret
+  PBS_TOKEN_ID: pbs_token_id
+  PBS_TOKEN_SECRET: pbs_token_secret
+  JELLYFIN_KEY: jellyfin_key
+  SONARR_KEY: sonarr_key
+  RADARR_KEY: radarr_key
+  LIDARR_KEY: lidarr_key
+  PROWLARR_KEY: prowlarr_key
+  BAZARR_KEY: bazarr_key
+  QBIT_KEY: qbit_key
+  SEERR_KEY: seerr_key
+  ADGUARD_USER: adguard_user
+  ADGUARD_PASS: adguard_pass

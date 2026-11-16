@@ -19,5 +19,6 @@ dashboard_editor_pubkeys: []
 #   - /opt/homepage/config/settings.yaml
 #   - /opt/homepage/config/widgets.yaml
 #   - /opt/homepage/config/bookmarks.yaml
+#   - /opt/homepage/config/proxmox.yaml
 dashboard_editor_config_files: []
 # dashboard_editor_config_file: /opt/homepage/config/services.yaml

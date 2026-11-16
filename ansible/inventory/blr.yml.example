@@ -80,6 +80,7 @@ all:
             - /opt/homepage/config/settings.yaml
             - /opt/homepage/config/widgets.yaml
             - /opt/homepage/config/bookmarks.yaml
+            - /opt/homepage/config/proxmox.yaml
           # dashboard_editor_pubkeys: ["ssh-ed25519 AAAA... forge-ct176"]
         homarr-blr-lxc:  # CT 192
           ansible_host: 10.10.0.92
