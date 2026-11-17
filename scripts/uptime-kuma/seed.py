@@ -33,7 +33,7 @@ ALLOWED_STATUS = (
     {f"{lo}-{hi}" for lo, hi in ((100, 199), (200, 299), (300, 399), (400, 499), (500, 599))}
     | {str(i) for i in range(100, 1000)}
 )
-ALLOWED_TYPES = {"http", "keyword", "ping", "port", "dns"}
+ALLOWED_TYPES = {"http", "keyword", "ping", "port", "dns", "mysql"}
 MIN_INTERVAL = 20
 PINNED_LIB = "2.10.0"
 TOTP_HINTS = ("2fa", "twofa", "two-factor", "totp", "otp", "token required")
@@ -113,6 +113,16 @@ def normalize_monitor(raw: dict[str, Any], defaults: dict[str, Any], label: str)
         mon["port"] = int(raw.get("port") or 53)
         if raw.get("dns_last_result"):
             mon["dns_last_result"] = str(raw["dns_last_result"])
+    if typ == "mysql":
+        conn = raw.get("database_connection_string") or raw.get("databaseConnectionString")
+        if not conn:
+            raise SchemaError(
+                f"{label} {raw['name']!r}: missing database_connection_string"
+            )
+        mon["databaseConnectionString"] = str(conn)
+        mon["databaseQuery"] = str(
+            raw.get("database_query") or raw.get("databaseQuery") or "SELECT 1"
+        )
     return mon
 
 
@@ -173,6 +183,7 @@ def _type_enum(value: str):
         "ping": MonitorType.PING,
         "port": MonitorType.PORT,
         "dns": MonitorType.DNS,
+        "mysql": MonitorType.MYSQL,
     }[value]
 
 
@@ -202,6 +213,7 @@ COMPARE_KEYS = [
     "description", "accepted_statuscodes", "url", "hostname", "port",
     "keyword", "invertKeyword", "method", "dns_resolve_server",
     "dns_resolve_type", "dns_last_result",
+    "databaseConnectionString", "databaseQuery",
 ]
 
 
@@ -400,6 +412,9 @@ def _monitor_kwargs(mon: dict[str, Any], notification_ids: list[int] | None) -> 
         kwargs["dns_resolve_server"] = mon["dns_resolve_server"]
         kwargs["dns_resolve_type"] = mon["dns_resolve_type"]
         kwargs["port"] = mon["port"]
+    if mon["type"] == "mysql":
+        kwargs["databaseConnectionString"] = mon["databaseConnectionString"]
+        kwargs["databaseQuery"] = mon["databaseQuery"]
     kwargs.update(notification_payload(notification_ids))
     return kwargs
 
