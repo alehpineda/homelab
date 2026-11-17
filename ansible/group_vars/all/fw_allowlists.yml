@@ -133,6 +133,8 @@ pve_fw_ct_rules:
     - {proto: tcp, dport: "3001", source: +caddy}
     - {proto: tcp, dport: "12345", source: prometheus, comment: "alloy /metrics"}
     - {proto: tcp, dport: "3001", source: prometheus, comment: "kuma /metrics"}
+  157:  # files (copyparty pilot, 2026-11-17) — UI only via Caddy eth0 .250; no NetBird, no LAN direct, not .251
+    - {proto: tcp, dport: "3923", source: 10.10.0.250, comment: "copyparty via Caddy .250 only"}
   185:  # romm
     - {proto: tcp, dport: "80", source: +caddy}
   186:  # navidrome

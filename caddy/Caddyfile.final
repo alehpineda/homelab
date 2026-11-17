@@ -353,6 +353,21 @@ handle @dockge {
 			}
 		}
 	}
+	# copyparty CT157 (pilot 2026-11-17): owner .250 only, LAN only.
+	# NetBird remote clients arrive as .50/.51 (nb_routers masquerade) -> refused.
+	@files host files.alehpineda.com
+	handle @files {
+		@files_not_lan not remote_ip 10.10.0.0/24
+		abort @files_not_lan
+		@files_nb remote_ip 10.10.0.50 10.10.0.51
+		abort @files_nb
+		reverse_proxy http://10.10.0.57:3923 {
+			transport http {
+				local_address 10.10.0.250
+				network_proxy none
+			}
+		}
+	}
 	# Jackett (CT182 gluetun netns, 2026-11-13): admin .250 only; .251 falls into @family_ingress abort.
 	@jackett host jackett.alehpineda.com
 	handle @jackett {

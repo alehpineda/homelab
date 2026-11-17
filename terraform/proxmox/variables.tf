@@ -108,6 +108,12 @@ variable "ct186_ssh_public_keys" {
   default     = ""
 }
 
+variable "ct157_ssh_public_keys" {
+  description = "SSH authorized public keys for CT157 (copyparty pilot). Public keys only. Empty until TF_VAR_ct157_ssh_public_keys is set at create."
+  type        = string
+  default     = ""
+}
+
 variable "ct187_ssh_public_keys" {
   description = "SSH authorized public keys for CT187. Public keys only. Empty until TF_VAR_ct187_ssh_public_keys is set at create."
   type        = string
