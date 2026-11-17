@@ -1,12 +1,13 @@
 ---
-# CT 191 Homepage and CT 198 Homer: grokops editor access to the tile
-# config files. Not imported by site.yml. See docs/runbooks/dashboard-editor.md.
+# CT 191 Homepage: grokops editor access to the tile config files.
+# Not imported by site.yml. See docs/runbooks/dashboard-editor.md.
 # Authority: DeathScythe 2026-11-13 10:15 PM CT: "Yes, add the grokops key on
 # CT191 and CT198 via IaC". DeathScythe 2026-11-16 9:48 AM CT, Wolff 1:1
 # card t92s569: "Yes, have Forge give you write access to Homepage settings,
-# widgets and bookmarks".
+# widgets and bookmarks". Homer CT198 was removed after the 2026-11-17
+# dashboard pick (Homepage kept).
 - name: Dashboard config editor access
-  hosts: homepage-blr-lxc:homer-blr-lxc
+  hosts: homepage-blr-lxc
   become: true
   vars_files:
     - ../group_vars/all/bot_ssh_keys.yml

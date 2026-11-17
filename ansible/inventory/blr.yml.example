@@ -76,10 +76,10 @@ all:
           netbird_client_hosts_pins:
             - {ip: 10.10.0.250, name: jackett.alehpineda.com}
             - {ip: 100.85.100.247, name: crowdsec.alehpineda.com}
-        # CT 191 / 192 / 198. playbooks/dashboards.yml targets 191 and 198.
+        # CT 191 Homepage. playbooks/dashboards.yml targets 191 only.
         # site.yml does not. grokops keys come from
         # group_vars/all/bot_ssh_keys.yml (role bot_ssh_keys). Wave 4 log shipping (logging.yml
-        # --tags alloy_wave4) also targets these plus CT 176 and CT 165.
+        # --tags alloy_wave4) also targets CT 191 plus CT 176 and CT 165.
         homepage-blr-lxc:
           ansible_host: 10.10.0.91
           ansible_port: 22
@@ -89,14 +89,6 @@ all:
             - /opt/homepage/config/widgets.yaml
             - /opt/homepage/config/bookmarks.yaml
             - /opt/homepage/config/proxmox.yaml
-        homarr-blr-lxc:  # CT 192
-          ansible_host: 10.10.0.92
-          ansible_port: 22
-        homer-blr-lxc:
-          ansible_host: 10.10.0.98
-          ansible_port: 22
-          dashboard_editor_config_files:
-            - /opt/homer/assets/config.yml
         honcho-blr-lxc:  # CT 165
           ansible_host: 10.10.0.65
           ansible_port: 22

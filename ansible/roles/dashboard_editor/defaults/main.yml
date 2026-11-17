@@ -1,7 +1,7 @@
 ---
-# Non-root editor access to dashboard config files (CT 191 Homepage,
-# CT 198 Homer). Wolff (observability bot) edits tiles as grokops from
-# CT 176. No sudo, no password login. See docs/runbooks/dashboard-editor.md.
+# Non-root editor access to dashboard config files (CT 191 Homepage).
+# Wolff (observability bot) edits tiles as grokops from CT 176. No sudo,
+# no password login. See docs/runbooks/dashboard-editor.md.
 dashboard_editor_user: grokops
 dashboard_editor_group: dashcfg
 

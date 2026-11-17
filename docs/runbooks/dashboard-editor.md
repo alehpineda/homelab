@@ -1,4 +1,4 @@
-# Dashboard editor access (CT 191 Homepage, CT 198 Homer)
+# Dashboard editor access (CT 191 Homepage)
 
 Wolff (observability bot) owns dashboard tiles under the rollout flow
 (Forge deploys, Wolff adds monitors and tiles). He runs as `grokops` from
@@ -8,14 +8,14 @@ guests, fingerprint `SHA256:B0BznGN4uG7ub8EpB9qyE62MzZfygeGqgZA6gWIgC1s`).
 Authority: DeathScythe 2026-11-13 10:15 PM CT: "Yes, add the grokops key on
 CT191 and CT198 via IaC". DeathScythe 2026-11-16 9:48 AM CT, Wolff 1:1 card
 t92s569: "Yes, have Forge give you write access to Homepage settings,
-widgets and bookmarks".
+widgets and bookmarks". Homer CT198 was removed after the 2026-11-17
+dashboard pick (Homepage kept).
 
 ## What it grants
 
 | CT | Files | Directory |
 |----|-------|-----------|
 | 191 homepage-blr-lxc (10.10.0.91) | `/opt/homepage/config/services.yaml`, `settings.yaml`, `widgets.yaml`, `bookmarks.yaml`, `proxmox.yaml` root:dashcfg 0664 | `/opt/homepage/config` root:dashcfg 2775 |
-| 198 homer-blr-lxc (10.10.0.98) | `/opt/homer/assets/config.yml` root:dashcfg 0664 | `/opt/homer/assets` root:dashcfg 2775 |
 
 - User `grokops`: password locked, not in `sudo`, no sudoers drop-in.
 - Group `dashcfg` (system group), `grokops` is the only member.
@@ -26,12 +26,12 @@ widgets and bookmarks".
   renamed-in file becomes owned by `grokops`; the services run as root
   and still read it.
 - Before state on both (2026-11-13): directory root:root 0755, file
-  root:root 0644. After that apply, only `services.yaml` / Homer
-  `config.yml` were `root:dashcfg` 0664. On 2026-11-16 the other three
-  Homepage YAMLs were brought to the same owner and mode, and
-  `proxmox.yaml` followed later that day (Homepage plan step 2.6).
-- No restart: Homepage hot-reloads these YAML files; Homer is a static
-  `python3 -m http.server 8010`.
+  root:root 0644. After that apply, only `services.yaml` was
+  `root:dashcfg` 0664 (Homer `config.yml` was too, before CT198 was
+  removed). On 2026-11-16 the other three Homepage YAMLs were brought to
+  the same owner and mode, and `proxmox.yaml` followed later that day
+  (Homepage plan step 2.6).
+- No restart: Homepage hot-reloads these YAML files.
 - The role accepts `dashboard_editor_config_files` (list, preferred) or
   the legacy singular `dashboard_editor_config_file`.
 
@@ -57,7 +57,7 @@ applied through `pct exec`; backups are in
 
 ## Terraform
 
-`ssh_public_keys` on `proxmox_lxc.ct_191` / `ct_198` is root's create-time
+`ssh_public_keys` on `proxmox_lxc.ct_191` is root's create-time
 key list and is in `ignore_changes`. It is not used for this: changing it
 would not reach `grokops`, and Telmate treats `ssh_public_keys` as
 ForceNew, so dropping it from `ignore_changes` would plan a replacement.
@@ -85,6 +85,3 @@ To unwind the whole editor grant on CT 191:
 ```bash
 chown root:root /opt/homepage/config /opt/homepage/config/services.yaml /opt/homepage/config/settings.yaml /opt/homepage/config/widgets.yaml /opt/homepage/config/bookmarks.yaml && chmod 755 /opt/homepage/config && chmod 644 /opt/homepage/config/services.yaml /opt/homepage/config/settings.yaml /opt/homepage/config/widgets.yaml /opt/homepage/config/bookmarks.yaml && userdel -r grokops && groupdel dashcfg
 ```
-
-Homer: same with `/opt/homer/assets` and `config.yml`. A script copy lives
-at `/root/forge-grokops-20261113/rollback.sh <cfgfile>`.

@@ -138,12 +138,6 @@ variable "ct191_ssh_public_keys" {
   default     = ""
 }
 
-variable "ct192_ssh_public_keys" {
-  description = "SSH authorized public keys for CT192. Public keys only. Empty until TF_VAR_ct192_ssh_public_keys is set at create."
-  type        = string
-  default     = ""
-}
-
 variable "ct193_ssh_public_keys" {
   description = "SSH authorized public keys for CT193. Public keys only. Empty until TF_VAR_ct193_ssh_public_keys is set at create."
   type        = string
@@ -173,13 +167,6 @@ variable "ct197_ssh_public_keys" {
   type        = string
   default     = ""
 }
-
-variable "ct198_ssh_public_keys" {
-  description = "SSH authorized public keys for CT198. Public keys only. Empty until TF_VAR_ct198_ssh_public_keys is set at create."
-  type        = string
-  default     = ""
-}
-
 variable "ct199_ssh_public_keys" {
   description = "SSH authorized public keys for CT199. Public keys only. Empty until TF_VAR_ct199_ssh_public_keys is set at create."
   type        = string

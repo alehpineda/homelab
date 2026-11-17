@@ -21,7 +21,7 @@ pve_fw_cluster_ipsets:
     # Wave 2 (2026-11-14): + journald on 180,183,185,186,187,193,196,160,161,181,188.
     # AdGuard querylog (2026-11-14): + .55 (B), .53 (A).
     # Wave 3 (2026-11-14, card t57s331): + journald on 170,169,197,164,175(.63),162,189,194,195,199.
-    # Wave 4 (2026-11-14, card t64s378): + journald on 191,192,198,176,165. Logs only.
+    # Wave 4 (2026-11-14, card t64s378): + journald on 191,176,165 (192/198 removed 2026-11-17). Logs only.
     # Wave 5 (2026-11-14, card t67s400): + journald on 151,150,154,156 (.53/.55 already in).
     # Wave 6 (2026-11-14, card t72s425): + PBS host .25 journald (bare metal, no guest fw).
     # Databases (2026-11-16, t927u/t928u): + journald on 178 (.78), 179 (.79). Inert until the CTs exist.
@@ -29,7 +29,7 @@ pve_fw_cluster_ipsets:
             10.10.0.80, 10.10.0.83, 10.10.0.85, 10.10.0.86, 10.10.0.87, 10.10.0.93, 10.10.0.96, 10.10.0.60, 10.10.0.61, 10.10.0.81, 10.10.0.88,
             10.10.0.55, 10.10.0.53,
             10.10.0.70, 10.10.0.69, 10.10.0.97, 10.10.0.64, 10.10.0.63, 10.10.0.62, 10.10.0.89, 10.10.0.94, 10.10.0.95, 10.10.0.99,
-            10.10.0.91, 10.10.0.92, 10.10.0.98, 10.10.0.76, 10.10.0.65,
+            10.10.0.91, 10.10.0.76, 10.10.0.65,
             10.10.0.51, 10.10.0.50, 10.10.0.54, 10.10.0.56,
             10.10.0.25,
             10.10.0.78, 10.10.0.79]
@@ -149,8 +149,6 @@ pve_fw_ct_rules:
     - {proto: tcp, dport: "443", source: +caddy}
   191:  # homepage (dashboard trial)
     - {proto: tcp, dport: "3000", source: +caddy}
-  192:  # homarr (dashboard trial)
-    - {proto: tcp, dport: "7575", source: +caddy}
   193:  # bentopdf (plain http :8080, no redirect)
     - {proto: tcp, dport: "8080", source: +caddy}
   194:  # pricebuddy (scraper 127.0.0.1:3000 stays local)
@@ -161,8 +159,6 @@ pve_fw_ct_rules:
     - {proto: tcp, dport: "3000", source: +caddy}
   197:  # semaphore
     - {proto: tcp, dport: "3000", source: +caddy}
-  198:  # homer (dashboard trial)
-    - {proto: tcp, dport: "8010", source: +caddy}
   199:  # myip
     - {proto: tcp, dport: "18966", source: +caddy}
 
