@@ -308,15 +308,6 @@ handle @dockge {
 			}
 		}
 	}
-	@homarr host homarr.alehpineda.com
-	handle @homarr {
-		reverse_proxy http://10.10.0.92:7575 {
-			transport http {
-				local_address 10.10.0.250
-				network_proxy none
-			}
-		}
-	}
 	@pricebuddy host pricebuddy.alehpineda.com
 	handle @pricebuddy {
 		reverse_proxy http://10.10.0.94:80 {
@@ -338,15 +329,6 @@ handle @dockge {
 	@semaphore host semaphore.alehpineda.com
 	handle @semaphore {
 		reverse_proxy http://10.10.0.97:3000 {
-			transport http {
-				local_address 10.10.0.250
-				network_proxy none
-			}
-		}
-	}
-	@homer host homer.alehpineda.com
-	handle @homer {
-		reverse_proxy http://10.10.0.98:8010 {
 			transport http {
 				local_address 10.10.0.250
 				network_proxy none

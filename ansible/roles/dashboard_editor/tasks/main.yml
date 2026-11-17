@@ -2,8 +2,7 @@
 # Idempotent. grokops authorized_keys is rendered in full by role
 # bot_ssh_keys (target dashboard). Keeps root as
 # owner of the config files and directories; only the group and g+w change.
-# No service restart: Homepage hot-reloads these YAML files and Homer serves
-# config.yml as a static file.
+# No service restart: Homepage hot-reloads these YAML files.
 
 - name: Normalize the config file list
   ansible.builtin.set_fact:

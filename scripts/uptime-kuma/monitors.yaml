@@ -96,8 +96,6 @@ status_page:
         - NetBox
         - Wazuh
         - Homepage
-        - Homarr
-        - Homer
         - PriceBuddy
         - Change Detection
         - Semaphore
@@ -486,20 +484,6 @@ monitors:
     interval: 180
     resend_interval: 120
     description: CT191, Caddy .250. GET /api/healthcheck (200, body "up").
-  - name: Homarr
-    type: http
-    url: https://homarr.alehpineda.com
-    tags: [admin]
-    interval: 180
-    resend_interval: 120
-    description: CT192, Caddy .250.
-  - name: Homer
-    type: http
-    url: https://homer.alehpineda.com
-    tags: [admin]
-    interval: 180
-    resend_interval: 120
-    description: CT198, Caddy .250.
   - name: BentoPDF
     type: http
     url: https://bentopdf.alehpineda.com

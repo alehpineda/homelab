@@ -1,6 +1,6 @@
 ---
 # Per-bot SSH keys for grokaudit/grokops on gremory and the BRL host
-# (role bot_ssh_keys). LXCs, PBS and CT 191/198 get the same list through
+# (role bot_ssh_keys). LXCs, PBS and CT 191 get the same list through
 # grokaudit.yml, pbs.yml and dashboards.yml. Not imported by site.yml.
 # See docs/runbooks/bot-ssh-keys.md.
 # Authority: DeathScythe 2026-11-17 7:52 AM CT, Forge 1:1 card t953s4991
