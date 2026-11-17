@@ -48,6 +48,7 @@ resource "proxmox_lxc" "ct_185" {
   memory          = 32768
   swap            = 8192
   tags            = "community-script;family;media;romm;storage-data2"
+  nameserver      = "10.10.0.53 10.10.0.55"
   ostemplate      = "local:vztmpl/debian-13-standard_13.6-1_amd64.tar.zst"
   ssh_public_keys = var.ct185_ssh_public_keys
   password        = var.lxc_root_password

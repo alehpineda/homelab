@@ -37,6 +37,7 @@ resource "proxmox_lxc" "ct_196" {
   memory          = 4096
   swap            = 512
   tags            = "community-script;family;linkwarden;storage-data2"
+  nameserver      = "10.10.0.53 10.10.0.55"
   ostemplate      = "local:vztmpl/ubuntu-24.04-standard_24.04-2_amd64.tar.zst"
   ssh_public_keys = var.ct196_ssh_public_keys
   password        = var.lxc_root_password

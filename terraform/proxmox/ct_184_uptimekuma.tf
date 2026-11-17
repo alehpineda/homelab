@@ -28,8 +28,9 @@
 # See docs/runbooks/netbird-client-ct184.md.
 #
 # Template is the Debian 13 vztmpl already on BRL local (same as CT183).
-# Confirm it is still on local before apply. nameserver omitted: DNS via
-# Flint option 6, like ct_176 / ct_183. timezone America/Chicago is a
+# Confirm it is still on local before apply. nameserver is declared to
+# AdGuard A/B (10.10.0.53 10.10.0.55); Flint .1 cannot resolve GitHub.
+# timezone America/Chicago is a
 # pct setting and is not in the Telmate proxmox_lxc schema. After
 # create: pct set 184 --timezone America/Chicago, then pct start 184.
 # No IPv6 on this NIC.
@@ -50,6 +51,7 @@ resource "proxmox_lxc" "ct_184" {
   memory       = 2048
   swap         = 512
   tags         = "community-script;monitoring;kuma;storage-data2"
+  nameserver   = "10.10.0.53 10.10.0.55"
   # Create-time only. Ignored after create. Public keys only.
   ostemplate      = "local:vztmpl/debian-13-standard_13.6-1_amd64.tar.zst"
   ssh_public_keys = var.ct184_ssh_public_keys

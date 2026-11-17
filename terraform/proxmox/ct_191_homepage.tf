@@ -34,6 +34,7 @@ resource "proxmox_lxc" "ct_191" {
   memory          = 4096
   swap            = 512
   tags            = "admin;community-script;homepage;storage-data2;trial"
+  nameserver      = "10.10.0.53 10.10.0.55"
   ostemplate      = "local:vztmpl/debian-13-standard_13.6-1_amd64.tar.zst"
   ssh_public_keys = var.ct191_ssh_public_keys
   password        = var.lxc_root_password
