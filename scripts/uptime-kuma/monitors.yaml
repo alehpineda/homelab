@@ -7,11 +7,12 @@
 # current release with runtime version gating. Login against this instance
 # (2.5.9) is the live verification.
 #
-# 57 enabled monitors (44 v1 incl. CT185-190, plus 10 from the 2026-11-10
+# 58 enabled monitors (44 v1 incl. CT185-190, plus 10 from the 2026-11-10
 # ten-service raise, plus OpenObserve CT177 on 2026-11-11, plus CrowdSec
-# Web UI on gremory on 2026-11-14, plus Jackett on CT182 on 2026-11-14;
-# no LXC/router pings). The former CT185-190 placeholders were moved into
-# monitors after the six services went live.
+# Web UI on gremory on 2026-11-14, plus Jackett on CT182 on 2026-11-14,
+# plus MariaDB (CT179) on 2026-11-16; no LXC/router pings). The former
+# CT185-190 placeholders were moved into monitors after the six services
+# went live.
 
 kuma:
   url: https://uptime.alehpineda.com
@@ -65,6 +66,9 @@ status_page:
         - Flint ping
         - Comet ping
         - bael ping
+    - name: Databases
+      monitors:
+        - MariaDB (CT179)
     - name: Admin URLs
       monitors:
         - AdGuard UI
@@ -562,6 +566,20 @@ monitors:
     interval: 180
     resend_interval: 120
     description: crowdsec-web-ui on gremory, NetBird reverse proxy. Healthy on 200-399.
+
+  # --- MariaDB on CT179, 2026-11-16 ---
+  # Seeded live by Forge at 6:09 PM CT with --skip-notification. The yaml
+  # schema has no per-monitor notification flag; this monitor has no email
+  # link yet. A later seed can attach one after the user says yes.
+  - name: MariaDB (CT179)
+    type: port
+    hostname: 10.10.0.79
+    port: 3306
+    tags: [hosts]
+    interval: 60
+    timeout: 15
+    resend_interval: 60
+    description: TCP 3306 on CT179 mariadb-blr-lxc (10.10.0.79). Postgres 5432 on CT178 is firewalled from Kuma and is not monitored here.
 
 # No remaining after-build placeholders. CT185-190 monitors live above.
 placeholders: []
