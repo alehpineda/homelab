@@ -117,10 +117,14 @@ Status: **IaC only** until the owner says yes to merge, then to apply,
 then to the cutover window. Plan: Forge
 `/workspace/forge/plans/2026-11-16-seerr-postgres-trial.md`.
 
-Owner, Forge 1:1, 6:37 PM CT Nov 16 2026 (card t938s4874): "Yes, open the
-PR for the Seerr Postgres plan" and "Yes, install rootless Podman on CT176
-for the one-off pgloader run". Merge, apply, the pgloader run, and the
-cutover each still need their own yes.
+Owner, Forge 1:1, Nov 16 2026:
+- 6:37 PM CT (card t938s4874): "Yes, open the PR for the Seerr Postgres plan"
+  and "Yes, install rootless Podman on CT176 for the one-off pgloader run".
+- 7:09 PM CT (card t938s4881): "Yes, use Podman as root on CT176 for the
+  one-off pgloader run" (rootless failed in this unprivileged LXC).
+
+Merge, apply, the pgloader data copy, and the cutover each still need
+their own yes.
 
 ### What the IaC adds
 
@@ -174,22 +178,23 @@ newer-Postgres problems). Use the upstream image
 against a **copy** of Seerr's `db.sqlite3` taken while Seerr is stopped.
 Do not point pgloader at the live file or at any other database.
 
+Rootless Podman failed on this unprivileged LXC (`newuidmap: write to
+uid_map failed: Operation not permitted`). Run it as root instead:
+
 ```bash
-# After the copy is on CT176, as deathscythe (rootless). Example only;
-# the exact load file is written at cutover. This is not a run command.
-podman run --rm --network=host \
+# After the copy is on CT176. Example only; the exact load file is
+# written at cutover. This is not a run command.
+sudo podman run --rm \
   -v /path/to/stopped-copy:/data:ro \
   ghcr.io/dimitri/pgloader:latest \
   pgloader --version
 ```
 
-CT176 package install is `playbooks/podman-rootless.yml` (role
-`podman_rootless`, CT176 only, not imported by `site.yml`). Rootless
-Podman needs a nested user namespace and the `deathscythe` subuid/subgid
-range. On an unprivileged LXC that already uses a 65536-uid map,
-`newuidmap` may fail with `write to uid_map failed: Operation not
-permitted`. Do not change CT176's LXC features (`nesting` / `keyctl`)
-or its idmap without a new yes from the owner.
+CT176 package install is `playbooks/podman-oneoff.yml` (role
+`podman_oneoff`, CT176 only, not imported by `site.yml`). It installs
+the `podman` package and is meant to be used with `sudo podman`. Do not
+change CT176's LXC features (`nesting` / `keyctl`) or its idmap without
+a new yes from the owner.
 
 ### Rollback
 
