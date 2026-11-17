@@ -568,18 +568,26 @@ monitors:
     description: crowdsec-web-ui on gremory, NetBird reverse proxy. Healthy on 200-399.
 
   # --- MariaDB on CT179, 2026-11-16 ---
-  # Seeded live by Forge at 6:09 PM CT with --skip-notification. The yaml
-  # schema has no per-monitor notification flag; this monitor has no email
-  # link yet. A later seed can attach one after the user says yes.
+  # Live as of 7:20 PM CT: Forge switched this from a TCP port check to a
+  # mysql login check (user kuma_monitor, USAGE only, host 10.10.0.84) and
+  # linked notification id 1, "Forge email (Gmail)". The yaml schema has no
+  # per-monitor notification flag; a normal seed attaches that SMTP
+  # notification to every monitor by name. Backup:
+  # /root/forge-kuma-m58-mysql-20261116/ on CT184.
+  # The password is not in this file. Live secret:
+  # CT179:/root/forge-db/kuma_monitor.pass. The connection string uses a
+  # placeholder because the seeder has no monitor-secret substitution.
+  # Do not re-seed m58 until the seeder can inject the password, or the
+  # live connection string will be clobbered.
   - name: MariaDB (CT179)
-    type: port
-    hostname: 10.10.0.79
-    port: 3306
+    type: mysql
+    database_query: "SELECT 1"
+    database_connection_string: mysql://kuma_monitor:<KUMA_M58_MYSQL_PASSWORD>@10.10.0.79:3306
     tags: [hosts]
     interval: 60
     timeout: 15
     resend_interval: 60
-    description: TCP 3306 on CT179 mariadb-blr-lxc (10.10.0.79). Postgres 5432 on CT178 is firewalled from Kuma and is not monitored here.
+    description: MySQL login check (SELECT 1) on CT179 mariadb-blr-lxc (10.10.0.79). Postgres 5432 on CT178 is firewalled from Kuma and is not monitored here.
 
 # No remaining after-build placeholders. CT185-190 monitors live above.
 placeholders: []
