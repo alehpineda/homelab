@@ -3,7 +3,10 @@
 
 - name: "CT {{ pve_fw_vmid }}: desired rule list"
   ansible.builtin.set_fact:
-    _ct_rules: "{{ pve_fw_ct_rules[pve_fw_vmid] | default([]) }}"
+    # Optional rules (currently the CT176 pgloader temp allow on 178) are
+    # appended only when postgres_pgloader_temp_allow is true. Default false,
+    # so a plain apply of this playbook does not open 5432 to 10.10.0.76.
+    _ct_rules: "{{ (pve_fw_ct_rules[pve_fw_vmid] | default([])) + ((pve_fw_ct_rules_optional[pve_fw_vmid] | default([])) if (postgres_pgloader_temp_allow | default(false) | bool) else []) }}"
     _ct_ipsets: "{{ (pve_fw_ct_ipsets | default({}))[pve_fw_vmid] | default({}) }}"
 
 - name: "CT {{ pve_fw_vmid }}: ensure guest ipsets exist (e.g. ipfilter-net0)"

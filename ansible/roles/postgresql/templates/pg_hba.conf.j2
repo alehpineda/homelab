@@ -10,3 +10,7 @@ host     all       all   ::1/128       scram-sha-256
 {% for app in postgresql_apps %}
 hostssl  {{ app.db }}  {{ app.user }}  {{ app.client }}  scram-sha-256
 {% endfor %}
+{% if postgres_pgloader_temp_allow | default(false) | bool %}
+# TEMP: one-off pgloader from CT176. Gated by postgres_pgloader_temp_allow (default false).
+hostssl  seerr  seerr  {{ postgres_pgloader_temp_client }}  scram-sha-256
+{% endif %}

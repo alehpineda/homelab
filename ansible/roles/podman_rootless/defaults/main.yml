@@ -1,0 +1,14 @@
+---
+# Rootless Podman on CT 176 (forge-ws-blr-lxc) for one-off tools such as
+# pgloader. Approved for CT 176 only. The hostname assert stops other guests.
+# Not imported by site.yml.
+podman_rootless_user: deathscythe
+podman_rootless_expected_hostname: forge-ws-blr-lxc
+# 65536-uid range, same shape as the existing deathscythe subuid on CT176.
+podman_rootless_subuid_start: 100000
+podman_rootless_subuid_count: 65536
+podman_rootless_packages:
+  - podman
+  - uidmap
+  - slirp4netns
+  - passt

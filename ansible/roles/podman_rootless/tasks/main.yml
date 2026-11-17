@@ -1,0 +1,36 @@
+---
+# Installs rootless Podman for CT 176. Does not pull images and does not
+# change LXC features (nesting, keyctl, idmap).
+
+- name: Restrict this role to CT 176
+  ansible.builtin.assert:
+    that:
+      - ansible_hostname == podman_rootless_expected_hostname
+    fail_msg: This role is only approved for {{ podman_rootless_expected_hostname }} (CT 176).
+
+- name: Install Podman and rootless helpers
+  ansible.builtin.apt:
+    name: "{{ podman_rootless_packages }}"
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: Ensure {{ podman_rootless_user }} has a subuid range
+  ansible.builtin.lineinfile:
+    path: /etc/subuid
+    regexp: "^{{ podman_rootless_user }}:"
+    line: "{{ podman_rootless_user }}:{{ podman_rootless_subuid_start }}:{{ podman_rootless_subuid_count }}"
+    create: true
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Ensure {{ podman_rootless_user }} has a subgid range
+  ansible.builtin.lineinfile:
+    path: /etc/subgid
+    regexp: "^{{ podman_rootless_user }}:"
+    line: "{{ podman_rootless_user }}:{{ podman_rootless_subuid_start }}:{{ podman_rootless_subuid_count }}"
+    create: true
+    owner: root
+    group: root
+    mode: "0644"
