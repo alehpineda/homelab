@@ -24,7 +24,7 @@
 # choice (chown to 1100 vs. ro bind); mp7 is reserved for it.
 #
 # After create: pct set 157 --timezone America/Chicago,
-# --nameserver "10.10.0.53 10.10.0.55", the mp idmaps/ro. PVE guest firewall
+# --nameserver "10.10.0.53 10.10.0.55" (declared below), the mp idmaps/ro. PVE guest firewall
 # (fw_allowlists 157: tcp/3923 from 10.10.0.250 only) before first start.
 resource "proxmox_lxc" "ct_157" {
   target_node     = var.pm_node
@@ -43,6 +43,7 @@ resource "proxmox_lxc" "ct_157" {
   ssh_public_keys = var.ct157_ssh_public_keys
   password        = var.lxc_root_password
   start           = false
+  nameserver      = "10.10.0.53 10.10.0.55" # AdGuard A/B; set by pct after create, declared so plan is 0-diff
 
   rootfs {
     storage = var.pm_storage
