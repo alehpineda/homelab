@@ -50,7 +50,14 @@ postgresql_syslog_ident: postgres
 postgresql_apps:
   - {name: openobserve, db: openobserve, user: openobserve, client: 10.10.0.77/32}
   - {name: grafana, db: grafana, user: grafana, client: 10.10.0.71/32}
+  - {name: seerr, db: seerr, user: seerr, client: 10.10.0.83/32}
 postgresql_secret_dir: /root/forge-db
+
+# TEMP one-off pgloader from CT176 (10.10.0.76) during the Seerr trial.
+# Default OFF: merging or applying this role does not open 5432 or add a
+# pg_hba line for .76. Set true only for that run, then set false and re-apply.
+postgres_pgloader_temp_allow: false
+postgres_pgloader_temp_client: 10.10.0.76/32
 
 # Metrics: Debian prometheus-postgres-exporter on :9187, peer auth as the
 # OS user `prometheus` mapped to a pg_monitor role (no password).

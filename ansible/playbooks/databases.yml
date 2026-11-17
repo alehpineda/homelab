@@ -1,6 +1,6 @@
 ---
 # Observability databases. Not imported by site.yml.
-#   CT 178 postgres-blr-lxc 10.10.0.78  PostgreSQL 17 (OpenObserve, then Grafana)
+#   CT 178 postgres-blr-lxc 10.10.0.78  PostgreSQL 17 (OpenObserve, Grafana, Seerr trial)
 #   CT 179 mariadb-blr-lxc  10.10.0.79  MariaDB 11.8 (Uptime Kuma only)
 # Install steps mirror community-scripts install/postgresql-install.sh and
 # install/mariadb-install.sh; the CTs come from terraform (ct_178/ct_179),

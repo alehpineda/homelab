@@ -1,0 +1,15 @@
+---
+# Installs rootful Podman for CT 176 one-off runs (e.g. pgloader).
+
+- name: Restrict this role to CT 176
+  ansible.builtin.assert:
+    that:
+      - ansible_hostname == podman_oneoff_expected_hostname
+    fail_msg: This role is only approved for {{ podman_oneoff_expected_hostname }} (CT 176).
+
+- name: Install Podman
+  ansible.builtin.apt:
+    name: "{{ podman_oneoff_packages }}"
+    state: present
+    update_cache: true
+    cache_valid_time: 3600

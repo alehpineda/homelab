@@ -98,9 +98,10 @@ pve_fw_ct_rules:
     - {proto: tcp, dport: "5080", source: prometheus, comment: "remote_write"}
     - {proto: tcp, dport: "9100", source: prometheus, comment: "node_exporter scrape"}
     - {proto: tcp, dport: "12345", source: prometheus, comment: "alloy /metrics"}
-  178:  # postgres (t927u/t928u Nov 16) — 5432 only from OpenObserve .77 and Grafana .71; exporters for Prometheus. Not rolled out until CT178 exists.
+  178:  # postgres (t927u/t928u Nov 16) — 5432 from OpenObserve .77, Grafana .71, and Seerr .83; exporters for Prometheus.
     - {proto: tcp, dport: "5432", source: openobserve, comment: "O2 meta store"}
     - {proto: tcp, dport: "5432", source: grafana, comment: "Grafana config db"}
+    - {proto: tcp, dport: "5432", source: seerr, comment: "Seerr trial db"}
     - {proto: tcp, dport: "9187", source: prometheus, comment: "postgres_exporter"}
     - {proto: tcp, dport: "9100", source: prometheus, comment: "node_exporter scrape"}
   179:  # mariadb (t928u Nov 16) — 3306 only from Uptime Kuma .84; exporters for Prometheus. Not rolled out until CT179 exists.
@@ -223,3 +224,17 @@ pve_fw_ct_rules:
     - {proto: udp, dport: "443", source: +management, comment: "HTTP/3"}
     - {proto: tcp, dport: "9180", source: prometheus, comment: "caddy LAN /metrics"}
     - {proto: tcp, dport: "12345", source: prometheus, comment: "alloy /metrics"}
+
+# TEMP one-off pgloader from CT176 (10.10.0.76) to CT178:5432 during the
+# Seerr trial. Default OFF: merging this file, or applying the firewall
+# playbook with the default, does not open 5432 to .76. Set this true only
+# for that run (and re-apply pve-guest-firewall.yml for 178), then set
+# false and re-apply. The postgresql role uses the same variable for pg_hba.
+postgres_pgloader_temp_allow: false
+
+# Extra IN rules, appended only when postgres_pgloader_temp_allow is true.
+# See roles/pve_guest_firewall/tasks/guest.yml.
+pve_fw_ct_rules_optional:
+  178:
+    - {proto: tcp, dport: "5432", source: 10.10.0.76/32, comment: "TEMP one-off pgloader from CT176; gated by postgres_pgloader_temp_allow"}
+

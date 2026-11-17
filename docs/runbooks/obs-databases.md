@@ -13,7 +13,7 @@ Owner, Forge 1:1, Nov 16 2026:
 
 | CT | Host | IP | Engine | Clients | Size |
 |---|---|---|---|---|---|
-| 178 | postgres-blr-lxc | 10.10.0.78 | PostgreSQL 17 (PGDG) | O2 CT177 (.77), Grafana CT171 (.71) | 2c / 2048 MiB / 8G root + 16G mp0 `/var/lib/postgresql` |
+| 178 | postgres-blr-lxc | 10.10.0.78 | PostgreSQL 17 (PGDG) | O2 CT177 (.77), Grafana CT171 (.71), Seerr CT183 (.83) trial | 2c / 2048 MiB / 8G root + 16G mp0 `/var/lib/postgresql` |
 | 179 | mariadb-blr-lxc | 10.10.0.79 | MariaDB 11.8 (Debian 13) | Uptime Kuma CT184 (.84) | 1c / 1024 MiB / 6G root + 8G mp0 `/var/lib/mysql` |
 
 Both: Debian 13 vztmpl, unprivileged, nesting, onboot, data2, MAC
@@ -85,7 +85,7 @@ secrets plan.
 - `prometheus-mysqld-exporter` :9104 (unix_socket user `prometheus`).
 - node_exporter :9100 on both.
 - Scrape jobs `postgres`, `postgres_node`, `mariadb`, `mariadb_node` are in `logging.yml` prom_scrape. Apply them as a subset only after the CTs exist.
-- Guest firewall: 178 allows 5432 from .71/.77 and 9187/9100 from prometheus. 179 allows 3306 from .84 and 9104/9100 from prometheus. Both are in `log_shippers` for Alloy push.
+- Guest firewall: 178 allows 5432 from .71/.77/.83 and 9187/9100 from prometheus. 179 allows 3306 from .84 and 9104/9100 from prometheus. Both are in `log_shippers` for Alloy push. A temporary 5432 allow from CT176 (.76) is gated by `postgres_pgloader_temp_allow` (default false); see the Seerr trial section.
 
 ## Apply order (each step its own yes)
 
@@ -110,3 +110,96 @@ secrets plan.
 Nothing depends on CT178/179 until a migration cuts over. Before that,
 `pct stop <id>` is enough. Destroying a CT needs a yes (`prevent_destroy`
 is set). Each migration has its own rollback in the plan.
+
+## Seerr trial (CT183 → CT178)
+
+Status: **IaC only** until the owner says yes to merge, then to apply,
+then to the cutover window. Plan: Forge
+`/workspace/forge/plans/2026-11-16-seerr-postgres-trial.md`.
+
+Owner, Forge 1:1, Nov 16 2026:
+- 6:37 PM CT (card t938s4874): "Yes, open the PR for the Seerr Postgres plan"
+  and "Yes, install rootless Podman on CT176 for the one-off pgloader run".
+- 7:09 PM CT (card t938s4881): "Yes, use Podman as root on CT176 for the
+  one-off pgloader run" (rootless failed in this unprivileged LXC).
+
+Merge, apply, the pgloader data copy, and the cutover each still need
+their own yes.
+
+### What the IaC adds
+
+- Role `postgresql`: database `seerr` owned by role `seerr`. `pg_hba`
+  gets `hostssl seerr seerr 10.10.0.83/32 scram-sha-256`. The password is
+  generated on CT178 into root-only `/root/forge-db/seerr.pass`, same as
+  the other apps. Adding `seerr` to `postgresql_apps` includes it in the
+  01:30 CT dump set (14 daily, 8 weekly) and the monthly restore test.
+- `fw_allowlists.yml`: CT178 IN tcp/5432 from the existing `seerr`
+  alias (10.10.0.83). The PVE firewall stays at `policy_in DROP`.
+- Temporary pgloader allow from 10.10.0.76/32 to 5432, and the matching
+  `pg_hba` line, are both gated by `postgres_pgloader_temp_allow`
+  (default `false`). Merging this PR, or applying the roles with the
+  default, does not open 5432 to CT176. To turn it on: apply
+  `databases.yml --tags db_postgres` and `pve-guest-firewall.yml` for 178
+  with `-e postgres_pgloader_temp_allow=true`. Turn it off the same way
+  with the default (or `=false`) after the run.
+- No new scrape job: `postgres_exporter` already covers CT178.
+
+### Forge apply steps (each its own yes)
+
+1. Apply `playbooks/databases.yml --tags db_postgres` so the `seerr`
+   role, database, password file, and `pg_hba` line exist. Do not enable
+   the temp allow yet.
+2. Apply `pve-guest-firewall.yml` with `pve_fw_rollout: [178]` so .83 can
+   reach 5432. Confirm the .76 rule is absent while the toggle is false.
+3. Password handoff to CT183, host-side only, never in chat and never on
+   argv or in a process list:
+   - As `grokops` on BRL, use `sudo -n pct` only.
+   - Copy `/root/forge-db/seerr.pass` from CT178 to a root-only 0600
+     file on the PVE host (for example under `/root/forge-db/`), then
+     `pct push` that file into CT183 as a root-only temp file.
+   - On CT183, merge `DB_TYPE=postgres`, `DB_HOST=10.10.0.78`,
+     `DB_PORT=5432`, `DB_USER=seerr`, `DB_NAME=seerr`, and `DB_PASS`
+     into `/etc/seerr/seerr.conf` (root 0600) by reading the temp file
+     inside the CT. Do not pass the password as a `pct exec` argument.
+   - Shred the PVE-host and CT183 temp files. Leave
+     `/root/forge-db/seerr.pass` on CT178 in place.
+4. Jack backs up `/etc/seerr` and the SQLite file, starts Seerr once so
+   it creates the Postgres tables, then stops it.
+5. For the data copy, set `postgres_pgloader_temp_allow=true` and re-apply
+   Postgres `pg_hba` plus the CT178 firewall. Run pgloader (below). Set
+   the toggle back to false and re-apply both so the .76 allow is gone.
+6. Jack starts Seerr and verifies requests, users, and settings.
+
+### pgloader (one-off on CT176)
+
+Do not use Ubuntu's packaged pgloader (3.6.x has known SQLite and
+newer-Postgres problems). Use the upstream image
+`ghcr.io/dimitri/pgloader:latest` once, with `--rm`, **data-only**,
+against a **copy** of Seerr's `db.sqlite3` taken while Seerr is stopped.
+Do not point pgloader at the live file or at any other database.
+
+Rootless Podman failed on this unprivileged LXC (`newuidmap: write to
+uid_map failed: Operation not permitted`). Run it as root instead:
+
+```bash
+# After the copy is on CT176. Example only; the exact load file is
+# written at cutover. This is not a run command.
+sudo podman run --rm \
+  -v /path/to/stopped-copy:/data:ro \
+  ghcr.io/dimitri/pgloader:latest \
+  pgloader --version
+```
+
+CT176 package install is `playbooks/podman-oneoff.yml` (role
+`podman_oneoff`, CT176 only, not imported by `site.yml`). It installs
+the `podman` package and is meant to be used with `sudo podman`. Do not
+change CT176's LXC features (`nesting` / `keyctl`) or its idmap without
+a new yes from the owner.
+
+### Rollback
+
+Set `DB_TYPE=sqlite` in `/etc/seerr/seerr.conf` and point Seerr back at
+the untouched SQLite file (the copy used by pgloader is separate). Leave
+the `seerr` Postgres database in place until the owner says yes to drop
+it. If the temp allow was opened, set `postgres_pgloader_temp_allow`
+false and re-apply `pg_hba` and the CT178 firewall.

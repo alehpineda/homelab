@@ -1,0 +1,12 @@
+---
+# Rootful Podman on CT 176 (forge-ws-blr-lxc) for one-off tools such as
+# pgloader. Not imported by site.yml. See docs/runbooks/obs-databases.md
+# (Seerr trial / pgloader). Opt-in; run only from an approved plan. Does
+# not pull images and does not change LXC features. Run containers with
+# `sudo podman ...` (rootless does not work on this unprivileged LXC).
+- name: CT 176 rootful Podman (one-off)
+  hosts: forge-ws-blr-lxc
+  become: true
+  gather_facts: true
+  roles:
+    - role: podman_oneoff

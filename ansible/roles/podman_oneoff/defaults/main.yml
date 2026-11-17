@@ -1,0 +1,16 @@
+---
+# Rootful Podman on CT 176 (forge-ws-blr-lxc) for one-off tools such as
+# pgloader. Approved for CT 176 only. The hostname assert stops other guests.
+# Not imported by site.yml.
+#
+# Rootless was tried first and failed in this unprivileged LXC
+# (newuidmap: write to uid_map failed: Operation not permitted). The owner
+# approved running Podman as root on CT176 for the one-off pgloader run
+# (Forge 1:1, 7:09 PM CT Nov 16 2026, card t938s4881). This role installs
+# the podman package only. uidmap, slirp4netns, passt, and fuse-overlayfs
+# are rootless helpers and are not required for rootful use (native overlay
+# already works). The role does not pull images and does not change LXC
+# features (nesting, keyctl, idmap).
+podman_oneoff_expected_hostname: forge-ws-blr-lxc
+podman_oneoff_packages:
+  - podman
