@@ -1,0 +1,49 @@
+#!/bin/bash
+# Managed by ansible role mariadb. Usage: forge-mariadb-ensure-monitor NAME USER CLIENT_IP
+# Creates 'USER'@'CLIENT_IP' if missing, sets the password from
+# {{ mariadb_secret_dir }}/NAME.pass (generated on first run, root 0600,
+# 40 alnum chars) and leaves the account at USAGE only: no database and no
+# other grants. SQL goes to the client on stdin, never argv; nothing secret
+# is printed. Prints "created" or "exists".
+set -euo pipefail
+name="$1"; user="$2"; client="$3"
+[[ "$name" =~ ^[a-z0-9_]+$ && "$user" =~ ^[a-z0-9_]+$ ]] || { echo "bad identifier" >&2; exit 64; }
+[[ "$client" =~ ^[0-9]{1,3}(\.[0-9]{1,3}){3}$ ]] || { echo "bad client ip" >&2; exit 64; }
+f="{{ mariadb_secret_dir }}/${name}.pass"
+umask 077
+if [[ ! -s "$f" ]]; then
+  # Same bounded-read generation as forge-mariadb-ensure-app (avoid SIGPIPE).
+  pw_new="$(head -c 1024 /dev/urandom | tr -dc 'A-Za-z0-9' | cut -c1-40)"
+  [[ "$pw_new" =~ ^[A-Za-z0-9]{40}$ ]] || { echo "password generation came up short" >&2; exit 67; }
+  printf '%s' "$pw_new" >"$f"; unset pw_new
+fi
+chown root:root "$f"; chmod 0600 "$f"
+pw="$(<"$f")"
+[[ "$pw" =~ ^[A-Za-z0-9]{24,}$ ]] || { echo "$f is not 24+ alnum chars" >&2; exit 65; }
+state=exists
+if [[ "$(mariadb -NBe "SELECT COUNT(*) FROM mysql.user WHERE User='${user}' AND Host='${client}'")" == 0 ]]; then
+  state=created
+fi
+mariadb <<SQL
+CREATE USER IF NOT EXISTS '${user}'@'${client}' IDENTIFIED BY '${pw}';
+ALTER USER '${user}'@'${client}' IDENTIFIED BY '${pw}';
+REVOKE ALL PRIVILEGES, GRANT OPTION FROM '${user}'@'${client}';
+GRANT USAGE ON *.* TO '${user}'@'${client}';
+SQL
+# Confirm USAGE only without printing SHOW GRANTS (it can include the hash).
+# GRANTEE in information_schema is 'user'@'host'. QUOTE() supplies the quotes.
+grantee="CONCAT(QUOTE('${user}'), '@', QUOTE('${client}'))"
+extra="$(mariadb -NBe "
+SELECT COUNT(*) FROM mysql.user WHERE User='${user}' AND Host='${client}';
+SELECT COALESCE(GROUP_CONCAT(PRIVILEGE_TYPE ORDER BY PRIVILEGE_TYPE), '')
+  FROM information_schema.USER_PRIVILEGES WHERE GRANTEE = ${grantee};
+SELECT COUNT(*) FROM information_schema.SCHEMA_PRIVILEGES WHERE GRANTEE = ${grantee};
+SELECT COUNT(*) FROM information_schema.TABLE_PRIVILEGES WHERE GRANTEE = ${grantee};
+")"
+# four lines: user exists, global priv list, schema count, table count
+mapfile -t lines <<<"$extra"
+if [[ "${lines[0]:-}" != "1" || "${lines[1]:-}" != "USAGE" || "${lines[2]:-}" != "0" || "${lines[3]:-}" != "0" ]]; then
+  echo "${name}: expected USAGE only on ${user}@${client}" >&2
+  exit 66
+fi
+echo "${name}: ${state}"

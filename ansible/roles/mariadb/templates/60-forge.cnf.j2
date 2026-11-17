@@ -6,6 +6,7 @@ port = {{ mariadb_port }}
 bind-address = {{ mariadb_bind_address }}
 skip-name-resolve
 max_connections = {{ mariadb_max_connections }}
+max_connect_errors = {{ mariadb_max_connect_errors }}
 innodb_buffer_pool_size = {{ mariadb_innodb_buffer_pool_size }}
 character-set-server = utf8mb4
 collation-server = utf8mb4_unicode_ci

@@ -46,6 +46,7 @@ Deviations, all in the roles:
 | PG memory | shared_buffers 128MB, 100 conns | 512MB, 50 conns | sized to 2 GiB |
 | PG logs | stderr file, UTC | syslog to journald | house JSON pipeline |
 | MariaDB bind | commented (all IPs) | `127.0.0.1,10.10.0.79` via `60-forge.cnf` | LAN only; script files left as shipped |
+| `max_connect_errors` | 100 | 100000 via `60-forge.cnf` | a failed-handshake streak must not block 10.10.0.84 (Kuma) |
 | Sizing | 1c/1024M/4G | see the table above | measured db sizes plus dumps on disk |
 | Adminer / phpMyAdmin | optional prompt | not installed | no web admin surface |
 
@@ -69,6 +70,11 @@ never argv, and are never printed or copied to the controller. Moving a
 password to a client CT is part of each migration window: copy CT to CT
 into the client's root-only env/config file. OpenBao comes later, per the
 secrets plan.
+
+`forge-mariadb-ensure-monitor` uses the same password files for login-only
+accounts (`mariadb_monitor_users`). `kuma_monitor@10.10.0.84` is USAGE only:
+no database and no other grants. It is the Kuma probe account, not the
+app user, and is not dumped.
 
 ## Backups
 

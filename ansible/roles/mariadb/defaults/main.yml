@@ -18,6 +18,9 @@ mariadb_port: 3306
 # Deviation: script listens on all interfaces.
 mariadb_bind_address: "127.0.0.1,10.10.0.79"
 mariadb_max_connections: 50
+# Default is 100. Raised so a streak of failed handshakes (e.g. a TCP-only
+# probe) cannot block 10.10.0.84, which will also be Kuma's DB client.
+mariadb_max_connect_errors: 100000
 # Sized for the 1024 MiB CT. kuma.db was 14.9 MB + 7.7 MB WAL on 2026-11-16.
 mariadb_innodb_buffer_pool_size: 256M
 
@@ -26,6 +29,11 @@ mariadb_innodb_buffer_pool_size: 256M
 # from there. Never committed, never sent to the controller, never logged.
 mariadb_apps:
   - {name: kuma, db: kuma, user: kuma, client: 10.10.0.84}
+# Login-only users: no database, USAGE only. Do not put these in
+# mariadb_apps (that list also drives dumps and ALL ON db.* grants).
+# Password: mariadb_secret_dir/<name>.pass, same rules as apps.
+mariadb_monitor_users:
+  - {name: kuma_monitor, user: kuma_monitor, client: 10.10.0.84}
 mariadb_secret_dir: /root/forge-db
 
 # Metrics: Debian prometheus-mysqld-exporter on :9104, unix_socket auth as
