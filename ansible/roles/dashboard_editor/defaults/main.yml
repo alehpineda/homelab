@@ -5,10 +5,9 @@
 dashboard_editor_user: grokops
 dashboard_editor_group: dashcfg
 
-# Public keys only. Set them in the gitignored inventory/blr.yml (host or
-# group vars), same as pbs_grokops_pubkeys. The live key is the CT 176
-# forge key, fingerprint SHA256:B0BznGN4uG7ub8EpB9qyE62MzZfygeGqgZA6gWIgC1s.
-dashboard_editor_pubkeys: []
+# Keys: group_vars/all/bot_ssh_keys.yml (role bot_ssh_keys, target
+# dashboard): Forge and Wolff, plus the legacy forge-ct176 key during the
+# transition. dashboard_editor_pubkeys is retired.
 
 # Set per host: the config files the editor may change. Their parent
 # directories also get group write (setgid) so atomic-rename editors work.

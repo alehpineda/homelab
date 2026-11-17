@@ -77,8 +77,8 @@ all:
             - {ip: 10.10.0.250, name: jackett.alehpineda.com}
             - {ip: 100.85.100.247, name: crowdsec.alehpineda.com}
         # CT 191 / 192 / 198. playbooks/dashboards.yml targets 191 and 198.
-        # site.yml does not. Set dashboard_editor_pubkeys here in the local
-        # copy (public keys only). Wave 4 log shipping (logging.yml
+        # site.yml does not. grokops keys come from
+        # group_vars/all/bot_ssh_keys.yml (role bot_ssh_keys). Wave 4 log shipping (logging.yml
         # --tags alloy_wave4) also targets these plus CT 176 and CT 165.
         homepage-blr-lxc:
           ansible_host: 10.10.0.91
@@ -89,7 +89,6 @@ all:
             - /opt/homepage/config/widgets.yaml
             - /opt/homepage/config/bookmarks.yaml
             - /opt/homepage/config/proxmox.yaml
-          # dashboard_editor_pubkeys: ["ssh-ed25519 AAAA... forge-ct176"]
         homarr-blr-lxc:  # CT 192
           ansible_host: 10.10.0.92
           ansible_port: 22
@@ -98,7 +97,6 @@ all:
           ansible_port: 22
           dashboard_editor_config_files:
             - /opt/homer/assets/config.yml
-          # dashboard_editor_pubkeys: ["ssh-ed25519 AAAA... forge-ct176"]
         honcho-blr-lxc:  # CT 165
           ansible_host: 10.10.0.65
           ansible_port: 22
@@ -169,7 +167,7 @@ all:
           ansible_host: 10.10.0.25
           ansible_port: 22
           ansible_user: grokops
-          # Set pbs_grokaudit_pubkeys / pbs_grokops_pubkeys in gitignored host_vars.
+          # grokaudit/grokops keys: group_vars/all/bot_ssh_keys.yml (role bot_ssh_keys).
     # Oracle VPS. playbooks/host-backups.yml (role gremory_pull_source). Public SSH only;
     # never install NetBird on it.
     gremory:

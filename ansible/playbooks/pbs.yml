@@ -4,6 +4,8 @@
 - name: Proxmox Backup Server baseline
   hosts: pbs
   become: true
+  vars_files:
+    - ../group_vars/all/bot_ssh_keys.yml
   gather_facts: true
   roles:
     - role: pbs

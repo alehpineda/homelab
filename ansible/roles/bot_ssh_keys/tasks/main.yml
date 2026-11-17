@@ -1,0 +1,15 @@
+---
+# Renders each listed account's ~/.ssh/authorized_keys in full (exclusive).
+# Does not create accounts; the owning role or host setup does that.
+- name: Require a target class and at least one account
+  ansible.builtin.assert:
+    that:
+      - bot_ssh_keys_target in ['brl', 'gremory', 'lxc', 'pbs', 'dashboard']
+      - bot_ssh_keys_accounts | length > 0
+    fail_msg: "Set bot_ssh_keys_target (brl|gremory|lxc|pbs|dashboard) and bot_ssh_keys_accounts."
+
+- name: Render authorized_keys per account
+  ansible.builtin.include_tasks: account.yml
+  loop: "{{ bot_ssh_keys_accounts }}"
+  loop_control:
+    loop_var: bot_ssh_keys_account

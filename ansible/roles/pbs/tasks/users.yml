@@ -15,19 +15,22 @@
     mode: "0700"
   loop: [grokaudit, grokops]
 
-# Builtin lineinfile keeps the repo free of extra collections. Adds keys only;
-# never removes existing ones.
-- name: Authorize service account keys
-  ansible.builtin.lineinfile:
-    path: "/home/{{ item.0 }}/.ssh/authorized_keys"
-    line: "{{ item.1 }}"
-    create: true
-    owner: "{{ item.0 }}"
-    group: "{{ item.0 }}"
-    mode: "0600"
-  loop: >-
-    {{ (['grokaudit'] | product(pbs_grokaudit_pubkeys) | list)
-       + (['grokops'] | product(pbs_grokops_pubkeys) | list) }}
+- name: Refuse the retired per-account key lists
+  ansible.builtin.assert:
+    that:
+      - pbs_grokaudit_pubkeys is not defined
+      - pbs_grokops_pubkeys is not defined
+    fail_msg: >-
+      pbs_grokaudit_pubkeys / pbs_grokops_pubkeys are retired. Keys come
+      from group_vars/all/bot_ssh_keys.yml; put any non-bot line in
+      bot_ssh_keys_extra (host_vars).
+
+- name: Authorize per-bot keys (exclusive, role bot_ssh_keys)
+  ansible.builtin.include_role:
+    name: bot_ssh_keys
+  vars:
+    bot_ssh_keys_target: pbs
+    bot_ssh_keys_accounts: [grokaudit, grokops]
 
 - name: Least-privilege sudo for grokops
   ansible.builtin.template:

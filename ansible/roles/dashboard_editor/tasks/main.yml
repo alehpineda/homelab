@@ -1,5 +1,6 @@
 ---
-# Idempotent. Adds keys only; never removes existing ones. Keeps root as
+# Idempotent. grokops authorized_keys is rendered in full by role
+# bot_ssh_keys (target dashboard). Keeps root as
 # owner of the config files and directories; only the group and g+w change.
 # No service restart: Homepage hot-reloads these YAML files and Homer serves
 # config.yml as a static file.
@@ -8,15 +9,21 @@
   ansible.builtin.set_fact:
     dashboard_editor_files: "{{ dashboard_editor_config_files if (dashboard_editor_config_files | default([]) | length > 0) else ([dashboard_editor_config_file] if dashboard_editor_config_file is defined else []) }}"
 
-- name: Require at least one config file path and at least one public key
+- name: Require at least one config file path
   ansible.builtin.assert:
     that:
       - dashboard_editor_files | length > 0
-      - dashboard_editor_pubkeys | length > 0
     fail_msg: >-
       Set dashboard_editor_config_files (or the legacy
-      dashboard_editor_config_file) per host and dashboard_editor_pubkeys
-      in the gitignored inventory/blr.yml.
+      dashboard_editor_config_file) per host in the gitignored
+      inventory/blr.yml.
+
+- name: Refuse the retired key list
+  ansible.builtin.assert:
+    that: dashboard_editor_pubkeys is not defined
+    fail_msg: >-
+      dashboard_editor_pubkeys is retired. Keys come from
+      group_vars/all/bot_ssh_keys.yml (role bot_ssh_keys, target dashboard).
 
 - name: Check each config file exists
   ansible.builtin.stat:
@@ -56,16 +63,12 @@
     group: "{{ dashboard_editor_user }}"
     mode: "0700"
 
-# Builtin lineinfile keeps the repo free of extra collections.
-- name: Authorize editor public keys
-  ansible.builtin.lineinfile:
-    path: "/home/{{ dashboard_editor_user }}/.ssh/authorized_keys"
-    line: "{{ item }}"
-    create: true
-    owner: "{{ dashboard_editor_user }}"
-    group: "{{ dashboard_editor_user }}"
-    mode: "0600"
-  loop: "{{ dashboard_editor_pubkeys }}"
+- name: Authorize per-bot keys (exclusive, role bot_ssh_keys)
+  ansible.builtin.include_role:
+    name: bot_ssh_keys
+  vars:
+    bot_ssh_keys_target: dashboard
+    bot_ssh_keys_accounts: ["{{ dashboard_editor_user }}"]
 
 - name: Group-write each config directory (setgid so new files keep the group)
   ansible.builtin.file:

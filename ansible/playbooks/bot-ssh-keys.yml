@@ -1,0 +1,57 @@
+---
+# Per-bot SSH keys for grokaudit/grokops on gremory and the BRL host
+# (role bot_ssh_keys). LXCs, PBS and CT 191/198 get the same list through
+# grokaudit.yml, pbs.yml and dashboards.yml. Not imported by site.yml.
+# See docs/runbooks/bot-ssh-keys.md.
+# Authority: DeathScythe 2026-11-17 7:52 AM CT, Forge 1:1 card t953s4991
+# (PR only; merge and every apply need their own yes).
+
+# gremory: Forge applies as ansible_user gremory with become. No from=.
+- name: Bot SSH keys on gremory
+  hosts: gremory
+  become: true
+  gather_facts: false
+  vars_files:
+    - ../group_vars/all/bot_ssh_keys.yml
+  tags: [gremory]
+  roles:
+    - role: bot_ssh_keys
+      vars:
+        bot_ssh_keys_target: gremory
+        bot_ssh_keys_accounts: [grokaudit]
+
+# BRL host: needs root (grokops has only pct/systemctl sudo). The user runs
+# scripts/brl-bot-ssh-keys.sh as root instead; this play is the
+# equivalent for a root-run playbook. Tag-gated so it never runs by default.
+- name: Bot SSH keys on the BRL host
+  hosts: pve
+  become: true
+  gather_facts: false
+  vars_files:
+    - ../group_vars/all/bot_ssh_keys.yml
+  tags: [never, brl]
+  roles:
+    - role: bot_ssh_keys
+      vars:
+        bot_ssh_keys_target: brl
+        bot_ssh_keys_accounts: [grokaudit, grokops]
+
+# Regenerate the BRL root script from the same list (controller only):
+#   ansible-playbook playbooks/bot-ssh-keys.yml --tags brl_script
+- name: Render the BRL root script
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars_files:
+    - ../roles/bot_ssh_keys/defaults/main.yml
+    - ../group_vars/all/bot_ssh_keys.yml
+  tags: [never, brl_script]
+  tasks:
+    - name: Write scripts/brl-bot-ssh-keys.sh
+      ansible.builtin.template:
+        src: ../roles/bot_ssh_keys/templates/brl-bot-ssh-keys.sh.j2
+        dest: "{{ playbook_dir }}/../../scripts/brl-bot-ssh-keys.sh"
+        mode: "0755"
+      vars:
+        bot_ssh_keys_target: brl
+        bot_ssh_keys_public_target: false

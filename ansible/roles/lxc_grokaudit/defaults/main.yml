@@ -6,9 +6,8 @@ lxc_grokaudit_user: grokaudit
 # (media) and the *arr apps run as uid 1000 there.
 lxc_grokaudit_uid: 2990
 
-# Public key only (secops_ssh.pub on the bot box).
-lxc_grokaudit_pubkey: >-
-  ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAICHYly9HcArNUHAgqk8av76uTHrqZuH3jJMO0Wu6V8+b grokaudit@grokbot-box
+# Keys: group_vars/all/bot_ssh_keys.yml (role bot_ssh_keys, target lxc).
+# The shared secops key stays in bot_ssh_keys_legacy during the transition.
 
 # Never added to these groups. Removed if present.
 lxc_grokaudit_denied_groups: [sudo, wheel, docker, adm, lxd]

@@ -8,6 +8,8 @@
 - name: Dashboard config editor access
   hosts: homepage-blr-lxc:homer-blr-lxc
   become: true
+  vars_files:
+    - ../group_vars/all/bot_ssh_keys.yml
   gather_facts: false
   roles:
     - role: dashboard_editor

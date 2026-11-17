@@ -6,5 +6,7 @@
   hosts: grokaudit_lxc
   gather_facts: false
   become: true
+  vars_files:
+    - ../group_vars/all/bot_ssh_keys.yml
   roles:
     - lxc_grokaudit

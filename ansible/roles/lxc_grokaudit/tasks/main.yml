@@ -30,13 +30,19 @@
     group: "{{ lxc_grokaudit_user }}"
     mode: "0700"
 
-- name: Authorize the secops public key (exclusive)
-  ansible.builtin.copy:
-    dest: "/home/{{ lxc_grokaudit_user }}/.ssh/authorized_keys"
-    content: "{{ lxc_grokaudit_pubkey }}\n"
-    owner: "{{ lxc_grokaudit_user }}"
-    group: "{{ lxc_grokaudit_user }}"
-    mode: "0600"
+- name: Refuse the retired single-key variable
+  ansible.builtin.assert:
+    that: lxc_grokaudit_pubkey is not defined
+    fail_msg: >-
+      lxc_grokaudit_pubkey is retired. Keys come from
+      group_vars/all/bot_ssh_keys.yml (role bot_ssh_keys).
+
+- name: Authorize per-bot keys (exclusive, role bot_ssh_keys)
+  ansible.builtin.include_role:
+    name: bot_ssh_keys
+  vars:
+    bot_ssh_keys_target: lxc
+    bot_ssh_keys_accounts: ["{{ lxc_grokaudit_user }}"]
 
 - name: Read grokaudit groups  # noqa: command-instead-of-module
   ansible.builtin.command: id -nG {{ lxc_grokaudit_user }}
