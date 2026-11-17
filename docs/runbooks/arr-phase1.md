@@ -18,7 +18,7 @@ Caddy, AdGuard, or NetBird.
 | Hostname | `arr-blr-lxc` |
 | Address | `10.10.0.82/24` on `vmbr0`, gateway `10.10.0.1` |
 | MAC | `02:46:4F:52:01:82` |
-| Size | 4 vCPU, 8192 MiB RAM, 512 MiB swap, 16 GiB rootfs on `data2` |
+| Size | 4 vCPU, 16384 MiB RAM, 512 MiB swap, 16 GiB rootfs on `data2` |
 | Privilege | unprivileged, `nesting=1`, `keyctl=1` |
 | Start | Terraform `start` is false. `onboot` is true after the first start |
 
