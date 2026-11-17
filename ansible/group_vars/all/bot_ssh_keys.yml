@@ -30,9 +30,14 @@ bot_ssh_keys_list:
     pubkey: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAICFqu1WZ35tyOjqfwXYPTz67NRatSqmV8naHGDLX87vB night-watch@grokbot"
     grants:
       - {account: grokaudit, targets: [brl, gremory, lxc]}
-  # Surface Scout (box only; the scout user on CT 176 needs no SSH logins)
+  # Surface Scout (box only). Per-key from= adds CT176 (10.10.0.76) so
+  # the box key can hop via scout@CT176 onto LAN CTs with no direct TCP 22
+  # route from the box. Other bots keep the origin default. The template
+  # has no per-target from=, so this applies on every LAN target (brl,
+  # lxc, pbs) for this key only. gremory still has no from=.
   - bot: surface-scout
     origin: box  # SHA256:1myBGH8C7U6rL38/DfC7qbJrntrXpJcs3J6bilMOPZw
+    from: [10.10.0.50, 10.10.0.51, 100.85.182.107, 10.10.0.76]
     pubkey: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAII4S1y9BYCVa1MuyHUgkYklDHjIQv+BBKrF4+YbBSOQ3 surface-scout@grokbot"
     grants:
       - {account: grokaudit, targets: [brl, gremory, lxc]}
