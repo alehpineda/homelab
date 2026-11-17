@@ -296,6 +296,10 @@ services:
     # Not a LinuxServer image. The process already runs as uid 1000.
     # PUID and PGID do not change that, so they are not set here.
     # No /config bind: the source volume had no durable database.
+    # mem_limit and memswap_limit are both 1536m so Chromium cannot
+    # spill into CT swap. The OOM killer acts in this container
+    # instead of starving the whole guest. Official FlareSolverr
+    # has no session or browser-limit env var, so none is set.
     image: flaresolverr/flaresolverr@sha256:c80ae007ce2ccdcd217a12426e4f039ef763ff90738c808d38810c3e59323767
     pull_policy: missing
     container_name: flaresolverr
@@ -305,6 +309,8 @@ services:
         condition: service_healthy
     environment:
       TZ: America/Chicago
+    mem_limit: 1536m
+    memswap_limit: 1536m
     restart: unless-stopped
     labels:
       com.centurylinklabs.watchtower.enable: "true"
