@@ -33,9 +33,9 @@ pbs_pve_user: pve-brl@pbs
 pbs_pve_token_name: brl
 pbs_pve_roles: [DatastoreBackup, DatastoreAudit]
 
-# Service accounts. Keys are set in gitignored host_vars.
-pbs_grokaudit_pubkeys: []
-pbs_grokops_pubkeys: []
+# Service accounts. Keys: group_vars/all/bot_ssh_keys.yml (role
+# bot_ssh_keys, target pbs). pbs_grokaudit_pubkeys / pbs_grokops_pubkeys
+# are retired.
 pbs_grokops_sudo_commands:
   - /usr/sbin/proxmox-backup-manager
   - /usr/bin/proxmox-backup-client

@@ -1,0 +1,50 @@
+---
+# Per-bot SSH identities for the grokaudit (read) and grokops (write)
+# accounts. One key per bot per origin; sshd's default INFO log already
+# records the fingerprint, so a login is attributable to a bot. See
+# docs/runbooks/bot-ssh-keys.md.
+# Authority: DeathScythe 2026-11-17 7:52 AM CT, Forge 1:1 card t953s4991.
+
+# The key list. Lives in group_vars/all/bot_ssh_keys.yml (public keys only),
+# loaded by each playbook with vars_files. Empty here on purpose.
+bot_ssh_keys_list: []
+
+# Set by the caller: which target class this host is, and which accounts
+# to render. Classes: brl, gremory, lxc, pbs, dashboard. A grant may also
+# name an inventory_hostname (for example arr-blr-lxc).
+bot_ssh_keys_target: ""
+bot_ssh_keys_accounts: []
+
+# Public targets get no from= (home WAN and box egress both change).
+bot_ssh_keys_public_target: "{{ bot_ssh_keys_target == 'gremory' }}"
+
+# Source address each origin has as seen by LAN targets (read from
+# $SSH_CONNECTION on 2026-11-17, read-only logins):
+# ct176: CT 176 itself (BRL 10.10.0.21 sees 10.10.0.76).
+# box: via the LAN address the NetBird routing peers masquerade it
+#   (BRL 10.10.0.21 and PBS 10.10.0.25 saw 10.10.0.50 = CT 150; CT 151 is
+#   its HA pair, same set as ipset nb_routers in fw_allowlists.yml); via
+#   BRL's own NetBird address 100.85.104.18 (the inventory address) BRL
+#   sees the box's NetBird peer IP 100.85.182.107.
+bot_ssh_keys_origin_from:
+  ct176: [10.10.0.76]
+  box: [10.10.0.50, 10.10.0.51, 100.85.182.107]
+
+# Transition: keep the two shared keys authorized (no options, as before)
+# until every bot has switched and 7 days show no legacy login. Then false.
+bot_ssh_keys_keep_legacy: true
+bot_ssh_keys_legacy:
+  - name: grokaudit@grokbot-box  # box /home/box/secrets/secops_ssh, SHA256:QdY4PXfJ...
+    pubkey: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAICHYly9HcArNUHAgqk8av76uTHrqZuH3jJMO0Wu6V8+b grokaudit@grokbot-box"
+    grants:
+      - {account: grokaudit, targets: [brl, gremory, lxc, pbs]}
+      - {account: grokops, targets: [brl, pbs]}
+  - name: forge-ct176  # CT 176 ~/.ssh/id_ed25519_forge, SHA256:B0BznGN4...
+    pubkey: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIMS00dkr6w3LB/iP5YRA6eKvHKn4EDJbvoHZTj4cwgGV forge-ct176"
+    grants:
+      - {account: grokaudit, targets: [brl, gremory, pbs]}
+      - {account: grokops, targets: [brl, pbs, dashboard]}
+
+# Per-host literal lines to keep that are not bot keys (for example a key
+# found live during the --check --diff review). {account: [lines]}
+bot_ssh_keys_extra: {}

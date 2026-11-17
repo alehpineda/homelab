@@ -1,0 +1,32 @@
+---
+- name: Build authorized_keys for {{ bot_ssh_keys_account }}
+  ansible.builtin.set_fact:
+    bot_ssh_keys_rendered: "{{ lookup('ansible.builtin.template', 'authorized_keys.j2') }}"
+
+- name: Refuse an authorized_keys with no keys for {{ bot_ssh_keys_account }}
+  ansible.builtin.assert:
+    that: bot_ssh_keys_rendered | regex_findall('(?m)^[^#\s]') | length > 0
+    fail_msg: "No key grants {{ bot_ssh_keys_account }} on {{ inventory_hostname }} ({{ bot_ssh_keys_target }}). Refusing to write an empty file."
+
+- name: Look up {{ bot_ssh_keys_account }}
+  ansible.builtin.getent:
+    database: passwd
+    key: "{{ bot_ssh_keys_account }}"
+
+- name: Ensure .ssh for {{ bot_ssh_keys_account }}
+  ansible.builtin.file:
+    path: "{{ ansible_facts.getent_passwd[bot_ssh_keys_account][4] }}/.ssh"
+    state: directory
+    owner: "{{ ansible_facts.getent_passwd[bot_ssh_keys_account][1] }}"
+    group: "{{ ansible_facts.getent_passwd[bot_ssh_keys_account][2] }}"
+    mode: "0700"
+
+- name: Write authorized_keys (exclusive) for {{ bot_ssh_keys_account }}
+  ansible.builtin.copy:
+    dest: "{{ ansible_facts.getent_passwd[bot_ssh_keys_account][4] }}/.ssh/authorized_keys"
+    content: "{{ bot_ssh_keys_rendered }}"
+    owner: "{{ ansible_facts.getent_passwd[bot_ssh_keys_account][1] }}"
+    group: "{{ ansible_facts.getent_passwd[bot_ssh_keys_account][2] }}"
+    mode: "0600"
+    backup: true
+    validate: ssh-keygen -lf %s

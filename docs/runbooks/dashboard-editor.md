@@ -44,8 +44,9 @@ ansible-playbook playbooks/dashboards.yml --check --diff
 ansible-playbook playbooks/dashboards.yml
 ```
 
-Set `dashboard_editor_pubkeys` per host in the gitignored `inventory/blr.yml`,
-and set `dashboard_editor_config_files` to the list above (update the local
+The grokops keys come from `ansible/group_vars/all/bot_ssh_keys.yml`
+(role `bot_ssh_keys`, target `dashboard`; see `docs/runbooks/bot-ssh-keys.md`).
+`dashboard_editor_pubkeys` is retired and fails the role if still set. Set `dashboard_editor_config_files` to the list above (update the local
 copy if it still has only `dashboard_editor_config_file: services.yaml`).
 The first live apply (2026-11-13) was done through
 `sudo -n pct exec <ctid>` from BRL with an equivalent script; backups and

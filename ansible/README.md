@@ -35,6 +35,8 @@ SSH port **4488**. Fresh LXCs often still listen on **22**. Set
 | `playbooks/podman-oneoff.yml` | Opt-in rootful Podman on CT 176 (role `podman_oneoff`) for one-off tools such as pgloader. Installs the `podman` package only. Run with `sudo podman`. Not run by `site.yml`. |
 | `playbooks/dashboards.yml` | CT 191 Homepage / CT 198 Homer: `grokops` key, `dashcfg` group write on Homepage `services.yaml`/`settings.yaml`/`widgets.yaml`/`bookmarks.yaml`/`proxmox.yaml` and Homer `config.yml`. No sudo. Not run by `site.yml`. |
 | `roles/dashboard_editor/` | That playbook. See `docs/runbooks/dashboard-editor.md`. |
+| `playbooks/bot-ssh-keys.yml` | Per-bot SSH keys for `grokaudit` on gremory (tag `gremory`) and `grokaudit`/`grokops` on the BRL host (tag `brl`, root only), plus `--tags brl_script` to regenerate `scripts/brl-bot-ssh-keys.sh`. Not run by `site.yml`. |
+| `roles/bot_ssh_keys/` | Renders each account's `authorized_keys` in full from `group_vars/all/bot_ssh_keys.yml` (`from=` + `restrict` on LAN, `restrict` only on gremory). Also used by `lxc_grokaudit`, `pbs` and `dashboard_editor`. See `docs/runbooks/bot-ssh-keys.md`. |
 | `roles/console_autologin/` | Getty drop-ins for that playbook. Default off. |
 | `playbooks/jellyfin-opencl.yml` | CT 180 Intel OpenCL runtime (role `jellyfin_opencl`): pinned compute-runtime 26.40.40196.8, IGC 2.42.6, gmmlib 22.10.2 from Intel GitHub releases (sha256 pinned), plus `clinfo`; checks `clinfo` and `opencl=ocl@va` as `jellyfin`. No Jellyfin restart or settings. Not run by `site.yml`. See `docs/runbooks/jellyfin-opencl.md`. |
 | `playbooks/arr.yml` | CT 182 Docker, Dockge, and the phase-1 stack. Not run by `site.yml`. |

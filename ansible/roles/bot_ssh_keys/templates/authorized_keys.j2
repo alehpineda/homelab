@@ -1,0 +1,24 @@
+# Managed by Ansible role bot_ssh_keys. Manual edits are overwritten.
+# Source: ansible/group_vars/all/bot_ssh_keys.yml (alehpineda/homelab).
+# account={{ bot_ssh_keys_account }} target={{ bot_ssh_keys_target }}
+{% for key in bot_ssh_keys_list %}
+{% for grant in key.grants if grant.account == bot_ssh_keys_account and (bot_ssh_keys_target in grant.targets or inventory_hostname in grant.targets) %}
+{% set src = key['from'] | default(bot_ssh_keys_origin_from[key.origin] | default([])) %}
+{% if src | length > 0 and not (bot_ssh_keys_public_target | bool) %}
+from="{{ src | join(',') }}",restrict {{ key.pubkey | trim }}
+{% else %}
+restrict {{ key.pubkey | trim }}
+{% endif %}
+{% endfor %}
+{% endfor %}
+{% if bot_ssh_keys_keep_legacy | bool %}
+# legacy shared keys (transition; remove with bot_ssh_keys_keep_legacy: false)
+{% for key in bot_ssh_keys_legacy %}
+{% for grant in key.grants if grant.account == bot_ssh_keys_account and bot_ssh_keys_target in grant.targets %}
+{{ key.pubkey | trim }}
+{% endfor %}
+{% endfor %}
+{% endif %}
+{% for line in bot_ssh_keys_extra[bot_ssh_keys_account] | default([]) %}
+{{ line | trim }}
+{% endfor %}

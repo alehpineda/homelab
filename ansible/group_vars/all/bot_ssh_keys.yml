@@ -1,0 +1,60 @@
+---
+# Per-bot SSH public keys (role bot_ssh_keys). Public keys only; private
+# keys stay on their origin and are never copied. Fingerprints and paths:
+# bot box /workspace/secops/ssh-key-registry.md.
+# Grants follow plan 2026-11-17-per-bot-ssh-identity-and-scout-probes.md 1.1.
+# targets: brl, gremory, lxc, pbs, dashboard, or an inventory_hostname.
+bot_ssh_keys_list:
+  # Forge
+  - bot: forge
+    origin: box  # SHA256:gSeIX0Fwj9UL1HxevbeLeonwJuaXp9ksiJB9PLRnKFE
+    pubkey: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIMvYFpwy+PMsnuKJUjJ0Uw7b8auHyBojKWmE2FGwRaCF forge@grokbot"
+    grants:
+      - {account: grokaudit, targets: [brl, gremory, lxc, pbs]}
+      - {account: grokops, targets: [brl, pbs, dashboard]}
+  - bot: forge
+    origin: ct176  # SHA256:n7qyDwiFA65ZiUkKTrRUGQhEQwzXje6GBZoPrZTiFNE
+    pubkey: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIMOpaPvoTBn2RGaKTOIx6uLdVhyGMc09+O65GCt48iyv forge@grokbot"
+    grants:
+      - {account: grokaudit, targets: [brl, gremory, lxc, pbs]}
+      - {account: grokops, targets: [brl, pbs, dashboard]}
+  # Patch Marshal
+  - bot: patch-marshal
+    origin: ct176  # SHA256:TgzjmOfG+vT/jamk/qXePwu6GZEr9HpU9uo0Dl/nALk
+    pubkey: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIIYPKKWC6gSp2kZsdL8k/04vQ12oWtY/ng5e7RdapDvO patch-marshal@grokbot"
+    grants:
+      - {account: grokaudit, targets: [brl, gremory, lxc]}
+  # Night Watch
+  - bot: night-watch
+    origin: box  # SHA256:j9O6dxQiBlq7Rf61LkwkpKqKijeu+B3jR6MMs7dGcT0
+    pubkey: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAICFqu1WZ35tyOjqfwXYPTz67NRatSqmV8naHGDLX87vB night-watch@grokbot"
+    grants:
+      - {account: grokaudit, targets: [brl, gremory, lxc]}
+  # Surface Scout (box only; the scout user on CT 176 needs no SSH logins)
+  - bot: surface-scout
+    origin: box  # SHA256:1myBGH8C7U6rL38/DfC7qbJrntrXpJcs3J6bilMOPZw
+    pubkey: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAII4S1y9BYCVa1MuyHUgkYklDHjIQv+BBKrF4+YbBSOQ3 surface-scout@grokbot"
+    grants:
+      - {account: grokaudit, targets: [brl, gremory, lxc]}
+  # Christian Wolff (grokops on BRL because his brief keeps "grokops for
+  # writes"; plan 1.1)
+  - bot: wolff
+    origin: box  # SHA256:mL3rNmLQktjIrPK5lRSCUsAJyIJ5LErTBdBU93bZA1w
+    pubkey: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAILm5xiROsfnUBwGRU4+9eTkTelhluvIWTaqsOTKO0ELq wolff@grokbot"
+    grants:
+      - {account: grokaudit, targets: [brl, gremory, lxc]}
+      - {account: grokops, targets: [brl, dashboard]}
+  - bot: wolff
+    origin: ct176  # SHA256:j3mm4uhpYGo5RJko9PQQjnDS/g47GrcRgWp8z4fXuOM
+    pubkey: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIHIWs60up1WltyH8qPwr7Sxw3SfRWpklHCD5gW7Pwkgl wolff@grokbot"
+    grants:
+      - {account: grokaudit, targets: [brl, gremory, lxc]}
+      - {account: grokops, targets: [brl, dashboard]}
+  # Jack Sparrow (CT 182 only; grokops on BRL for pct exec into CT 182,
+  # scoped by sudoers; his writes still need the user's yes)
+  - bot: jack-sparrow
+    origin: box  # SHA256:9jFPEZO1+QKuIPylaynZ31Y4fLB4QeAruMZjHANheK8
+    pubkey: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIDwssQiRO2opzfDRGJJwDQEE1Ue8NGDWAGKoYyfQmwIA jack-sparrow@grokbot"
+    grants:
+      - {account: grokaudit, targets: [brl, arr-blr-lxc]}
+      - {account: grokops, targets: [brl]}
