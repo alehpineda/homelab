@@ -67,7 +67,7 @@ resource "proxmox_lxc" "ct_182" {
   unprivileged = true
   onboot       = true
   cores        = 4
-  memory       = 8192 # raised 6144 -> 8192 2026-11-16 after FlareSolverr Chromium pile-up
+  memory       = 16384 # raised 8192 -> 16384 2026-11-17 after 1536m FlareSolverr cap proved too tight
   swap         = 512
   tags         = "arr;media;storage-data2;vpn"
   nameserver   = "10.10.0.53 10.10.0.55"
