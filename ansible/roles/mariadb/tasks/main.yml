@@ -58,14 +58,14 @@
     group: root
     mode: "0700"
 
-- name: Install the app/user helper and the dump script
+- name: Install the app, monitor, and dump helpers
   ansible.builtin.template:
     src: "{{ item }}.j2"
     dest: "/usr/local/sbin/{{ item }}"
     owner: root
     group: root
     mode: "0750"
-  loop: [forge-mariadb-ensure-app, forge-mariadb-dump]
+  loop: [forge-mariadb-ensure-app, forge-mariadb-ensure-monitor, forge-mariadb-dump]
 
 - name: Ensure each app's user, database and password (generated on the CT)
   ansible.builtin.command:
@@ -85,6 +85,24 @@
 - name: Report app state (names only)
   ansible.builtin.debug:
     msg: "{{ _mdb_app.results | map(attribute='stdout') | list }}"
+
+- name: Ensure each monitor user (USAGE only; password generated on the CT)
+  ansible.builtin.command:
+    argv:
+      - /usr/local/sbin/forge-mariadb-ensure-monitor
+      - "{{ item.name }}"
+      - "{{ item.user }}"
+      - "{{ item.client }}"
+  loop: "{{ mariadb_monitor_users }}"
+  loop_control:
+    label: "{{ item.name }}"
+  register: _mdb_mon
+  changed_when: "'created' in _mdb_mon.stdout"
+  no_log: true
+
+- name: Report monitor-user state (names only)
+  ansible.builtin.debug:
+    msg: "{{ _mdb_mon.results | map(attribute='stdout') | list }}"
 
 - name: Exporter user (unix_socket, read-only monitoring grants)
   ansible.builtin.command:
