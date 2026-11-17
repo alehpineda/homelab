@@ -48,6 +48,10 @@ entry has `bot`, `origin` (`box` | `ct176`), `pubkey` and `grants`
   masquerade the mesh onto the LAN) and 100.85.182.107 (the box's NetBird
   peer IP, seen when connecting to BRL's NetBird address 100.85.104.18).
   Checked read-only from `$SSH_CONNECTION` on 2026-11-17.
+  Exception: the surface-scout box key sets a per-key `from` that also
+  includes 10.10.0.76, so a hop through scout@CT176 is accepted on LAN
+  targets (the box has no direct TCP 22 route to some CTs). Other bots
+  are unchanged. A key may set `from` to override the origin default.
 - `bot_ssh_keys_keep_legacy: true` keeps the two shared keys
   (`grokaudit@grokbot-box`, `forge-ct176`) with no options on the targets
   where they are authorized today, until the retirement step.
