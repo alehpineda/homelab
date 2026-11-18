@@ -3,7 +3,7 @@
 # Declared 2026-11-17. Plan: Forge plans/2026-11-17-copyparty-pilot.md.
 # Authority: DeathScythe 2026-11-17 4:33 PM CT, Forge 1:1, card t973s5107:
 # "Yes, build the copyparty pilot on CT157 with full rights including delete"
-# and t974u "Add the arcade mount." (arcade: see below, not mounted yet).
+# Arcade later dropped by the owner (card t976s5122).
 #
 # Shape copied from ct_187 (unprivileged, Debian 13 vztmpl, per-mount idmap).
 # No NetBird client, no GPU. Only copyparty runs here.
@@ -17,11 +17,8 @@
 # are applied with `pct set 157 --mpN ...` after create while the CT is
 # stopped, and recorded here as comments (same as ct_187).
 #
-# arcade (/media/data/arcade, dataset media/data/arcade) is NOT mounted: it is
-# owned by host root 0:0 (not 1100), and RomM CT185 binds only
-# arcade/collections ro=1. A 1000->1100 idmap cannot write a root-owned tree,
-# and mapping a CT uid onto host uid 0 is not acceptable. Pending the owner's
-# choice (chown to 1100 vs. ro bind); mp7 is reserved for it.
+# arcade (/media/data/arcade, dataset media/data/arcade, host root 0:0) is
+# OUT of the pilot per the owner (2026-11-17, card t976s5122). mp7 stays unused.
 #
 # After create: pct set 157 --timezone America/Chicago,
 # --nameserver "10.10.0.53 10.10.0.55" (declared below), the mp idmaps/ro. PVE guest firewall
