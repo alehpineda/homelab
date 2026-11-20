@@ -638,3 +638,172 @@ loki.process "syslog_json" {
   forward_to = [loki.write.loki.receiver, loki.relabel.o2route.receiver]
 }
 {% endif %}
+
+{% if alloy_source_gitlab %}
+
+// GitLab Omnibus logs (CT 166). Stream labels only: job, env, host, ct,
+// service. component stays in the JSON body. Never promote request IDs,
+// user ids, project paths, or client IPs to stream labels.
+local.file_match "gitlab_logs" {
+  path_targets = [
+    { __path__ = "{{ alloy_gitlab_log_root }}/gitlab-rails/*_json.log",     component = "rails",     job = "gitlab_rails" },
+    { __path__ = "{{ alloy_gitlab_log_root }}/gitlab-workhorse/current",     component = "workhorse", job = "gitlab_workhorse" },
+    { __path__ = "{{ alloy_gitlab_log_root }}/gitaly/current",               component = "gitaly",    job = "gitlab_gitaly" },
+    { __path__ = "{{ alloy_gitlab_log_root }}/sidekiq/current",              component = "sidekiq",   job = "gitlab_sidekiq" },
+    { __path__ = "{{ alloy_gitlab_log_root }}/nginx/gitlab_access.log",      component = "nginx",     job = "gitlab_nginx" },
+    { __path__ = "{{ alloy_gitlab_log_root }}/nginx/gitlab_error.log",       component = "nginx",     job = "gitlab_nginx" },
+  ]
+}
+
+loki.source.file "gitlab_logs" {
+  targets       = local.file_match.gitlab_logs.targets
+  forward_to    = [loki.process.gitlab_json.receiver]
+  tail_from_end = true
+}
+
+// Pack each line into {ts, level, service, host, env, component, msg}.
+// Rails/workhorse/gitaly/sidekiq are JSON; nginx is combined/error text.
+loki.process "gitlab_json" {
+  stage.drop {
+    expression          = "^\\s*$"
+    drop_counter_reason = "blank_line"
+  }
+
+  stage.json {
+    expressions = {
+      time     = "time",
+      severity = "severity",
+      level    = "level",
+      message  = "message",
+      msg      = "msg",
+      method   = "method",
+      path     = "path",
+      status   = "status",
+    }
+  }
+
+  stage.template {
+    source   = "level_norm"
+{% raw %}    template = `{{ $raw := default (default "" .level) .severity }}{{ $low := lower $raw }}{{ if or (eq $low "information") (eq $low "informational") (eq $low "info") }}info{{ else if or (eq $low "warn") (eq $low "warning") }}warning{{ else if or (eq $low "err") (eq $low "error") }}error{{ else if or (eq $low "fatal") (eq $low "crit") (eq $low "critical") }}error{{ else if or (eq $low "dbg") (eq $low "debug") }}debug{{ else if $low }}{{ $low }}{{ else if contains "error" (default "" .filename) }}error{{ else if eq (default "" .job) "gitlab_nginx" }}info{{ else }}unknown{{ end }}`{% endraw %}
+  }
+
+  stage.template {
+    source   = "ts"
+{% raw %}    template = `{{ $t := default "" .time }}{{ if $t }}{{ $t }}{{ else }}{{ dateInZone "2006-01-02T15:04:05.000000Z" now "UTC" }}{{ end }}`{% endraw %}
+  }
+
+  stage.template {
+    source   = "msg_out"
+{% raw %}    template = `{{ if .message }}{{ .message }}{{ else if .msg }}{{ .msg }}{{ else if and .method .path }}{{ .method }} {{ .path }}{{ if .status }} {{ .status }}{{ end }}{{ else }}{{ .Entry }}{{ end }}`{% endraw %}
+  }
+
+  stage.drop {
+    source              = "msg_out"
+    expression          = "^\\s*$"
+    drop_counter_reason = "blank_line"
+  }
+
+  stage.template {
+    source   = "line_json"
+{% raw %}    template = `{"ts":{{ toJson .ts }},"level":{{ toJson .level_norm }},"service":"gitlab","host":"{% endraw %}{{ alloy_host_label }}{% raw %}","env":"{% endraw %}{{ alloy_env_label }}{% raw %}","component":{{ toJson (default "" .component) }},"msg":{{ toJson (default "" .msg_out) }}}`{% endraw %}
+  }
+
+  stage.output {
+    source = "line_json"
+  }
+
+  stage.label_drop {
+    values = ["filename", "component"]
+  }
+
+  stage.static_labels {
+    values = {
+      env     = "{{ alloy_env_label }}",
+      host    = "{{ alloy_host_label }}",
+      ct      = "{{ alloy_ct_label }}",
+      service = "{{ alloy_service_label }}",
+    }
+  }
+  forward_to = [loki.write.loki.receiver, loki.relabel.o2route.receiver]
+}
+
+// Localhost-only scrapes, remote-written to Prometheus CT172. Exporters
+// stay on 127.0.0.1; no gitlab.rb whitelist or bind change. Do not scrape
+// bundled Prometheus :9090 or nginx VTS :8060. These series are not
+// re-exported on Alloy :12345; Prometheus scrapes this Alloy for agent
+// metrics, same as other CTs. Do not remote-write Alloy's own :12345
+// metrics. Labels stay on the scrape targets (env, host, ct, service).
+prometheus.remote_write "prometheus" {
+  endpoint {
+    url = "{{ alloy_prometheus_remote_write_url }}"
+  }
+}
+
+// gitlab-rails /-/metrics can be slow; give it a longer timeout.
+prometheus.scrape "gitlab" {
+  scrape_interval = "60s"
+  scrape_timeout  = "30s"
+  body_size_limit = "16MiB"
+
+  targets = [
+    {
+      "__address__"      = "127.0.0.1:80",
+      "__metrics_path__" = "/-/metrics",
+      job                = "gitlab",
+      env                = "{{ alloy_env_label }}",
+      host               = "{{ alloy_host_label }}",
+      ct                 = "{{ alloy_ct_label }}",
+      service            = "{{ alloy_service_label }}",
+    },
+  ]
+
+  forward_to = [prometheus.relabel.gitlab_local.receiver]
+}
+
+prometheus.scrape "gitlab_exporters" {
+  scrape_interval = "60s"
+  scrape_timeout  = "10s"
+  body_size_limit = "16MiB"
+
+  targets = [
+    {
+      "__address__" = "127.0.0.1:9168",
+      job           = "gitlab_exporter",
+      env           = "{{ alloy_env_label }}",
+      host          = "{{ alloy_host_label }}",
+      ct            = "{{ alloy_ct_label }}",
+      service       = "{{ alloy_service_label }}",
+    },
+    {
+      "__address__" = "127.0.0.1:9100",
+      job           = "gitlab_node",
+      env           = "{{ alloy_env_label }}",
+      host          = "{{ alloy_host_label }}",
+      ct            = "{{ alloy_ct_label }}",
+      service       = "{{ alloy_service_label }}",
+    },
+    {
+      "__address__" = "127.0.0.1:9187",
+      job           = "gitlab_postgres",
+      env           = "{{ alloy_env_label }}",
+      host          = "{{ alloy_host_label }}",
+      ct            = "{{ alloy_ct_label }}",
+      service       = "{{ alloy_service_label }}",
+    },
+    {
+      "__address__" = "127.0.0.1:9121",
+      job           = "gitlab_redis",
+      env           = "{{ alloy_env_label }}",
+      host          = "{{ alloy_host_label }}",
+      ct            = "{{ alloy_ct_label }}",
+      service       = "{{ alloy_service_label }}",
+    },
+  ]
+
+  forward_to = [prometheus.relabel.gitlab_local.receiver]
+}
+
+prometheus.relabel "gitlab_local" {
+  forward_to = [prometheus.remote_write.prometheus.receiver]
+}
+{% endif %}

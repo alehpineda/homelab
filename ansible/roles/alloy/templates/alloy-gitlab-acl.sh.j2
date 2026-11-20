@@ -1,0 +1,52 @@
+#!/bin/sh
+# Managed by ansible role alloy (alehpineda/homelab). Do not edit live.
+# Grants the alloy user traverse on the GitLab log dirs we tail and read on
+# the active files. Re-applies after logrotate/svlogd recreate 0600/0700
+# files (which zeroes the ACL mask). Touches only ACL entries and masks;
+# no-op when they are already right. Never tails postgresql/redis dumps,
+# logrotate, or the bundled Prometheus/Alertmanager trees.
+set -eu
+R="{{ alloy_gitlab_log_root }}"
+
+fix() {
+  p="$1"; spec="$2"; shift 2
+  [ -e "$p" ] || return 0
+  cur="$(getfacl -cpE "$p" 2>/dev/null)" || return 0
+  for want in "$@"; do
+    if printf '%s\n' "$cur" | grep -qx "$want"; then continue; fi
+    setfacl -m "$spec" "$p"
+    logger -t alloy-gitlab-acl "re-applied $spec on $p"
+    return 0
+  done
+}
+
+# Dirs: alloy needs r-x to enter; default ACL so rotated files stay readable.
+for d in \
+  "$R/gitlab-rails" \
+  "$R/gitlab-workhorse" \
+  "$R/gitaly" \
+  "$R/sidekiq" \
+  "$R/nginx"
+do
+  fix "$d" "u:alloy:rx,m::rx,d:u:alloy:r,d:m::r" \
+    "user:alloy:r-x" "mask::r-x" "default:user:alloy:r--" "default:mask::r--"
+done
+
+# Rails JSON logs (active files only, not .gz).
+if [ -d "$R/gitlab-rails" ]; then
+  for f in "$R/gitlab-rails/"*_json.log; do
+    [ -f "$f" ] || continue
+    fix "$f" "u:alloy:r,m::r" "user:alloy:r--" "mask::r--"
+  done
+fi
+
+# svlogd "current" plus nginx access/error.
+for f in \
+  "$R/gitlab-workhorse/current" \
+  "$R/gitaly/current" \
+  "$R/sidekiq/current" \
+  "$R/nginx/gitlab_access.log" \
+  "$R/nginx/gitlab_error.log"
+do
+  fix "$f" "u:alloy:r,m::r" "user:alloy:r--" "mask::r--"
+done

@@ -9,7 +9,8 @@
 #   alloy_arr     CT 182 Docker logs -> Loki + OpenObserve
 #   prom_rw       CT 172 Prometheus remote_write -> OpenObserve
 #   o2_node_exporter  CT 177 prometheus-node-exporter (mp0 disk metric)
-#   prom_scrape   CT 172 repo-managed scrape jobs (scrape.d + scrape_config_files)
+#   prom_scrape   CT 172 repo-managed scrape jobs (scrape.d + scrape_config_files);
+#                 also the remote-write receiver drop-in when enabled
 #   alloy_wave1   wave 1 journald on CT 171/172/173/174/177/184 (per-CT tags:
 #                 alloy_grafana, alloy_prometheus, alloy_pve_exporter,
 #                 alloy_kuma, alloy_loki, alloy_openobserve). Apply one CT at
@@ -38,6 +39,9 @@
 #                 remote-syslog listener on the CT 173 Alloy (play alloy_loki,
 #                 job flint_syslog, udp/1514 from 10.10.0.1 only).
 #                 The router-side 5-minute heartbeat is playbooks/flint.yml.
+#   alloy_gitlab  CT 166 GitLab Omnibus logs + localhost scrapes, Alloy
+#                 :12345 for Prometheus (user t994s5195, 3:51 PM CT Nov 20).
+#                 Apply only with --tags alloy_gitlab. Never use --tags alloy_host.
 # See docs/runbooks/logging-loki-openobserve.md.
 - name: Loki config
   hosts: loki-blr-lxc
@@ -121,6 +125,7 @@
         # this is the end state. The OpenBao token renew timer is independent
         # of that subset (card t874u, 7:44 PM CT Nov 14).
         prometheus_openbao_token_renew: true
+        prometheus_enable_remote_write_receiver: true
         prometheus_scrape_jobs:
           - job: openobserve_node
             static_configs:
@@ -176,6 +181,10 @@
                 labels: {host: arr-blr-lxc, ct: "182", service: alloy, env: homelab}
               - targets: ["10.10.0.21:12345"]
                 labels: {host: barbatoslupusrex, ct: "host", service: alloy, env: homelab}
+              # GitLab Alloy (user t994s5195 / t995u, 3:51 PM CT Nov 20).
+              # Labels follow the user's ask (host=gitlab, service=gitlab), not service=alloy.
+              - targets: ["10.10.0.66:12345"]
+                labels: {host: gitlab, ct: "166", service: gitlab, env: homelab}
           - job: kuma
             # Basic auth: any username + a dedicated Kuma API key (owner-created
             # 2026-11-14). The key file lives only on CT172 (0600 root:root).
@@ -870,3 +879,21 @@
         alloy_service_label: pbs
         alloy_journal_service_stream_label: true
         alloy_journal_drop_rules: *w3_secret_drops
+
+# GitLab CT 166 (user said "Yes, install Alloy on CT166 for logs and metrics"
+# at 3:51 PM CT Nov 20, Forge 1:1, card t994s5195). Logs + localhost scrapes
+# only. No gitlab.rb change. Apply with --tags alloy_gitlab only.
+- name: Alloy on CT 166 (GitLab logs and localhost scrapes)
+  hosts: gitlab-blr-lxc
+  gather_facts: false
+  tags: [alloy_gitlab]
+  roles:
+    - role: alloy
+      vars:
+        alloy_http_listen_addr: "{{ ansible_host }}:12345"
+        alloy_source_gitlab: true
+        alloy_host_label: gitlab
+        alloy_service_label: gitlab
+        alloy_ct_label: "166"
+        alloy_prometheus_remote_write_url: http://10.10.0.72:9090/api/v1/write
+

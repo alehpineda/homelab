@@ -31,6 +31,7 @@ alloy_source_caddy: false       # CT 250 /var/log/caddy/access.log -> job caddy_
 alloy_source_docker: false      # CT 182 Docker stdout -> job arr_docker
 alloy_source_adguard: false     # CT 153/155 querylog.json -> job adguard_querylog
 alloy_source_qbittorrent: false # CT 182 qBittorrent log file -> job arr_qbittorrent
+alloy_source_gitlab: false      # CT 166 Omnibus JSON/file logs + localhost scrapes
 
 alloy_journal_max_age: 12h
 # Alloy HTTP server (UI + /metrics). Empty = package default 127.0.0.1:12345.
@@ -95,6 +96,15 @@ alloy_qbittorrent_config_dir: /opt/arr/qbittorrent
 alloy_qbittorrent_log_dir: "{{ alloy_qbittorrent_config_dir }}/qBittorrent/logs"
 alloy_qbittorrent_log: "{{ alloy_qbittorrent_log_dir }}/qbittorrent.log"
 alloy_qbittorrent_acl_interval: 2min
+# GitLab Omnibus logs (CT 166). Several trees are 0700 and logrotate/svlogd
+# recreate files, so with alloy_source_gitlab the role installs `acl` and a
+# root timer that grants the alloy user traverse on the tailed dirs and
+# read on the active files only. No gitlab.rb change.
+alloy_gitlab_log_root: /var/log/gitlab
+alloy_gitlab_acl_interval: 2min
+# Remote-write of GitLab localhost scrapes to Prometheus CT172.
+# Only used when alloy_source_gitlab is true.
+alloy_prometheus_remote_write_url: http://10.10.0.72:9090/api/v1/write
 
 # Remote syslog listener (wave 6, CT 173): one listener per device, e.g.
 #   - {address: "10.10.0.73:1514", protocol: udp, format: rfc3164,

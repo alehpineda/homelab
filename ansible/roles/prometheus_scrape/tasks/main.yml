@@ -91,3 +91,25 @@
         enabled: true
         state: started
         daemon_reload: true
+
+- name: Remote-write receiver drop-in
+  when: prometheus_enable_remote_write_receiver | bool
+  block:
+    - name: systemd drop-in directory for Prometheus
+      ansible.builtin.file:
+        path: "{{ prometheus_unit_dropin_dir }}"
+        state: directory
+        owner: root
+        group: root
+        mode: "0755"
+
+    - name: Install the remote-write receiver drop-in
+      ansible.builtin.template:
+        src: 10-forge-remote-write-receiver.conf.j2
+        dest: "{{ prometheus_unit_dropin_dir }}/10-forge-remote-write-receiver.conf"
+        owner: root
+        group: root
+        mode: "0644"
+      notify:
+        - Reload systemd
+        - Restart prometheus

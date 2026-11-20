@@ -209,6 +209,47 @@
   loop: [alloy-qbittorrent-acl.path, alloy-qbittorrent-acl.timer]
   when: alloy_source_qbittorrent
 
+- name: Ensure acl (setfacl) for the GitLab log read grant
+  ansible.builtin.apt:
+    name: acl
+    state: present
+  when: alloy_source_gitlab
+
+- name: Install the GitLab log ACL re-apply script
+  ansible.builtin.template:
+    src: alloy-gitlab-acl.sh.j2
+    dest: /usr/local/sbin/alloy-gitlab-acl
+    owner: root
+    group: root
+    mode: "0755"
+  when: alloy_source_gitlab
+
+- name: Install the GitLab log ACL service and timer
+  ansible.builtin.template:
+    src: "{{ item }}.j2"
+    dest: "/etc/systemd/system/{{ item }}"
+    owner: root
+    group: root
+    mode: "0644"
+  loop: [alloy-gitlab-acl.service, alloy-gitlab-acl.timer]
+  when: alloy_source_gitlab
+
+- name: Apply the GitLab log ACL now
+  ansible.builtin.systemd_service:
+    name: alloy-gitlab-acl.service
+    state: started
+    daemon_reload: true
+  changed_when: false
+  when: alloy_source_gitlab
+
+- name: Enable the GitLab log ACL timer
+  ansible.builtin.systemd_service:
+    name: alloy-gitlab-acl.timer
+    state: started
+    enabled: true
+    daemon_reload: true
+  when: alloy_source_gitlab
+
 - name: Write the OpenObserve ingest env file (0600)
   ansible.builtin.template:
     src: o2.env.j2

@@ -7,7 +7,9 @@ resource "proxmox_lxc" "ct_166" {
   arch         = "amd64"
   ostype       = "debian"
   unprivileged = true
-  onboot       = false
+  # User yes, Forge 1:1 card t994s5195, 3:51 PM CT Nov 20:
+  # "Yes, set CT166 to start on boot through IaC"
+  onboot       = true
   cores        = 4
   memory       = 16384
   swap         = 512

@@ -1,0 +1,11 @@
+# Managed by ansible role alloy (alehpineda/homelab). Do not edit live.
+[Unit]
+Description=Re-apply alloy read ACL on GitLab Omnibus logs every {{ alloy_gitlab_acl_interval }}
+
+[Timer]
+OnBootSec=30s
+OnUnitActiveSec={{ alloy_gitlab_acl_interval }}
+AccuracySec=5s
+
+[Install]
+WantedBy=timers.target
