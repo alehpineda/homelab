@@ -25,6 +25,7 @@ pve_fw_cluster_ipsets:
     # Wave 5 (2026-11-14, card t67s400): + journald on 151,150,154,156 (.53/.55 already in).
     # Wave 6 (2026-11-14, card t72s425): + PBS host .25 journald (bare metal, no guest fw).
     # Databases (2026-11-16, t927u/t928u): + journald on 178 (.78), 179 (.79). Inert until the CTs exist.
+    # GitLab (2026-11-20, t994s5195): + Alloy on 166 (.66).
     cidrs: [10.10.0.21, 10.10.0.250, 10.10.0.82, 10.10.0.71, 10.10.0.72, 10.10.0.73, 10.10.0.74, 10.10.0.77, 10.10.0.84,
             10.10.0.80, 10.10.0.83, 10.10.0.85, 10.10.0.86, 10.10.0.87, 10.10.0.93, 10.10.0.96, 10.10.0.60, 10.10.0.61, 10.10.0.81, 10.10.0.88,
             10.10.0.55, 10.10.0.53,
@@ -32,7 +33,7 @@ pve_fw_cluster_ipsets:
             10.10.0.91, 10.10.0.76, 10.10.0.65,
             10.10.0.51, 10.10.0.50, 10.10.0.54, 10.10.0.56,
             10.10.0.25,
-            10.10.0.78, 10.10.0.79]
+            10.10.0.78, 10.10.0.79, 10.10.0.66]
   # `management` already exists (10.10.0.0/24, 100.85.0.0/16) and is used by
   # node rules for 22/8006/3128. Not managed here; change it only with NetTit.
 
@@ -135,6 +136,10 @@ pve_fw_ct_rules:
     - {proto: tcp, dport: "3001", source: prometheus, comment: "kuma /metrics"}
   157:  # files (copyparty pilot, 2026-11-17) — UI only via Caddy eth0 .250; no NetBird, no LAN direct, not .251
     - {proto: tcp, dport: "3923", source: 10.10.0.250, comment: "copyparty via Caddy .250 only"}
+  166:  # gitlab — UI via Caddy .250 to http://.66:80; Alloy :12345 from Prometheus only.
+    # Guest fw is not live on this CT yet; in-CT nft currently restricts :12345.
+    - {proto: tcp, dport: "80", source: +caddy, comment: "gitlab via Caddy"}
+    - {proto: tcp, dport: "12345", source: prometheus, comment: "alloy /metrics"}
   185:  # romm
     - {proto: tcp, dport: "80", source: +caddy}
   186:  # navidrome
