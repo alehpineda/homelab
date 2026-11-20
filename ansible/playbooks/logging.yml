@@ -9,7 +9,8 @@
 #   alloy_arr     CT 182 Docker logs -> Loki + OpenObserve
 #   prom_rw       CT 172 Prometheus remote_write -> OpenObserve
 #   o2_node_exporter  CT 177 prometheus-node-exporter (mp0 disk metric)
-#   prom_scrape   CT 172 repo-managed scrape jobs (scrape.d + scrape_config_files)
+#   prom_scrape   CT 172 repo-managed scrape jobs (scrape.d + scrape_config_files);
+#                 also the remote-write receiver drop-in when enabled
 #   alloy_wave1   wave 1 journald on CT 171/172/173/174/177/184 (per-CT tags:
 #                 alloy_grafana, alloy_prometheus, alloy_pve_exporter,
 #                 alloy_kuma, alloy_loki, alloy_openobserve). Apply one CT at
@@ -124,6 +125,7 @@
         # this is the end state. The OpenBao token renew timer is independent
         # of that subset (card t874u, 7:44 PM CT Nov 14).
         prometheus_openbao_token_renew: true
+        prometheus_enable_remote_write_receiver: true
         prometheus_scrape_jobs:
           - job: openobserve_node
             static_configs:
@@ -893,4 +895,5 @@
         alloy_host_label: gitlab
         alloy_service_label: gitlab
         alloy_ct_label: "166"
+        alloy_prometheus_remote_write_url: http://10.10.0.72:9090/api/v1/write
 

@@ -102,6 +102,9 @@ alloy_qbittorrent_acl_interval: 2min
 # read on the active files only. No gitlab.rb change.
 alloy_gitlab_log_root: /var/log/gitlab
 alloy_gitlab_acl_interval: 2min
+# Remote-write of GitLab localhost scrapes to Prometheus CT172.
+# Only used when alloy_source_gitlab is true.
+alloy_prometheus_remote_write_url: http://10.10.0.72:9090/api/v1/write
 
 # Remote syslog listener (wave 6, CT 173): one listener per device, e.g.
 #   - {address: "10.10.0.73:1514", protocol: udp, format: rfc3164,

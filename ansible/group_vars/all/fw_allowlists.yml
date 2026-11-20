@@ -85,8 +85,9 @@ pve_fw_ct_rules:
     - {proto: tcp, dport: "11434", source: firecrawl}
     - {proto: tcp, dport: "11434", source: +nb_routers}
     - {proto: tcp, dport: "11434", source: n8n}
-  172:  # prometheus
+  172:  # prometheus (9090: Grafana query + Alloy CT166 remote_write)
     - {proto: tcp, dport: "9090", source: grafana}
+    - {proto: tcp, dport: "9090", source: "10.10.0.66", comment: "Alloy remote_write"}
   173:  # loki (push from Alloy agents; 9095 gRPC stays Grafana-only)
     - {proto: tcp, dport: "3100", source: grafana}
     - {proto: tcp, dport: "9095", source: grafana}

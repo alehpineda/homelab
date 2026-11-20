@@ -24,3 +24,12 @@ prometheus_openbao_token_file: /etc/prometheus/openbao_token
 prometheus_openbao_renew_url: https://10.10.0.62:8200/v1/auth/token/renew-self
 prometheus_openbao_renew_script: /usr/local/sbin/openbao-token-renew
 prometheus_openbao_renew_randomized_delay: 30min
+
+# Enable --web.enable-remote-write-receiver via a systemd drop-in that
+# replaces ExecStart. Off by default; turn on from the prom_scrape play.
+# Keep the ExecStart flags in the drop-in template in sync with the unit.
+prometheus_enable_remote_write_receiver: false
+prometheus_bin: /usr/local/bin/prometheus
+prometheus_listen_address: 0.0.0.0:9090
+prometheus_tsdb_path: /var/lib/prometheus/
+prometheus_unit_dropin_dir: /etc/systemd/system/prometheus.service.d

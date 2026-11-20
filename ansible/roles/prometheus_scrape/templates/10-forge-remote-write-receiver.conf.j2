@@ -1,0 +1,10 @@
+# Managed by ansible role prometheus_scrape when
+# prometheus_enable_remote_write_receiver is true. Replaces ExecStart so
+# --web.enable-remote-write-receiver is added; keep in sync with the unit.
+[Service]
+ExecStart=
+ExecStart={{ prometheus_bin }} \
+    --config.file={{ prometheus_config_path }} \
+    --storage.tsdb.path={{ prometheus_tsdb_path }} \
+    --web.listen-address={{ prometheus_listen_address }} \
+    --web.enable-remote-write-receiver

@@ -727,13 +727,22 @@ loki.process "gitlab_json" {
   forward_to = [loki.write.loki.receiver, loki.relabel.o2route.receiver]
 }
 
-// Localhost-only scrapes. Exporters stay on 127.0.0.1; no gitlab.rb
-// whitelist or bind change. Do not scrape bundled Prometheus :9090 or
-// nginx VTS :8060. These series are not re-exported on Alloy :12345;
-// Prometheus scrapes this Alloy for agent metrics, same as other CTs.
+// Localhost-only scrapes, remote-written to Prometheus CT172. Exporters
+// stay on 127.0.0.1; no gitlab.rb whitelist or bind change. Do not scrape
+// bundled Prometheus :9090 or nginx VTS :8060. These series are not
+// re-exported on Alloy :12345; Prometheus scrapes this Alloy for agent
+// metrics, same as other CTs. Do not remote-write Alloy's own :12345
+// metrics. Labels stay on the scrape targets (env, host, ct, service).
+prometheus.remote_write "prometheus" {
+  endpoint {
+    url = "{{ alloy_prometheus_remote_write_url }}"
+  }
+}
+
+// gitlab-rails /-/metrics can be slow; give it a longer timeout.
 prometheus.scrape "gitlab" {
-  scrape_interval = "30s"
-  scrape_timeout  = "20s"
+  scrape_interval = "60s"
+  scrape_timeout  = "30s"
   body_size_limit = "16MiB"
 
   targets = [
@@ -746,6 +755,17 @@ prometheus.scrape "gitlab" {
       ct                 = "{{ alloy_ct_label }}",
       service            = "{{ alloy_service_label }}",
     },
+  ]
+
+  forward_to = [prometheus.relabel.gitlab_local.receiver]
+}
+
+prometheus.scrape "gitlab_exporters" {
+  scrape_interval = "60s"
+  scrape_timeout  = "10s"
+  body_size_limit = "16MiB"
+
+  targets = [
     {
       "__address__" = "127.0.0.1:9168",
       job           = "gitlab_exporter",
@@ -784,6 +804,6 @@ prometheus.scrape "gitlab" {
 }
 
 prometheus.relabel "gitlab_local" {
-  forward_to = []
+  forward_to = [prometheus.remote_write.prometheus.receiver]
 }
 {% endif %}
