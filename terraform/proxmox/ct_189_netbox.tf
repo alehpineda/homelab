@@ -9,7 +9,10 @@
 #
 # Install method (day-1, after create): community-scripts netbox
 # (install/netbox-install.sh). Postgres 16 + Redis, Apache :80 (and
-# self-signed :443 — Caddy proxies HTTP 80). Expected v4.7.4.
+# self-signed :443 — Caddy proxies HTTP 80). Installed NetBox Community
+# 4.7.4 (Django 6.1.2; confirmed 2026-11-21). `manage.py version` prints
+# the Django version, not NetBox. Memory 4096 MiB (was 2048); swap stays
+# 512. A memory change on this LXC can apply live, no guest restart.
 # Installer writes Django admin creds to ~/netbox.creds; copy to a box
 # secret, never chat. Disk bumped to 8G (script floor is 4G).
 
@@ -33,7 +36,7 @@ resource "proxmox_lxc" "ct_189" {
   unprivileged    = true
   onboot          = true
   cores           = 2
-  memory          = 2048
+  memory          = 4096
   swap            = 512
   tags            = "community-script;admin;netbox;storage-data2"
   ostemplate      = "local:vztmpl/debian-13-standard_13.6-1_amd64.tar.zst"
