@@ -896,4 +896,31 @@
         alloy_service_label: gitlab
         alloy_ct_label: "166"
         alloy_prometheus_remote_write_url: http://10.10.0.72:9090/api/v1/write
+        # Wolff drop list (proposal 2026-11-20). User yes, Forge 1:1 t997u,
+        # 8:14 AM CT Nov 21: "Yes on gitlab".
+        alloy_gitlab_drop_metric_regexes:
+          - gitlab_database_stat_table_.*
+          - gitlab_pg_sequences_.*
+          - gitlab_sli_.*
+          - gitlab_ruby_threads_running_threads
+          - pg_statio_user_tables_.*
+          - pg_total_relation_size_bytes
+          - pg_stat_activity_.*
+          - pg_locks_count
+          - pg_roles_connection_limit
+          - pg_settings_.*
+          - redis_commands_latencies_usec_.*
+          - redis_latency_percentiles_usec.*
+          - redis_commands_duration_seconds_total
+          - redis_commands_failed_calls_total
+          - redis_commands_rejected_calls_total
+          - redis_commands_total
+          - node_cpu_scaling_.*
+          - node_cpu_frequency_.*
+          - node_zfs_.*
+          - node_hwmon_.*
+          - node_cooling_device_.*
+          - node_schedstat_.*
+          - node_softnet_.*
+          - node_disk_.*
 
