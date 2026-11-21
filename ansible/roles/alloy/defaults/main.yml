@@ -105,6 +105,11 @@ alloy_gitlab_acl_interval: 2min
 # Remote-write of GitLab localhost scrapes to Prometheus CT172.
 # Only used when alloy_source_gitlab is true.
 alloy_prometheus_remote_write_url: http://10.10.0.72:9090/api/v1/write
+# Metric-name drops on the localhost scrape -> remote_write path only
+# (prometheus.relabel.gitlab_local). Empty = no drop rule rendered, so
+# other CTs are unchanged. Do not use a broad redis_commands_.* regex;
+# that would also drop redis_commands_processed_total.
+alloy_gitlab_drop_metric_regexes: []
 
 # Remote syslog listener (wave 6, CT 173): one listener per device, e.g.
 #   - {address: "10.10.0.73:1514", protocol: udp, format: rfc3164,

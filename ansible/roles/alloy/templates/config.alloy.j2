@@ -805,5 +805,13 @@ prometheus.scrape "gitlab_exporters" {
 
 prometheus.relabel "gitlab_local" {
   forward_to = [prometheus.remote_write.prometheus.receiver]
+{% if alloy_gitlab_drop_metric_regexes | default([]) %}
+
+  rule {
+    source_labels = ["__name__"]
+    regex         = "{{ alloy_gitlab_drop_metric_regexes | join('|') }}"
+    action        = "drop"
+  }
+{% endif %}
 }
 {% endif %}
